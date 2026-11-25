@@ -2,26 +2,54 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'">
 <title>Litescape</title>
 <style>
-  :root { color-scheme: light dark; --bg: #f6f7f9; --fg: #171a21; --muted: #5d6472; --accent: #4f6ef7; }
-  @media (prefers-color-scheme: dark) { :root { --bg: #171a21; --fg: #e8eaf0; --muted: #9aa1ae; --accent: #6e8bff; } }
-  body { margin: 0; height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--fg);
-    font: 14px/1.5 system-ui, sans-serif; text-align: center; }
+  :root { color-scheme: light dark; --bg: #f6f7f9; --fg: #171a21; --muted: #5d6472; --accent: #4f6ef7; --line: #dde1e8;
+    --warn: #a15c00; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #171a21; --fg: #e8eaf0; --muted: #9aa1ae; --accent: #6e8bff;
+    --line: #2c313c; --warn: #f0b35a; } }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--fg);
+    font: 14px/1.5 system-ui, sans-serif; }
+  main { width: min(560px, 100% - 32px); padding: 48px 0; }
+  header { text-align: center; }
   h1 { font-size: 18px; font-weight: 600; margin: 16px 0 4px; }
-  p { margin: 0; color: var(--muted); max-width: 360px; }
+  h2 { font-size: 14px; font-weight: 600; margin: 40px 0 4px; }
+  p { margin: 0; color: var(--muted); }
+  header p { max-width: 360px; margin: 0 auto; }
+  a { color: var(--accent); }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin: 0 auto;
     animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: .25; } }
   @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+  ul { list-style: none; margin: 12px 0; padding: 0; border-top: 1px solid var(--line); }
+  li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  li > div { flex: 1; min-width: 0; }
+  .name { font-weight: 500; overflow-wrap: anywhere; }
+  .meta, .note { font-size: 13px; color: var(--muted); }
+  .note.warn { color: var(--warn); }
+  button { font: inherit; padding: 4px 12px; border-radius: 6px; border: 1px solid var(--line); background: transparent;
+    color: var(--fg); cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:disabled { opacity: .5; cursor: default; }
+  #error { color: var(--warn); margin-top: 8px; }
 </style>
 </head>
 <body>
 <main>
-  <div class="dot" aria-hidden="true"></div>
-  <h1>Waiting for Minecraft</h1>
-  <p>Start Minecraft with the Litescape mod. The viewer opens here once you're in a world.</p>
+  <header>
+    <div class="dot" aria-hidden="true"></div>
+    <h1>Waiting for Minecraft</h1>
+    <p>Start Minecraft in an instance with the Litescape mod. The viewer opens here once the game is running.</p>
+  </header>
+  <section aria-labelledby="mod-title">
+    <h2 id="mod-title">Install the mod</h2>
+    <p id="summary">Looking for Minecraft instances…</p>
+    <ul id="list"></ul>
+    <button id="add" type="button">Add instance folder…</button>
+    <p id="error" role="alert"></p>
+  </section>
 </main>
+<script src="waiting.js"></script>
 </body>
 </html>

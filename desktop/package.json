@@ -2,7 +2,7 @@
   "name": "litescape",
   "productName": "Litescape",
   "version": "0.2.0",
-  "description": "Desktop window for the Litescape mod's 3D schematic viewer",
+  "description": "Desktop window for the Litescape mod's 3D schematic viewer, and installer for the mod",
   "author": "GA16-24",
   "license": "MIT",
   "private": true,
@@ -20,7 +20,20 @@
     "appId": "dev.ga16.litescape",
     "files": [
       "main.js",
-      "waiting.html"
+      "instances.js",
+      "preload.cjs",
+      "waiting.html",
+      "waiting.js"
+    ],
+    "extraResources": [
+      {
+        "from": "../build/libs",
+        "to": "mod",
+        "filter": [
+          "*.jar",
+          "!*-sources.jar"
+        ]
+      }
     ],
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "protocols": [
