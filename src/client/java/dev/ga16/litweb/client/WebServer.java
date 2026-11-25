@@ -105,6 +105,7 @@ final class WebServer {
 				send(ex, 403, "text/plain", "Forbidden".getBytes(StandardCharsets.UTF_8));
 				return;
 			}
+			if (ex.getRequestHeaders().containsKey("X-Litescape-App")) LitWebClient.appSeen();
 			String path = ex.getRequestURI().getPath();
 			Map<String, String> q = query(ex.getRequestURI().getRawQuery());
 			boolean post = ex.getRequestMethod().equals("POST");
