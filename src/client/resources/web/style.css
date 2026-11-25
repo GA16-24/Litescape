@@ -351,6 +351,12 @@ button {
 .row-action.on {
   display: inline-flex;
 }
+@media (hover: none) {
+  /* touch screens can't hover to reveal Share or Hide */
+  .row-action {
+    display: inline-flex;
+  }
+}
 .row-action:hover {
   color: var(--text);
 }
