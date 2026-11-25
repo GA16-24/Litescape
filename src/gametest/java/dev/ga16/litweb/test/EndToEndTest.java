@@ -99,10 +99,41 @@ public class EndToEndTest implements FabricClientGameTest {
 				String st3 = "";
 				for (int i = 0; i < 40 && !st3.contains("\"sharedId\":\"" + shared); i++, ctx.waitTicks(5)) st3 = call(ctx, "GET", "/api/state");
 				check(st3.contains("\"sharedId\":\"" + shared), "shared list push reached the client");
+				check(st3.contains("\"access\":\"private\""), "a new share starts private");
 				save("state-3.json", st3);
 				collectTextures(json(save("view-shared.json", call(ctx, "GET", "/api/view?type=shared&id=" + shared))));
 				JsonObject sst = json(save("status-shared.json", call(ctx, "GET", "/api/status?type=shared&id=" + shared)));
 				check(sst.getAsJsonArray("counts").toString().equals(c.toString()), "server status " + sst.get("counts") + " matches client " + c);
+
+				// Access: limit it to one player, see the server store and push it back, keep it on Update copy, refuse junk.
+				String alice = "b6d1f0f2-0000-4000-8000-00000000a1ce";
+				call(ctx, "POST", "/api/access", "{\"id\":\"" + shared + "\",\"access\":\"players\",\"players\":{\"" + alice + "\":\"Alice_Mines\"}}");
+				String limited = "";
+				for (int i = 0; i < 40 && !limited.contains("\"access\":\"players\""); i++, ctx.waitTicks(5)) limited = call(ctx, "GET", "/api/state");
+				check(limited.contains("\"access\":\"players\"") && limited.contains(alice), "access change reached the client");
+				call(ctx, "POST", "/api/share?id=" + placement);
+				check(call(ctx, "GET", "/api/state").contains("\"access\":\"players\""), "Update copy keeps access");
+				String refused = "";
+				try {
+					call(ctx, "POST", "/api/access", "{\"id\":\"" + shared + "\",\"access\":\"friends\",\"players\":{}}");
+				} catch (AssertionError e) {
+					refused = e.getMessage();
+				}
+				check(refused.contains("Unknown access"), "bad access refused: " + refused);
+				call(ctx, "POST", "/api/access", "{\"id\":\"" + shared + "\",\"access\":\"private\",\"players\":{}}"); // back to the default for the fixtures
+				// The world is remembered with its shared list and the copy downloaded above, for viewing after leaving.
+				JsonObject here = json(call(ctx, "GET", "/api/state")).getAsJsonArray("servers").get(0).getAsJsonObject();
+				check(here.getAsJsonArray("shared").toString().contains(shared), "remembered server lists the shared schematic");
+				try (var files = Files.walk(FabricLoader.getInstance().getConfigDir().resolve("litweb-servers"))) {
+					check(files.anyMatch(f -> f.getFileName().toString().equals(shared + ".bin")), "downloaded copy saved for later");
+				}
+				String notSaved = "";
+				try {
+					call(ctx, "GET", "/api/view?type=shared&id=" + shared + "&server=server:elsewhere.example");
+				} catch (AssertionError e) {
+					notSaved = e.getMessage();
+				}
+				check(notSaved.contains("404") && notSaved.contains("not-saved"), "another server without a saved copy: " + notSaved);
 
 				// The player places one block the copy needs and one it doesn't: only the first counts.
 				sp.getServer().runOnServer(server -> {
