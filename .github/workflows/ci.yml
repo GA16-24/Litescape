@@ -133,7 +133,8 @@ jobs:
   dependency-review:
     name: Dependency review
     needs: dependency-submission
-    if: ${{ !cancelled() && !failure() && github.event_name == 'pull_request' }}
+    # Like code scanning, dependency review needs paid GitHub Code Security on private repos.
+    if: ${{ !cancelled() && !failure() && github.event_name == 'pull_request' && !github.event.repository.private }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
