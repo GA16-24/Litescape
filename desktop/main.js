@@ -8,7 +8,12 @@ const PORTS = Array.from({ length: 10 }, (_, i) => 8723 + i);
 
 async function alive(url) {
   try {
-    return (await fetch(`${url}api/state`, { signal: AbortSignal.timeout(1000) })).ok;
+    // The header tells the game this app is installed, so /litweb opens it instead of a browser tab.
+    const res = await fetch(`${url}api/state`, {
+      headers: { 'X-Litescape-App': '1' },
+      signal: AbortSignal.timeout(1000),
+    });
+    return res.ok;
   } catch {
     return false;
   }
@@ -25,6 +30,22 @@ async function findViewer() {
 function openOutside(url) {
   if (/^https?:/.test(url)) shell.openExternal(url);
 }
+
+// The game opens litescape://open from /litweb and its chat link. A second launch hands off to this window.
+if (!app.requestSingleInstanceLock()) app.exit();
+if (app.isPackaged) app.setAsDefaultProtocolClient('litescape');
+let win = null;
+function show() {
+  if (!win || win.isDestroyed()) return;
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+app.on('second-instance', show);
+app.on('open-url', (e) => {
+  e.preventDefault();
+  show();
+});
 
 // Packaged builds carry the mod jar as a resource (see extraResources); `npm start` uses the Gradle output.
 const MOD_DIR = app.isPackaged
@@ -86,7 +107,7 @@ function setupInstaller(win) {
 
 app.whenReady().then(() => {
   let current = null;
-  const win = new BrowserWindow({
+  win = new BrowserWindow({
     width: 1440,
     height: 900,
     title: 'Litescape',
