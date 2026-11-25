@@ -47,6 +47,7 @@ body:
         - Singleplayer
         - Server with the mod installed
         - Server without the mod
+        - Not in a world (for example, the desktop app before the game starts)
     validations:
       required: true
   - type: textarea
