@@ -1,0 +1,43 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+  schedule:
+    - cron: "23 4 * * 1"
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write # upload CodeQL results to code scanning
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [java-kotlin, javascript-typescript, actions]
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          queries: security-extended,security-and-quality
+          config: |
+            paths-ignore:
+              - src/client/resources/web/vendor
+      - uses: github/codeql-action/analyze@v4.39.3
+        with:
+          category: /language:${{ matrix.language }}
