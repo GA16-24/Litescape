@@ -1202,6 +1202,9 @@ export class Iris {
       const p = this.water;
       gbFbo(p);
       gl.enable(gl.DEPTH_TEST);
+      // Minecraft culls back faces here. Packs shade glass assuming a front face (MakeUp's fresnel blows up past 1 on a back face).
+      // shortcut: fluid tops are single-sided in mesher.js, so water seen from below vanishes; emit vanilla's reversed top face if that matters.
+      gl.enable(gl.CULL_FACE);
       this.applyBlend(p.blend === undefined ? { blend: DEFAULT_BLEND } : p);
       this.draw(
         p,
@@ -1209,6 +1212,7 @@ export class Iris {
         { ...gb, renderStage: STAGE.TERRAIN_TRANSLUCENT, iris_alphaTestRef: p.alphaRef },
         { writing: new Set(p.drawBuffers) },
       );
+      gl.disable(gl.CULL_FACE);
     }
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
