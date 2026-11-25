@@ -1,4 +1,18 @@
-# Litescape
+<h1 align="center">Litescape</h1>
+
+<p align="center">Your Litematica selections and schematic placements in 3D, in a browser tab.</p>
+
+<p align="center">
+  <img alt="Minecraft 26.3" src="https://img.shields.io/badge/Minecraft-26.3-555?style=flat-square">
+  <img alt="Fabric Loader 0.20.1+" src="https://img.shields.io/badge/Fabric_Loader-0.20.1%2B-555?style=flat-square">
+  <img alt="Litematica 0.29.1" src="https://img.shields.io/badge/Litematica-0.29.1-555?style=flat-square">
+  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-555?style=flat-square"></a>
+</p>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/viewer-dark.png">
+  <img alt="A cottage placement 84% built. Placed blocks render normally, the unbuilt roof shows as see-through ghost blocks, and the side panel shows build progress and who can see the shared schematic." src="docs/images/viewer-light.png">
+</picture>
 
 A Fabric mod for Minecraft 26.3 that shows your Litematica selection and schematic placements as 3D models in a browser tab. On a server that also runs the mod, players can share a placement so everyone can watch it get built.
 
@@ -7,6 +21,7 @@ A Fabric mod for Minecraft 26.3 that shows your Litematica selection and schemat
 - Select an area with Litematica's area selection tool and it appears at `http://127.0.0.1:8723/`, with the textures from your current resource pack. The view reloads when you move a corner.
 - Open one of your placements to compare it with the world. Correct blocks render normally, missing blocks show as ghosts, a wrong block is tinted red and a wrong orientation or state is tinted amber. The counts and the material list ("88 left") update every 2 seconds.
 - Click Share on a placement to upload it to the server. Once you let them in from the Access panel, other players with the mod see it under "Shared on this server" and can follow progress from anywhere. The server compares it against the world using whatever chunks it has loaded. Sharing is opt-in per placement, and only the owner or an operator can stop sharing.
+- When you share, you can include the surroundings: the land and builds up to 8, 16 or 32 blocks around the placement. The server copies them from the world once, as a snapshot, and the shared view shows the schematic standing in them. They're greyed out by default so the build stands out; the Surroundings panel switches them to full color or hides them. Chunks the server didn't have loaded show up empty, and the panel says how many. Go near them and press Recapture. Recapture and Update copy take a new snapshot. Build progress still comes from the live world. The surroundings follow the schematic's Access setting.
 - The Access panel sets who can see a shared schematic: everyone on the server, only the players you pick, or only you. A new share starts as only you. Players can be picked while they're online or once they've helped build it. Operators can always see and manage every shared schematic. The server enforces this: a player without access doesn't get the schematic in their list and can't download it or its progress. Update copy keeps the access you set.
 - The server switcher at the top of the sidebar lists every server you've joined with the mod. The one you're on is live. The others show what was shared with you on your last visit, and any schematic you opened there can still be viewed in 3D. Progress, placements and access changes need you to be on that server. Joining a server switches the page to it.
 - A shared schematic lists its contributors: who placed blocks that match it, how many and when they were last active. Blocks count when a player places them by hand after the schematic was shared; buckets, pistons and commands like `/fill` don't count, and re-placing the same block counts once. Each player shows with their Minecraft face, cropped from their skin. The skin comes from Mojang the same way the game loads skins for player heads; players without one get their default skin. Everyone who can see the shared schematic can see this list. The schematic's author from the Litematica file is shown too.
@@ -68,8 +83,10 @@ The macOS build isn't notarized yet. The Homebrew cask clears the download quara
 | `region-read`           | `ops`      | Who may read areas from the server for the selection view (`ops`, `everyone`, `none`). Everyone else falls back to their own loaded chunks.                      |
 | `shared-progress`       | `everyone` | Who may request build progress for shared schematics. Progress reveals whether each position matches, so set `ops` if you worry about players using it to scout. |
 | `max-shared-per-player` | `20`       | How many schematics one player can share at once.                                                                                                                |
+| `terrain-capture`       | `ops`      | Who may include surroundings when sharing (`ops`, `everyone`, `none`). Surroundings can show ores, bases and other players' builds near the schematic.           |
+| `terrain-max-margin`    | `32`       | How many blocks around a schematic the surroundings may reach, up to 64.                                                                                         |
 
-Shared schematics are stored in `<world>/litweb/`.
+Shared schematics are stored in `<world>/litweb/`, with their surroundings in `<id>.terrain.bin`.
 
 Server reads only touch chunks that are already loaded. They never load or generate terrain, so a far-away selection can't stall the server.
 
@@ -77,13 +94,13 @@ Server reads only touch chunks that are already loaded. They never load or gener
 
 The web server binds to `127.0.0.1` only. It rejects requests whose `Host` or `Origin` isn't the local page, so other websites can't read your world or share on your behalf.
 
-The server switcher keeps each server's shared list and the schematics you opened in `config/litweb-servers/`. A copy is deleted once it's unshared or you lose access and you next visit that server. Taking away someone's access doesn't remove a copy they already downloaded.
+The server switcher keeps each server's shared list and the schematics you opened in `config/litweb-servers/`. A copy is deleted once it's unshared or you lose access and you next visit that server. Surroundings aren't kept in these copies, so they only show while you're on that server. Taking away someone's access doesn't remove a copy they already downloaded.
 
 Opening the Shaders tab asks Modrinth for the popular packs' icons and download counts. Getting a pack downloads it from Modrinth. Nothing else leaves your computer, and these requests carry no account or world details. Shader settings are saved in `config/litweb-shaders.json`.
 
 ## Limits
 
-- Views are capped at 16,777,216 blocks (for example 256×256×256). Reads from the world are capped at 4,194,304 blocks because they run on the game thread.
+- Views are capped at 16,777,216 blocks (for example 256×256×256). Reads from the world are capped at 4,194,304 blocks because they run on the game thread. That includes surroundings, so a large schematic can only take a small margin; sizes over the cap can't be picked.
 - Blocks drawn by special renderers without a block model (chests, signs) show as their outline box in their particle texture.
 - Biome tint (grass, leaves, water) is sampled once at the center of the view.
 - The selection view refreshes when the selection changes or when you press <kbd>R</kbd>. It doesn't watch for block edits inside an unchanged selection.

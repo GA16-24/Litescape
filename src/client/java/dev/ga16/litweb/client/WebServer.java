@@ -48,7 +48,12 @@ final class WebServer {
 	/** null until the server has answered a region read; reset on disconnect. */
 	static volatile @Nullable Boolean regionRead;
 
-	private record Cached(String key, Volume volume) {}
+	/** terrainFrom: first palette index of the surroundings (-1 = none); inner: the schematic's box inside volume. */
+	private record Cached(String key, Volume volume, int terrainFrom, int @Nullable [] inner) {
+		Cached(String key, Volume volume) {
+			this(key, volume, -1, null);
+		}
+	}
 	/** Iris shader packs for the web renderer; uses the same shaderpacks folder as Iris. */
 	private static final ShaderApi shaders = new ShaderApi(
 		net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir().resolve("shaderpacks"),
@@ -110,7 +115,15 @@ final class WebServer {
 					case "/api/status" -> json(ex, 200, status(q.getOrDefault("type", ""), q.getOrDefault("id", "")));
 					case "/api/share" -> {
 						if (!post) throw new HttpError(405, "Use POST");
-						json(ex, 200, share(q.getOrDefault("id", "")));
+						json(ex, 200, share(q.getOrDefault("id", ""), margin(q)));
+					}
+					case "/api/capture" -> {
+						if (!post) throw new HttpError(405, "Use POST");
+						JsonObject body = new JsonObject();
+						body.addProperty("id", q.getOrDefault("id", ""));
+						body.addProperty("margin", margin(q));
+						await(Bridge.request("capture", body.toString(), new byte[0]));
+						json(ex, 200, new JsonObject());
 					}
 					case "/api/access" -> {
 						if (!post) throw new HttpError(405, "Use POST");
@@ -178,6 +191,12 @@ final class WebServer {
 		o.addProperty("serverMod", Bridge.serverMod());
 		o.addProperty("regionRead", regionRead == null ? "unknown" : regionRead ? "yes" : "no");
 		o.addProperty("singleplayer", mc.hasSingleplayerServer());
+		String terrain = Bridge.terrainJson;
+		if (terrain != null) {
+			JsonObject t = JsonParser.parseString(terrain).getAsJsonObject();
+			t.add("y", ints(level.getMinY(), level.getMaxY())); // surroundings stop at the world's floor and ceiling
+			o.add("terrain", t);
+		}
 
 		Lit.Selection sel = Lit.selection();
 		if (sel != null) {
@@ -218,6 +237,7 @@ final class WebServer {
 
 	private static JsonObject view(String type, String id, String serverKey) throws Exception {
 		Volume v;
+		Cached withTerrain = null;
 		String source, name;
 		switch (type) {
 			case "selection" -> {
@@ -255,8 +275,10 @@ final class WebServer {
 				source = "shared";
 				name = "";
 				Servers.Id cur = onClient(Servers::current);
-				if (serverKey.isEmpty() || cur != null && cur.key().equals(serverKey)) v = sharedVolume(id, cur);
-				else {
+				if (serverKey.isEmpty() || cur != null && cur.key().equals(serverKey)) {
+					withTerrain = sharedVolume(id, cur);
+					v = withTerrain.volume();
+				} else {
 					// A remembered server: show the copy saved when it was last opened there.
 					byte[] blob = Servers.blob(serverKey, id);
 					if (blob == null) throw new HttpError(404, "not-saved");
@@ -272,6 +294,10 @@ final class WebServer {
 		out.addProperty("source", source);
 		out.add("origin", ints(v.x0, v.y0, v.z0));
 		out.add("size", ints(v.sx, v.sy, v.sz));
+		if (withTerrain != null && withTerrain.inner() != null) {
+			out.addProperty("terrainFrom", withTerrain.terrainFrom());
+			out.add("inner", ints(withTerrain.inner()));
+		}
 		ByteBuffer buf = ByteBuffer.allocate(v.blocks.length * 2).order(ByteOrder.LITTLE_ENDIAN);
 		buf.asShortBuffer().put(v.blocks);
 		out.addProperty("blocks", Base64.getEncoder().encodeToString(buf.array()));
@@ -312,13 +338,13 @@ final class WebServer {
 		return out;
 	}
 
-	private static JsonObject share(String key) throws Exception {
+	private static JsonObject share(String key, int margin) throws Exception {
 		Object[] r = onClient(() -> {
 			SchematicPlacement p = Lit.placement(key);
 			return p == null ? null : new Object[] {p.getName(), placementVolume(p), Lit.author(p)};
 		});
 		if (r == null) throw new HttpError(404, "That placement no longer exists");
-		byte[] id = await(Bridge.upload(key, (String) r[0], (String) r[2], ((Volume) r[1]).encode()));
+		byte[] id = await(Bridge.upload(key, (String) r[0], (String) r[2], margin, ((Volume) r[1]).encode()));
 		JsonObject out = new JsonObject();
 		out.addProperty("id", new String(id, StandardCharsets.UTF_8));
 		return out;
@@ -343,19 +369,39 @@ final class WebServer {
 		return c.volume;
 	}
 
-	private static Volume sharedVolume(String id, Servers.@Nullable Id server) throws Exception {
-		String updated = "";
+	/** The shared schematic, set into its captured surroundings when it has them. */
+	private static Cached sharedVolume(String id, Servers.@Nullable Id server) throws Exception {
+		String version = "";
+		int margin = 0;
 		for (var e : JsonParser.parseString(Bridge.sharedJson).getAsJsonArray()) {
 			JsonObject s = e.getAsJsonObject();
-			if (s.get("id").getAsString().equals(id)) updated = s.get("updated").getAsString();
+			if (!s.get("id").getAsString().equals(id)) continue;
+			margin = s.has("margin") ? s.get("margin").getAsInt() : 0;
+			version = s.get("updated").getAsString() + ":" + (s.has("captured") ? s.get("captured").getAsString() : "");
 		}
 		Cached c = sharedCache;
-		if (c == null || !c.key.equals(id + updated)) {
+		if (c == null || !c.key.equals(id + version)) {
 			byte[] blob = await(Bridge.request("get", id, new byte[0]));
-			sharedCache = c = new Cached(id + updated, Volume.decode(blob));
+			Volume v = Volume.decode(blob);
+			c = new Cached(id + version, v);
+			if (margin > 0) {
+				Volume t = Volume.decode(await(Bridge.request("terrain", id, new byte[0])));
+				Volume all = Volume.around(v, t);
+				if (all != null) c = new Cached(id + version, all, v.palette.size(), new int[] {v.x0 - t.x0, v.y0 - t.y0, v.z0 - t.z0, v.sx, v.sy, v.sz});
+			}
+			sharedCache = c;
+			// shortcut: saved copies for other servers keep only the schematic; cache the terrain too if people miss it offline.
 			if (server != null) Servers.saveBlob(server.key(), id, blob);
 		}
-		return c.volume;
+		return c;
+	}
+
+	private static int margin(Map<String, String> q) throws HttpError {
+		try {
+			return Integer.parseInt(q.getOrDefault("margin", "0"));
+		} catch (NumberFormatException e) {
+			throw new HttpError(400, "Bad margin");
+		}
 	}
 
 	// ---- player skins, for contributor faces ----
