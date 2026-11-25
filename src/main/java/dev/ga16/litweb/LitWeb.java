@@ -310,7 +310,17 @@ public final class LitWeb implements ModInitializer {
 			s.players = old.players;
 		}
 		// Old clients send no margin; they get no surroundings rather than stale ones from before a move.
-		capture(player, s, v, player.level(), meta.has("margin") ? meta.get("margin").getAsInt() : 0);
+		int margin = meta.has("margin") ? meta.get("margin").getAsInt() : 0;
+		if (old != null && old.margin > 0 && margin == old.margin && !allowed(player, "terrain-capture")) {
+			// Someone who may no longer capture keeps the snapshot while the schematic stays put; a move would leave it in the wrong place.
+			if (!Arrays.equals(old.origin, s.origin) || !Arrays.equals(old.size, s.size)) {
+				throw new IOException("This server no longer lets you capture surroundings, so they can't follow the move. Remove them in the Surroundings panel first.");
+			}
+			s.margin = old.margin;
+			s.captured = old.captured;
+			s.chunks = old.chunks;
+			s.chunksCaptured = old.chunksCaptured;
+		} else capture(player, s, v, player.level(), margin);
 		Files.write(dir.resolve(id + ".bin"), data);
 		shared.put(id, s);
 		loaded.put(id, v);
