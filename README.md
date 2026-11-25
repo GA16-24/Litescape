@@ -27,7 +27,7 @@ A Fabric mod for Minecraft 26.3 that shows your Litematica selection and schemat
 - A shared schematic lists its contributors: who placed blocks that match it, how many and when they were last active. Blocks count when a player places them by hand after the schematic was shared; buckets, pistons and commands like `/fill` don't count, and re-placing the same block counts once. Each player shows with their Minecraft face, cropped from their skin. The skin comes from Mojang the same way the game loads skins for player heads; players without one get their default skin. Everyone who can see the shared schematic can see this list. The schematic's author from the Litematica file is shown too.
 - The viewer also has layer slicing (all, up to a layer, single layer), hover to identify a block, click to isolate a material, a filter for remaining blocks or problems, screenshots, and a <kbd>⌘K</kbd> command palette. Light and dark themes follow your system.
 
-Type `/litweb` in game to open the page. The link is also posted in chat when you join a world.
+Type `/litweb` in game to open the viewer, or click the link posted in chat when you join a world. If you use the desktop app, these open the app instead of a browser tab.
 
 ## Shader packs
 
@@ -68,6 +68,8 @@ When the game isn't running, the app lists the instances it found in the Minecra
 - Minecraft Launcher profiles that share a game folder share its mods folder too, so installing into one puts the mod in all of them.
 
 Once the game is running, the app shows the viewer. If you quit the game it goes back to the instance list, and it reconnects when you start the game again. Links to other sites open in your browser.
+
+After you've opened the app with the game running, `/litweb` and the chat link open the app instead of your browser, starting it if it's closed. If the app doesn't respond within 10 seconds, for example because you uninstalled it, the game opens your browser and goes back to using it. The setting is kept in `config/litweb-desktop-app`.
 
 The macOS build isn't notarized yet. The Homebrew cask clears the download quarantine for you. If you install the `.dmg` by hand, macOS will block the first launch until you allow it under System Settings → Privacy & Security.
 
