@@ -276,7 +276,7 @@ public final class ShaderApi {
 	}
 
 	private static HttpRequest request(String url) {
-		return HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(60)).header("User-Agent", "litematica-web-viewer").GET().build();
+		return HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(60)).header("User-Agent", "litescape").GET().build();
 	}
 
 	private static String str(JsonObject o, String k) {

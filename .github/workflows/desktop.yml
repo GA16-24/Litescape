@@ -1,6 +1,7 @@
 name: Desktop release
 
 # Push a tag like desktop-v0.1.0 (matching desktop/package.json) to build the Electron app with the mod jar inside,
+# attach it and the mod jar to this repo's vX.Y.Z release (create that release first),
 # publish it on the public GA16-24/homebrew-tap repo and point the cask at it.
 # PRs that touch the app only run the builds. Keep them out of required checks: the path filter means most PRs never run them.
 on:
@@ -93,13 +94,25 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: homebrew-tap
-    permissions: {}
+    permissions:
+      contents: write # upload the apps and mod jar to this repo's release
     steps:
       - uses: actions/download-artifact@v8.0.2
         with:
           path: dist
           pattern: desktop-*
           merge-multiple: true
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: mod-jar
+          path: mod
+      - name: Attach the apps and mod jar to the Litescape release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#desktop-v}"
+          gh release upload "v$version" dist/* "mod/litescape-$version.jar" --repo "$GITHUB_REPOSITORY" --clobber
       - name: Release on GA16-24/homebrew-tap and update Casks/litescape.rb
         env:
           GH_TOKEN: ${{ secrets.TAP_TOKEN }}
