@@ -2007,8 +2007,8 @@ canvas.addEventListener('pointerdown', (e) => {
 canvas.addEventListener('pointerup', (e) => {
   if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 4 || e.button !== 0) return;
   const hit = voxelAt(e);
-  const e = hit && S.data.palette[S.data.blocks16[hit.i]];
-  if (e && !e.t) isolate(e.mid);
+  const block = hit && S.data.palette[S.data.blocks16[hit.i]];
+  if (block && !block.t) isolate(block.mid);
   else if (S.iso >= 0) isolate(S.iso); // empty space or the surroundings: show everything again
 });
 canvas.addEventListener('wheel', hideHint, { passive: true });
