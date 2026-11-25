@@ -47,12 +47,12 @@ test('mcMatches', () => {
 test('finds instances in each launcher and installs only where the mod can load', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'litescape-'));
   const libs = path.join(tmp, 'libs');
-  jar(path.join(libs, 'litematica-web-viewer-0.2.0.jar'), {
+  jar(path.join(libs, 'litescape-0.2.0.jar'), {
     id: 'litweb',
     version: '0.2.0',
     depends: { minecraft: '~26.3' },
   });
-  write(path.join(libs, 'litematica-web-viewer-0.2.0-sources.jar'), 'not a mod');
+  write(path.join(libs, 'litescape-0.2.0-sources.jar'), 'not a mod');
   const mod = bundledMod(libs);
   assert.equal(mod.version, '0.2.0');
 
@@ -124,8 +124,8 @@ test('finds instances in each launcher and installs only where the mod can load'
   install(ready, mod);
   assert.deepEqual(fs.readdirSync(path.join(ready, 'mods')).sort(), [
     'fabric-api.jar',
-    'litematica-web-viewer-0.2.0.jar',
     'litematica.jar',
+    'litescape-0.2.0.jar',
   ]);
   found = byName();
   assert.equal(found['Build world'].installed, '0.2.0');
