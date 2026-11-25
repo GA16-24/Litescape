@@ -1,4 +1,5 @@
 ---
+
 name: issue-to-merge
 description: The route every change in this repo takes, from issue to triage to PR to merge. Use when opening an issue, triaging one, starting work on one, filing or babysitting a PR, or merging and closing.
 ---
@@ -41,14 +42,14 @@ Security problems never go in an issue. Follow [SECURITY.md](../../../SECURITY.m
 
 Read the issue, reproduce it if you can, and give it one outcome:
 
-| Outcome | Labels | Action |
-|---|---|---|
-| Accepted bug | `bug` | Comment with what you confirmed. Add `help wanted` or `good first issue` if outside PRs are welcome. |
-| Accepted feature | `enhancement` | Comment that the feature is agreed and what scope it has. Feature PRs need this comment. |
-| Needs info | `question` | Ask for the missing versions, steps or logs. |
-| Duplicate | `duplicate` | Link the original and close as not planned. |
-| Out of scope | `wontfix` | Quote the CONTRIBUTING rule it breaks and close as not planned. |
-| Not a bug | `invalid` | Say what is happening instead and close as not planned. |
+| Outcome          | Labels        | Action                                                                                               |
+| ---------------- | ------------- | ---------------------------------------------------------------------------------------------------- |
+| Accepted bug     | `bug`         | Comment with what you confirmed. Add `help wanted` or `good first issue` if outside PRs are welcome. |
+| Accepted feature | `enhancement` | Comment that the feature is agreed and what scope it has. Feature PRs need this comment.             |
+| Needs info       | `question`    | Ask for the missing versions, steps or logs.                                                         |
+| Duplicate        | `duplicate`   | Link the original and close as not planned.                                                          |
+| Out of scope     | `wontfix`     | Quote the CONTRIBUTING rule it breaks and close as not planned.                                      |
+| Not a bug        | `invalid`     | Say what is happening instead and close as not planned.                                              |
 
 ```sh
 gh issue edit <n> --add-label bug --add-label "help wanted"
