@@ -674,7 +674,7 @@ async function pollStatus(now) {
       }
       const total = r.counts.slice(1).reduce((a, b) => a + b, 0);
       S.pct.set(key, total ? r.counts[1] / total : 0);
-      renderInspector();
+      if (!$('inspector').querySelector(':active')) renderInspector(); // a rebuild mid-press swallows the click; the next poll catches up
       renderNav();
       renderTop();
     }
@@ -1244,6 +1244,7 @@ function renderFoot() {
     <div class="foot-line">${ICON.server}<span>${server}</span></div>`;
 }
 
+let lastChips = null;
 function renderTop() {
   const d = S.desc,
     a = S.api,
@@ -1293,12 +1294,14 @@ function renderTop() {
           ? `<button type="button" class="chip warn" data-open-shaders data-tip="${esc(SH.error || '')}">${esc(name)} failed</button>`
           : `<button type="button" class="chip accent" data-open-shaders data-tip="Open shader settings">${ICON.sparkle}${esc(name)}</button>`;
   }
-  $('chips').innerHTML = chips;
+  if (chips !== lastChips) $('chips').innerHTML = lastChips = chips; // polls re-render every second
   const has = !!data;
   for (const id of ['act-refresh', 'act-fit', 'act-shot', 'act-shaders']) $(id).disabled = !has;
   $('act-shaders').setAttribute('aria-pressed', String(!!SH.settings.enabled));
 }
 
+// Status polls re-render every 2 s; rewriting unchanged HTML would close open dropdowns and drop clicks.
+let lastInspector = null;
 function renderInspector() {
   const el = $('inspector');
   const d = S.desc,
@@ -1308,6 +1311,7 @@ function renderInspector() {
   $('toggle-inspector').hidden = !data;
   if (!data || !d || !a) {
     el.innerHTML = '';
+    lastInspector = null;
     return;
   }
   const scrollTop = el.scrollTop;
@@ -1321,8 +1325,11 @@ function renderInspector() {
     )
     .join('')}</div>`;
   if (SH.tab === 'shaders') {
-    el.innerHTML = h + renderShaders();
-    el.scrollTop = scrollTop;
+    h += renderShaders();
+    if (h !== lastInspector) {
+      el.innerHTML = lastInspector = h;
+      el.scrollTop = scrollTop;
+    }
     const f = $('sh-search');
     if (f && SH.searchFocus && document.activeElement !== f) {
       f.focus();
@@ -1433,8 +1440,10 @@ function renderInspector() {
       )}${mats.length > 300 ? `<div class="mats-more">${mats.length - 300} more. Filter to find them.</div>` : ''}${!mats.length ? '<div class="mats-more">No matching materials</div>' : ''}</div></section>`;
 
   const typing = document.activeElement?.id === 'access-add' ? document.activeElement.selectionStart : -1;
-  el.innerHTML = h;
-  el.scrollTop = scrollTop;
+  if (h !== lastInspector) {
+    el.innerHTML = lastInspector = h;
+    el.scrollTop = scrollTop;
+  }
   if (S.scrollToAccess && $('access')) {
     S.scrollToAccess = false;
     $('access').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
