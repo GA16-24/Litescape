@@ -109,6 +109,29 @@ public final class Volume {
 		return out;
 	}
 
+	/**
+	 * This schematic set into the terrain captured around it. The palette holds the schematic's states first and
+	 * the terrain's from index schematic.palette.size() on, duplicates and all, so the viewer can tell them apart.
+	 * Returns null when the terrain doesn't contain the schematic or the palettes don't fit together.
+	 */
+	public static @Nullable Volume around(Volume s, Volume t) {
+		int dx = s.x0 - t.x0, dy = s.y0 - t.y0, dz = s.z0 - t.z0, off = s.palette.size();
+		if (dx < 0 || dy < 0 || dz < 0 || dx + s.sx > t.sx || dy + s.sy > t.sy || dz + s.sz > t.sz || off + t.palette.size() > 65535) return null;
+		Volume v = new Volume(t.x0, t.y0, t.z0, t.sx, t.sy, t.sz);
+		v.palette.clear(); // idOf() would dedupe across the two halves; nothing calls it on this volume
+		v.index.clear();
+		v.palette.addAll(s.palette);
+		v.palette.addAll(t.palette);
+		for (int i = 0; i < t.blocks.length; i++) v.blocks[i] = (short) ((t.blocks[i] & 0xFFFF) + off);
+		for (int y = 0, i = 0; y < s.sy; y++)
+			for (int z = 0; z < s.sz; z++)
+				for (int x = 0; x < s.sx; x++, i++) {
+					BlockState want = s.palette.get(s.blocks[i]);
+					if (want != null && !want.isAir()) v.blocks[v.at(x + dx, y + dy, z + dz)] = s.blocks[i];
+				}
+		return v;
+	}
+
 	public byte[] encode() {
 		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
 		try (DataOutputStream out = new DataOutputStream(new DeflaterOutputStream(bytes))) {
