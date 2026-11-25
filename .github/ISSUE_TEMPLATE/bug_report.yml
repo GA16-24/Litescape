@@ -1,0 +1,84 @@
+name: Bug report
+description: Something is broken, renders wrong or crashes.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search [open and closed issues](https://github.com/GA16-24/Litescape/issues?q=is%3Aissue) first. If one matches, add what you saw there.
+
+        Only Fabric on the Minecraft version in the README is supported. Security problems go through [SECURITY.md](https://github.com/GA16-24/Litescape/blob/main/SECURITY.md), not here.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw and what you expected instead. A screenshot or short video helps a lot for anything visual.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The fewest steps that still show the bug. If it only happens with other mods installed, name them.
+      placeholder: |
+        1. Open a placement that has glass windows.
+        2. In the Shaders tab, pick MakeUp Ultra Fast and set the time to night.
+        3. Orbit until you face the windows.
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does it happen?
+      multiple: true
+      options:
+        - In game (the mod, commands, chat link)
+        - Web viewer in a browser
+        - Desktop app
+        - Shaders tab
+        - Sharing placements on a server
+    validations:
+      required: true
+  - type: dropdown
+    id: world
+    attributes:
+      label: World
+      options:
+        - Singleplayer
+        - Server with the mod installed
+        - Server without the mod
+        - Not in a world (for example, the desktop app before the game starts)
+    validations:
+      required: true
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: Use exact versions; "latest" isn't one. The mod version is in the jar's file name, or give the commit if you built it.
+      value: |
+        Mod:
+        Minecraft:
+        Fabric Loader:
+        Fabric API:
+        Litematica and malilib:
+        Server (if any), with its mod version:
+    validations:
+      required: true
+  - type: input
+    id: shader
+    attributes:
+      label: Shader pack and settings
+      description: Only for rendering bugs with shaders on. Pack name and version, plus any Scene settings you changed (time, weather, resolution, shadows).
+      placeholder: MakeUp Ultra Fast 9.6a, time 16100, Shadows off, Clear, 100%
+  - type: input
+    id: system
+    attributes:
+      label: Browser, OS and GPU
+      description: For viewer and rendering bugs. Write "Desktop app" as the browser if you use the app.
+      placeholder: Chrome 142, Windows 11, NVIDIA RTX 3060
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Drag in `logs/latest.log` from your Minecraft folder, and the crash report from `crash-reports/` if the game crashed. For viewer bugs, copy any red errors from the browser console (F12).
