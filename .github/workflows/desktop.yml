@@ -1,0 +1,117 @@
+name: Desktop release
+
+# Push a tag like desktop-v0.1.0 (matching desktop/package.json) to build the Electron app,
+# publish it on the public GA16-24/homebrew-tap repo and point the cask at it.
+on:
+  push:
+    tags: ['desktop-v*']
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    strategy:
+      matrix:
+        os: [macos-15, windows-2025, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci
+      - name: Tag matches package.json version
+        shell: bash
+        run: test "desktop-v$(node -p 'require("./package.json").version')" = "$GITHUB_REF_NAME"
+      - run: npm run dist
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: desktop-${{ matrix.os }}
+          path: |
+            desktop/dist/*.dmg
+            desktop/dist/*.exe
+            desktop/dist/*.AppImage
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish release and cask
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: homebrew-tap
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Release on GA16-24/homebrew-tap and update Casks/litescape.rb
+        env:
+          GH_TOKEN: ${{ secrets.TAP_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#desktop-v}"
+          gh release create "v$version" dist/* --repo GA16-24/homebrew-tap --title "Litescape $version" \
+            --notes "Desktop app for Litescape $version. Install with \`brew install --cask GA16-24/tap/litescape\`."
+          sha() { sha256sum "dist/Litescape-$version-$1" | cut -d' ' -f1; }
+          mac=$(sha mac-universal.dmg)
+          x64=$(sha linux-x86_64.AppImage)
+          arm=$(sha linux-arm64.AppImage)
+
+          git clone --depth 1 "https://x-access-token:$GH_TOKEN@github.com/GA16-24/homebrew-tap.git" tap
+          mkdir -p tap/Casks
+          cat > tap/Casks/litescape.rb <<EOF
+          cask "litescape" do
+            arch arm: "arm64", intel: "x86_64"
+            platform_suffix = on_system_conditional macos: "mac-universal.dmg", linux: "linux-#{arch}.AppImage"
+
+            version "$version"
+            sha256 arm:          "$mac",
+                   intel:        "$mac",
+                   arm64_linux:  "$arm",
+                   x86_64_linux: "$x64"
+
+            on_macos do
+              app "Litescape.app"
+
+              # shortcut: the app is only ad-hoc signed, so Gatekeeper would block it; drop this once it is notarized.
+              postflight_steps do
+                run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{appdir}}/Litescape.app"]
+              end
+
+              zap trash: "~/Library/Application Support/Litescape"
+            end
+            on_linux do
+              app_image "Litescape-#{version}-linux-#{arch}.AppImage", target: "Litescape.AppImage"
+
+              zap trash: "~/.config/Litescape"
+            end
+
+            url "https://github.com/GA16-24/homebrew-tap/releases/download/v#{version}/Litescape-#{version}-#{platform_suffix}"
+            name "Litescape"
+            desc "Desktop viewer for Litematica schematics from the Litescape Minecraft mod"
+            homepage "https://github.com/GA16-24/homebrew-tap"
+          end
+          EOF
+
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/litescape.rb
+          git commit -m "litescape $version"
+          git push

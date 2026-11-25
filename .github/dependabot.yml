@@ -15,3 +15,9 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /desktop
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
