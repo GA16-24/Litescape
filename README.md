@@ -77,10 +77,10 @@ The macOS build isn't notarized yet. The Homebrew cask clears the download quara
 
 The mod also works on its own, with the viewer in a browser tab. Put the jar in your mods folder yourself:
 
-| Where             | Needs                                                                        |
-| ----------------- | ---------------------------------------------------------------------------- |
-| Client            | Fabric Loader 0.20.1+, Fabric API, Litematica 0.29.1 (and MaLiLib), this mod |
-| Server (optional) | Fabric Loader, Fabric API, this mod. The server doesn't need Litematica.     |
+| Where             | Needs                                                                                                                                                                                                                                                                            |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Client            | Fabric Loader 0.20.1+, Fabric API, Litematica 0.29.1 (and MaLiLib), this mod                                                                                                                                                                                                     |
+| Server (optional) | On a Fabric server:<br>1. Download the jar from [Modrinth](https://modrinth.com/mod/litescape).<br>2. Put it and [Fabric API](https://modrinth.com/mod/fabric-api) in `mods/`.<br>3. Restart the server.<br>It doesn't need Litematica. See [Server settings](#server-settings). |
 
 It's one jar for both sides. Servers always install it by hand. Without the server part, the client reads blocks from the chunks it has loaded and the page tells you what percentage of the area is covered.
 
