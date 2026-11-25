@@ -19,10 +19,12 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.util.zip.DeflaterOutputStream;
 import net.fabricmc.api.ModInitializer;
@@ -74,8 +76,9 @@ public final class LitWeb implements ModInitializer {
 	private static @org.jspecify.annotations.Nullable LitWeb instance;
 	private @org.jspecify.annotations.Nullable MinecraftServer server;
 	private boolean contributorsDirty;
-	/** Positions already credited, so breaking and re-placing a block doesn't count twice. Kept until restart. */
+	/** Positions already credited, so breaking and re-placing a block doesn't count twice. Saved as <id>.credited. */
 	private final Map<String, java.util.BitSet> credited = new HashMap<>();
+	private final Set<String> creditedDirty = new HashSet<>();
 
 	private final Map<String, Shared> shared = new LinkedHashMap<>();
 	private final Map<String, Volume> loaded = new HashMap<>();
@@ -117,6 +120,7 @@ public final class LitWeb implements ModInitializer {
 		shared.clear();
 		loaded.clear();
 		credited.clear();
+		creditedDirty.clear();
 		Path cfg = FabricLoader.getInstance().getConfigDir().resolve("litweb-server.properties");
 		config.setProperty("region-read", "ops");
 		config.setProperty("shared-progress", "everyone");
@@ -191,7 +195,9 @@ public final class LitWeb implements ModInitializer {
 				shared.remove(s.id);
 				loaded.remove(s.id);
 				credited.remove(s.id);
+				creditedDirty.remove(s.id);
 				Files.deleteIfExists(dir.resolve(s.id + ".bin"));
+				Files.deleteIfExists(dir.resolve(s.id + ".credited"));
 				saveIndexAndBroadcast(server);
 				send(player, req.req(), "", new byte[0]);
 			}
@@ -259,10 +265,11 @@ public final class LitWeb implements ModInitializer {
 			}
 			// The right block counts even if its orientation still needs fixing.
 			if (want == null || want.isAir() || want.getBlock() != placed.getBlock()) continue;
-			java.util.BitSet done = credited.computeIfAbsent(s.id, k -> new java.util.BitSet());
+			java.util.BitSet done = credited.computeIfAbsent(s.id, this::readCredited);
 			int index = (y * s.size[2] + z) * s.size[0] + x;
 			if (done.get(index)) continue;
 			done.set(index);
+			creditedDirty.add(s.id);
 			Contributor c = s.contributors.computeIfAbsent(player.getStringUUID(), k -> new Contributor());
 			c.name = player.getPlainTextName();
 			c.placed++;
@@ -275,9 +282,23 @@ public final class LitWeb implements ModInitializer {
 		if (!contributorsDirty || server == null || dir == null) return;
 		contributorsDirty = false;
 		try {
+			for (String id : creditedDirty) {
+				if (shared.containsKey(id)) Files.write(dir.resolve(id + ".credited"), credited.get(id).toByteArray());
+			}
+			creditedDirty.clear();
 			saveIndexAndBroadcast(server);
 		} catch (IOException e) {
 			LOG.warn("Could not save contribution counts", e);
+		}
+	}
+
+	private java.util.BitSet readCredited(String id) {
+		Path file = dir.resolve(id + ".credited");
+		try {
+			return Files.exists(file) ? java.util.BitSet.valueOf(Files.readAllBytes(file)) : new java.util.BitSet();
+		} catch (IOException e) {
+			LOG.warn("Could not read credited blocks for {}", id, e);
+			return new java.util.BitSet();
 		}
 	}
 

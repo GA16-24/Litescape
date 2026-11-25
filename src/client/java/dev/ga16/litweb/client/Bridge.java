@@ -23,6 +23,7 @@ final class Bridge {
 	private static final AtomicInteger nextReq = new AtomicInteger(1);
 	/** Shared-schematic list JSON as last pushed by the server; "[]" when there is no server mod. */
 	static volatile String sharedJson = "[]";
+	private static final ByteArrayOutputStream pushed = new ByteArrayOutputStream();
 	/** Serializes uploads: the server keeps one upload buffer per player. */
 	private static CompletableFuture<?> uploadChain = CompletableFuture.completedFuture(null);
 
@@ -72,7 +73,10 @@ final class Bridge {
 
 	static void onReply(Reply r) {
 		if (r.req() == Net.PUSH_LIST) {
-			sharedJson = new String(r.data(), StandardCharsets.UTF_8);
+			// A list over one reply part arrives in several pushes.
+			if (r.part() == 0) pushed.reset();
+			pushed.writeBytes(r.data());
+			if (r.part() == r.parts() - 1) sharedJson = pushed.toString(StandardCharsets.UTF_8);
 			return;
 		}
 		Pending p = pending.get(r.req());
