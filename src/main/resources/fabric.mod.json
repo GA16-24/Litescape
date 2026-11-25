@@ -10,6 +10,7 @@
 		"main": ["dev.ga16.litweb.LitWeb"],
 		"client": ["dev.ga16.litweb.client.LitWebClient"]
 	},
+	"mixins": ["litweb.mixins.json"],
 	"depends": {
 		"fabricloader": ">=0.20.1",
 		"minecraft": "~26.3",

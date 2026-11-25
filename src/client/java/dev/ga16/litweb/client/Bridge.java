@@ -42,7 +42,7 @@ final class Bridge {
 		return p.future.orTimeout(60, TimeUnit.SECONDS).whenComplete((r, e) -> pending.remove(req));
 	}
 
-	static synchronized CompletableFuture<byte[]> upload(String key, String name, byte[] blob) {
+	static synchronized CompletableFuture<byte[]> upload(String key, String name, String author, byte[] blob) {
 		CompletableFuture<byte[]> result = uploadChain.handle((r, e) -> null).thenCompose(ignored -> {
 			int req = nextReq.getAndIncrement();
 			Pending p = new Pending(new CompletableFuture<>(), new ByteArrayOutputStream());
@@ -57,6 +57,7 @@ final class Bridge {
 					JsonObject meta = new JsonObject();
 					meta.addProperty("key", key);
 					meta.addProperty("name", name);
+					meta.addProperty("author", author);
 					meta.addProperty("part", i);
 					meta.addProperty("parts", parts);
 					byte[] chunk = Arrays.copyOfRange(blob, i * Net.UP_PART, Math.min(blob.length, (i + 1) * Net.UP_PART));

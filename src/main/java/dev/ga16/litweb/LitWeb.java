@@ -58,10 +58,24 @@ public final class LitWeb implements ModInitializer {
 
 	/** Metadata for one shared schematic; the blocks live in <id>.bin. */
 	public static final class Shared {
-		public String id, name, owner, ownerName, dim;
+		public String id, name, owner, ownerName, dim, author;
 		public int[] origin, size;
 		public long updated;
+		/** Player UUID -> blocks they placed that match the schematic, counted since it was shared. */
+		public Map<String, Contributor> contributors = new LinkedHashMap<>();
 	}
+
+	public static final class Contributor {
+		public String name;
+		public int placed;
+		public long last;
+	}
+
+	private static @org.jspecify.annotations.Nullable LitWeb instance;
+	private @org.jspecify.annotations.Nullable MinecraftServer server;
+	private boolean contributorsDirty;
+	/** Positions already credited, so breaking and re-placing a block doesn't count twice. Kept until restart. */
+	private final Map<String, java.util.BitSet> credited = new HashMap<>();
 
 	private final Map<String, Shared> shared = new LinkedHashMap<>();
 	private final Map<String, Volume> loaded = new HashMap<>();
@@ -74,7 +88,13 @@ public final class LitWeb implements ModInitializer {
 	public void onInitialize() {
 		PayloadTypeRegistry.serverboundPlay().register(Req.TYPE, Req.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(Reply.TYPE, Reply.CODEC);
+		instance = this;
 		ServerLifecycleEvents.SERVER_STARTED.register(this::load);
+		ServerLifecycleEvents.SERVER_STOPPING.register(s -> flushContributors());
+		// Contribution counts change on every placed block; save and push them at most every 5 seconds.
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(s -> {
+			if (s.getTickCount() % 100 == 0) flushContributors();
+		});
 		ServerPlayConnectionEvents.DISCONNECT.register((h, s) -> {
 			uploads.remove(h.player.getUUID());
 			lastStatus.remove(h.player.getUUID());
@@ -93,8 +113,10 @@ public final class LitWeb implements ModInitializer {
 	}
 
 	private void load(MinecraftServer server) {
+		this.server = server;
 		shared.clear();
 		loaded.clear();
+		credited.clear();
 		Path cfg = FabricLoader.getInstance().getConfigDir().resolve("litweb-server.properties");
 		config.setProperty("region-read", "ops");
 		config.setProperty("shared-progress", "everyone");
@@ -114,7 +136,10 @@ public final class LitWeb implements ModInitializer {
 			Path index = dir.resolve("index.json");
 			if (Files.exists(index)) {
 				List<Shared> list = GSON.fromJson(Files.readString(index), new TypeToken<List<Shared>>() {}.getType());
-				if (list != null) for (Shared s : list) shared.put(s.id, s);
+				if (list != null) for (Shared s : list) {
+					if (s.contributors == null) s.contributors = new LinkedHashMap<>(); // index.json from before contributors existed
+					shared.put(s.id, s);
+				}
 			}
 		} catch (IOException e) {
 			LOG.error("Could not load litweb data", e);
@@ -165,6 +190,7 @@ public final class LitWeb implements ModInitializer {
 				}
 				shared.remove(s.id);
 				loaded.remove(s.id);
+				credited.remove(s.id);
 				Files.deleteIfExists(dir.resolve(s.id + ".bin"));
 				saveIndexAndBroadcast(server);
 				send(player, req.req(), "", new byte[0]);
@@ -204,11 +230,55 @@ public final class LitWeb implements ModInitializer {
 		s.origin = new int[] {v.x0, v.y0, v.z0};
 		s.size = new int[] {v.sx, v.sy, v.sz};
 		s.updated = System.currentTimeMillis();
+		if (meta.has("author")) s.author = meta.get("author").getAsString().substring(0, Math.min(64, meta.get("author").getAsString().length()));
+		Shared old = shared.get(id);
+		if (old != null) s.contributors = old.contributors; // "Update copy" keeps who helped so far
 		Files.write(dir.resolve(id + ".bin"), data);
 		shared.put(id, s);
 		loaded.put(id, v);
 		saveIndexAndBroadcast(server);
 		send(player, req.req(), "", id.getBytes(StandardCharsets.UTF_8));
+	}
+
+	/** Called by the BlockItem mixin on the server thread after a player places a block. */
+	public static void onPlaced(ServerPlayer player, BlockPos pos, BlockState placed) {
+		if (instance != null) instance.placed(player, pos, placed);
+	}
+
+	private void placed(ServerPlayer player, BlockPos pos, BlockState placed) {
+		String dim = player.level().dimension().identifier().toString();
+		for (Shared s : shared.values()) {
+			int x = pos.getX() - s.origin[0], y = pos.getY() - s.origin[1], z = pos.getZ() - s.origin[2];
+			if (!s.dim.equals(dim) || x < 0 || y < 0 || z < 0 || x >= s.size[0] || y >= s.size[1] || z >= s.size[2]) continue;
+			BlockState want;
+			try {
+				Volume v = volume(s);
+				want = v.palette.get(v.blocks[v.at(x, y, z)]);
+			} catch (IOException e) {
+				continue;
+			}
+			// The right block counts even if its orientation still needs fixing.
+			if (want == null || want.isAir() || want.getBlock() != placed.getBlock()) continue;
+			java.util.BitSet done = credited.computeIfAbsent(s.id, k -> new java.util.BitSet());
+			int index = (y * s.size[2] + z) * s.size[0] + x;
+			if (done.get(index)) continue;
+			done.set(index);
+			Contributor c = s.contributors.computeIfAbsent(player.getStringUUID(), k -> new Contributor());
+			c.name = player.getPlainTextName();
+			c.placed++;
+			c.last = System.currentTimeMillis();
+			contributorsDirty = true;
+		}
+	}
+
+	private void flushContributors() {
+		if (!contributorsDirty || server == null || dir == null) return;
+		contributorsDirty = false;
+		try {
+			saveIndexAndBroadcast(server);
+		} catch (IOException e) {
+			LOG.warn("Could not save contribution counts", e);
+		}
 	}
 
 	private Shared require(String id) throws IOException {

@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
 import { OrbitControls } from './vendor/OrbitControls.js';
+import { Iris } from './iris.js';
 
 const $ = (id) => document.getElementById(id);
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
@@ -28,6 +29,13 @@ const ICON = {
   cmd: '<svg class="i" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>',
   stop: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9 9l6 6M15 9l-6 6"/></svg>',
   retry: '<svg class="i" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>',
+  folder: '<svg class="i" viewBox="0 0 24 24"><path d="M3.5 7a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg>',
+  download: '<svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5"/><path d="M5 19h14"/></svg>',
+  sparkle: '<svg class="i" viewBox="0 0 24 24"><path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.5l-1.9-5.7-5.6-1.9L10.1 9z"/></svg>',
+  back: '<svg class="i" viewBox="0 0 24 24"><path d="m14.5 6-6 6 6 6"/></svg>',
+  chevron: '<svg class="i" viewBox="0 0 24 24"><path d="m9.5 6 6 6-6 6"/></svg>',
+  sun: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>',
+  moon: '<svg class="i" viewBox="0 0 24 24"><path d="M19.5 14.5A7.5 7.5 0 0 1 9.5 4.5a7.5 7.5 0 1 0 10 10z"/></svg>',
 };
 
 // ---------------------------------------------------------------- app state
@@ -115,9 +123,12 @@ function resize() {
 }
 new ResizeObserver(resize).observe($('stage'));
 controls.addEventListener('change', () => { needsRender = true; });
-function frame() {
+function frame(now) {
   requestAnimationFrame(frame);
   controls.update();
+  const shaded = shaderOn();
+  if ($('gl-iris').hidden === shaded) syncShaderView(); // e.g. the loading overlay just went away
+  if (shaded) { renderIris(now); return; }
   if (!needsRender) return;
   needsRender = false;
   renderer.render(scene, camera);
@@ -199,7 +210,9 @@ worker.onmessage = (e) => {
   S.vis = e.data.vis;
   meshes.forEach((m) => { root.remove(m); m.geometry.dispose(); });
   meshes.length = 0;
-  e.data.groups.forEach((g, i) => {
+  SH.meshReady = e.data.iris;
+  if (e.data.iris) iris.setMesh(e.data.groups);
+  else e.data.groups.forEach((g, i) => {
     if (!g.idx.length) return;
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(g.pos, 3));
@@ -213,6 +226,7 @@ worker.onmessage = (e) => {
     meshes.push(m);
   });
   needsRender = true;
+  syncShaderView();
   if (S.pendingFit) { S.pendingFit = false; fit(); }
   hideOverlayIfLoaded();
 };
@@ -225,7 +239,7 @@ function remesh() {
     meshQueued = false;
     const d = S.data;
     const [y0, y1] = layerRange();
-    worker.postMessage({ type: 'mesh', seq: ++meshSeq, opts: { y0, y1, filter: S.status ? S.filter : 'all', ghosts: S.ghosts, iso: S.iso, status: S.status } });
+    worker.postMessage({ type: 'mesh', seq: ++meshSeq, opts: { y0, y1, filter: S.status ? S.filter : 'all', ghosts: S.ghosts, iso: S.iso, status: S.status, iris: shaderWanted(), separateAo: !!iris?.separateAo } });
     setGridY(y0);
   });
 }
@@ -295,12 +309,14 @@ function prepare(data, atlas, refit) {
   atlasTex.flipY = false;
   atlasTex.colorSpace = THREE.SRGBColorSpace;
   materials.forEach((m) => { m.map = atlasTex; m.needsUpdate = true; });
+  iris?.setAtlas(atlas.canvas);
 
   const pal = data.palette.map((e) => e && {
-    air: e.air, opaque: !!e.opaque, selfCull: !!e.selfCull, mid: e.mid ?? -1, f: e.f || null,
+    air: e.air, opaque: !!e.opaque, selfCull: !!e.selfCull, mid: e.mid ?? -1, f: e.f || null, light: e.light || 0,
     q: new Float32Array((e.q || []).flat()),
   });
   worker.postMessage({ type: 'load', sx: data.size[0], sy: data.size[1], sz: data.size[2], blocks: data.blocks16, pal, rects: atlas.rects });
+  sendEnt();
   buildHelpers(data);
   countMaterials();
   if (refit) S.pendingFit = true;
@@ -726,9 +742,16 @@ function renderTop() {
     if (S.counts && S.connected) chips += `<span class="chip live" data-tip="Build progress updates every 2 seconds">Live</span>`;
     if (S.connected === false) chips += `<span class="chip warn">Offline</span>`;
   }
+  if (data && SH.settings.enabled && SH.settings.pack) {
+    const name = packName(SH.settings.pack);
+    chips += SH.status === 'compiling' ? `<button type="button" class="chip accent" data-open-shaders data-tip="Open shader settings"><span class="spinner xs"></span>${esc(name)}</button>`
+      : SH.status === 'error' ? `<button type="button" class="chip warn" data-open-shaders data-tip="${esc(SH.error || '')}">${esc(name)} failed</button>`
+      : `<button type="button" class="chip accent" data-open-shaders data-tip="Open shader settings">${ICON.sparkle}${esc(name)}</button>`;
+  }
   $('chips').innerHTML = chips;
   const has = !!data;
-  for (const id of ['act-refresh', 'act-fit', 'act-shot']) $(id).disabled = !has;
+  for (const id of ['act-refresh', 'act-fit', 'act-shot', 'act-shaders']) $(id).disabled = !has;
+  $('act-shaders').setAttribute('aria-pressed', String(!!SH.settings.enabled));
 }
 
 function renderInspector() {
@@ -738,7 +761,14 @@ function renderInspector() {
   $('toggle-inspector').hidden = !data;
   if (!data || !d || !a) { el.innerHTML = ''; return; }
   const scrollTop = el.scrollTop;
-  let h = '';
+  let h = `<div class="tabs" role="tablist" aria-label="Panel">${[['details', 'Details'], ['shaders', 'Shaders']].map(([k, l]) => `<button type="button" role="tab" id="tab-${k}" aria-selected="${SH.tab === k}" aria-controls="inspector" tabindex="${SH.tab === k ? 0 : -1}" data-tab="${k}">${l}${k === 'shaders' && SH.settings.enabled ? '<span class="tab-dot" aria-label="on"></span>' : ''}</button>`).join('')}</div>`;
+  if (SH.tab === 'shaders') {
+    el.innerHTML = h + renderShaders();
+    el.scrollTop = scrollTop;
+    const f = $('sh-search');
+    if (f && SH.searchFocus && document.activeElement !== f) { f.focus(); f.setSelectionRange(f.value.length, f.value.length); }
+    return;
+  }
 
   if (S.counts) {
     const c = S.counts;
@@ -763,23 +793,27 @@ function renderInspector() {
     if (data.unknown) facts.push(['Not loaded', fmt.format(data.unknown) + ' blocks']);
   }
   const sh = d.type === 'shared' ? a.shared?.find((s) => s.id === d.id) : null;
+  const pl = d.type === 'placement' ? a.placements?.find((p) => p.id === d.id) : null;
+  const author = sh?.author || pl?.author;
+  if (author) facts.push(['Author', author]);
   if (sh) {
     facts.push(['Shared by', sh.mine ? 'You' : sh.ownerName]);
     facts.push(['Dimension', sh.dim.replace('minecraft:', '')]);
     facts.push(['Shared', new Date(sh.updated).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })]);
   }
   h += `<section class="panel"><div class="panel-head"><h3>Overview</h3></div><dl class="facts">${facts.map(([k, v]) => `<dt>${k}</dt><dd title="${esc(v)}">${esc(v)}</dd>`).join('')}</dl>`;
-  const pl = d.type === 'placement' ? a.placements?.find((p) => p.id === d.id) : null;
   if (pl) {
     const busy = S.busy.has(pl.id);
     h += pl.sharedId
       ? `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-share-now="${esc(pl.id)}" ${busy ? 'disabled' : ''}>${ICON.share}Update copy</button><button class="btn" data-unshare="${esc(pl.sharedId)}" data-key-of="${esc(pl.id)}">${ICON.stop}Stop sharing</button></div>
          <p class="updated" style="margin:0 0 12px">Shared. Use Update copy after you move or edit the placement.</p>`
       : `<div class="btn-row" style="margin:0 0 6px"><button class="btn primary" data-share-now="${esc(pl.id)}" ${!a.serverMod || busy ? 'disabled' : ''}>${ICON.share}${busy ? 'Sharing…' : 'Share to server'}</button></div>
-         <p class="updated" style="margin:0 0 12px">${a.serverMod ? 'Other players can then view it and follow the build from their browser.' : 'The server needs Litematica Web Viewer to share schematics.'}</p>`;
+         <p class="updated" style="margin:0 0 12px">${a.serverMod ? 'Other players can then view it, follow the build from their browser and see who helped.' : 'The server needs Litematica Web Viewer to share schematics.'}</p>`;
   }
   if (sh && sh.mine) h += `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-unshare="${esc(sh.id)}">${ICON.stop}Stop sharing</button></div>`;
   h += '</section>';
+  const shared = sh || (pl?.sharedId && a.shared?.find((s) => s.id === pl.sharedId));
+  if (shared) h += contributorsHtml(shared, a.player);
 
   const q = S.matQuery.toLowerCase();
   const mats = data.mats.filter((m) => m.total && (!q || m.name.toLowerCase().includes(q)))
@@ -800,6 +834,35 @@ function renderInspector() {
   el.scrollTop = scrollTop;
   const f = $('mat-filter');
   if (f && document.activeElement?.id !== 'mat-filter' && S.matFocus) { f.focus(); f.setSelectionRange(f.value.length, f.value.length); }
+}
+
+/** Who placed blocks of a shared schematic. The server counts placed blocks that match it, from when it was shared. */
+function contributorsHtml(sh, me) {
+  const list = Object.entries(sh.contributors || {}).map(([uuid, c]) => ({ uuid, ...c })).sort((x, y) => y.placed - x.placed);
+  const total = list.reduce((n, c) => n + c.placed, 0);
+  let h = `<section class="panel"><div class="panel-head"><h3>Contributors</h3>${total ? `<span class="row-meta num">${fmt.format(total)} placed</span>` : ''}</div>`;
+  if (!list.length) {
+    return h + '<p class="updated" style="margin:0 0 12px">Nobody has placed a block of it yet. Blocks placed by hand count from the moment it was shared.</p></section>';
+  }
+  h += '<div class="contribs">';
+  for (const c of list) {
+    const hue = [...c.uuid].reduce((x, ch) => (x * 31 + ch.charCodeAt(0)) % 360, 7);
+    const pct = (100 * c.placed) / total;
+    // The face is cropped from the player's skin; the initial shows until it loads, or if it can't.
+    h += `<div class="contrib"><span class="avatar" style="--h:${hue}" aria-hidden="true">${esc((c.name || '?')[0].toUpperCase())}<i style="--skin:url('api/skin?uuid=${encodeURIComponent(c.uuid)}')"></i></span>
+      <span class="c-main"><span class="c-name">${esc(c.name)}${c.name === me ? '<span class="you">you</span>' : ''}</span><span class="c-sub">Active ${ago(c.last)}</span></span>
+      <span class="c-count"><b class="num">${fmt.format(c.placed)}</b><span class="c-pct num">${pct < 1 ? '<1' : Math.round(pct)}%</span></span>
+      <span class="c-bar"><i style="width:${pct.toFixed(1)}%"></i></span></div>`;
+  }
+  return h + '</div><p class="updated" style="margin:0 0 12px">Counts blocks placed by hand that match the schematic.</p></section>';
+}
+
+function ago(t) {
+  const s = Math.max(0, (Date.now() - t) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+  return new Date(t).toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
 function stacks(n) {
@@ -864,6 +927,9 @@ $('nav').addEventListener('keydown', (e) => {
 
 $('inspector').addEventListener('click', (e) => {
   const t = e.target;
+  const tab = t.closest('[data-tab]')?.dataset.tab;
+  if (tab) return setTab(tab);
+  if (shaderClick(t)) return;
   const filter = t.closest('[data-filter]')?.dataset.filter;
   if (filter) return setFilter(filter);
   const legend = t.closest('[data-legend]')?.dataset.legend;
@@ -878,11 +944,26 @@ $('inspector').addEventListener('click', (e) => {
 });
 $('inspector').addEventListener('change', (e) => {
   if (e.target.id === 'ghosts') { S.ghosts = e.target.checked; remesh(); }
+  shaderChange(e.target);
 });
 $('inspector').addEventListener('input', (e) => {
   if (e.target.id === 'mat-filter') { S.matQuery = e.target.value; S.matFocus = true; renderInspector(); }
+  shaderInput(e.target);
 });
-$('inspector').addEventListener('focusout', (e) => { if (e.target.id === 'mat-filter') S.matFocus = false; });
+$('inspector').addEventListener('focusout', (e) => {
+  if (e.target.id === 'mat-filter') S.matFocus = false;
+  if (e.target.id === 'sh-search') SH.searchFocus = false;
+});
+$('inspector').addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && e.target.id === 'sh-search' && e.target.value) { e.stopPropagation(); SH.query = ''; renderInspector(); }
+  if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && e.target.matches('[role="tab"]')) {
+    e.preventDefault();
+    setTab(SH.tab === 'details' ? 'shaders' : 'details');
+    $(`tab-${SH.tab}`)?.focus();
+  }
+});
+$('chips').addEventListener('click', (e) => { if (e.target.closest('[data-open-shaders]')) openShaderTab(); });
+$('inspector').addEventListener('toggle', (e) => { if (e.target.matches('details.more')) SH.moreOpen = e.target.open; }, true);
 $('inspector').addEventListener('mouseover', (e) => {
   const m = e.target.closest('[data-mat]');
   hlUniform.value = m ? +m.dataset.mat : -1;
@@ -943,8 +1024,10 @@ function copyMaterials() {
 
 function screenshot() {
   if (!S.data) return;
-  renderer.render(scene, camera);
-  canvas.toBlob((blob) => {
+  const shaded = shaderOn();
+  if (shaded) renderIris(performance.now());
+  else renderer.render(scene, camera);
+  (shaded ? $('gl-iris') : canvas).toBlob((blob) => {
     const a = document.createElement('a');
     const name = (S.data.name || S.api?.shared?.find((s) => s.id === S.desc.id)?.name || 'view').replace(/[^\w-]+/g, '_');
     a.href = URL.createObjectURL(blob);
@@ -970,6 +1053,7 @@ $('toggle-inspector').addEventListener('click', () => toggle('inspector'));
 $('act-refresh').addEventListener('click', () => S.desc && open(S.desc, { force: true }));
 $('act-fit').addEventListener('click', fit);
 $('act-shot').addEventListener('click', screenshot);
+$('act-shaders').addEventListener('click', () => setShaderEnabled(!SH.settings.enabled));
 $('open-palette').addEventListener('click', () => openPalette(''));
 
 // ---- picking: walk the voxel grid along the mouse ray (fast, no triangle raycast)
@@ -1033,6 +1117,7 @@ function pick() {
   const e = d.palette[d.blocks16[hit.i]];
   cursor.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
   cursor.visible = true;
+  S.hover = [hit.x, hit.y, hit.z];
   needsRender = true;
   const st = S.status ? S.status[hit.i] : 0;
   const card = $('hover');
@@ -1050,11 +1135,505 @@ function pick() {
 }
 function hideHover() {
   $('hover').hidden = true;
+  S.hover = null;
   if (cursor.visible) { cursor.visible = false; needsRender = true; }
 }
 function hideHint() {
   const h = $('hint');
   if (h.style.opacity !== '0') { h.style.opacity = '0'; try { localStorage.setItem('litweb.hint', '0'); } catch {} }
+}
+
+// ---------------------------------------------------------------- shaders (Iris packs in WebGL2)
+
+const SH = {
+  list: null, // /api/shaders: installed packs, saved settings, featured packs
+  settings: { enabled: false, pack: null, time: 2500, rain: 0, scale: 1, options: {} },
+  status: 'off', // off | compiling | ready | error
+  error: null, errors: [], live: false, meshReady: false,
+  schema: [], lang: {}, values: {}, props: {}, locked: {}, sliders: new Set(), byName: new Map(),
+  screen: [], query: '', searchFocus: false, installing: new Set(), featured: null, tab: 'details',
+};
+let iris = null;
+try {
+  iris = new Iris($('gl-iris'));
+  if (!iris.supported) iris = null;
+} catch {
+  iris = null;
+}
+if (iris) iris.onLost = () => {
+  SH.status = 'error';
+  SH.error = 'The graphics driver reset the shader view. Reload the page to use shaders again.';
+  SH.live = false;
+  syncShaderView();
+  renderInspector();
+};
+
+const shaderWanted = () => !!iris && SH.settings.enabled && SH.live;
+function shaderOn() {
+  return shaderWanted() && SH.meshReady && !!S.data && !iris.lost && $('overlay').hidden;
+}
+const packName = (id) => SH.list?.packs.find((p) => p.id === id)?.name || String(id || '').replace(/\.zip$/i, '');
+
+function renderIris(now) {
+  const r = $('stage').getBoundingClientRect();
+  if (!r.width || !r.height) return;
+  const c = $('gl-iris');
+  const scale = Math.min(devicePixelRatio, 1.5) * SH.settings.scale; // heavy packs at full retina resolution are too slow
+  const W = Math.max(1, Math.round(r.width * scale)), H = Math.max(1, Math.round(r.height * scale));
+  if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+  camera.updateMatrixWorld(); // three only does this inside renderer.render, which shader mode skips
+  const dt = (now - (renderIris.last || now)) / 1000;
+  renderIris.last = now;
+  const [sx, sy, sz] = S.data.size;
+  iris.render({
+    view: camera.matrixWorldInverse.elements, fov: THREE.MathUtils.degToRad(camera.fov), aspect: W / H,
+    cam: camera.position.toArray(), target: controls.target.toArray(), origin: S.data.origin, radius: Math.hypot(sx, sy, sz) / 2,
+    worldTime: SH.settings.time, rain: SH.settings.rain, dt, ghosts: !!S.status && S.ghosts, hover: S.hover, width: W, height: H,
+  });
+  $('compass').firstElementChild.style.transform = `translateX(-50%) rotate(${controls.getAzimuthalAngle()}rad)`;
+}
+
+function syncShaderView() {
+  const on = shaderOn();
+  $('gl-iris').hidden = !on;
+  if (!on) needsRender = true;
+  const pill = $('shader-pill');
+  const showPill = !!S.data && SH.settings.enabled && SH.status === 'compiling';
+  pill.hidden = !showPill;
+  if (showPill) pill.innerHTML = `<span class="spinner xs"></span>Compiling ${esc(packName(SH.settings.pack))} for the browser…`;
+  renderTop();
+}
+
+async function loadShaderIndex() {
+  try {
+    SH.list = await api('api/shaders');
+    Object.assign(SH.settings, SH.list.settings || {});
+    SH.settings.options ||= {};
+    if (SH.settings.pack && !SH.list.packs.some((p) => p.id === SH.settings.pack)) { SH.settings.pack = null; SH.settings.enabled = false; }
+    if (SH.settings.enabled && SH.settings.pack && iris) compileShaders();
+  } catch {
+    SH.list = SH.list || { packs: [], featured: [], dir: '' };
+  }
+  if (SH.tab === 'shaders') loadFeatured();
+  renderShaderBits();
+}
+
+async function loadFeatured() {
+  if (SH.featured) return;
+  SH.featured = { loading: true, list: SH.list?.featured || [] };
+  try {
+    const r = await api('api/shaders/featured');
+    SH.featured = { list: r.featured.length ? r.featured : SH.list?.featured || [], offline: r.offline };
+  } catch {
+    SH.featured = { list: SH.list?.featured || [], offline: true };
+  }
+  renderShaderBits();
+}
+
+function renderShaderBits() {
+  syncShaderView();
+  if (SH.tab === 'shaders') renderInspector();
+  else renderInspectorTabsOnly();
+}
+function renderInspectorTabsOnly() {
+  const dot = document.querySelector('#tab-shaders');
+  if (dot) dot.innerHTML = 'Shaders' + (SH.settings.enabled ? '<span class="tab-dot" aria-label="on"></span>' : '');
+}
+
+let compileSeq = 0;
+async function compileShaders() {
+  const id = SH.settings.pack;
+  if (!iris || !id) return;
+  const seq = ++compileSeq;
+  SH.status = 'compiling';
+  SH.error = null;
+  renderShaderBits();
+  try {
+    const body = { pack: id };
+    if (SH.settings.options[id]) body.options = SH.settings.options[id];
+    const res = await api('api/shaders/load', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (seq !== compileSeq) return;
+    if (!(await iris.setPack(res, (path) => loadPackImage(id, path), () => seq === compileSeq))) return;
+    SH.schema = res.options;
+    SH.byName = new Map(res.options.map((o) => [o.n, o]));
+    SH.values = Object.fromEntries(res.options.map((o) => [o.n, o.v]));
+    SH.lang = res.lang || {};
+    SH.props = res.props || {};
+    SH.locked = res.locked || {};
+    SH.sliders = new Set((SH.props.sliders || '').trim().split(/\s+/));
+    SH.blocks = res.blocks || {};
+    SH.errors = iris.errors;
+    SH.status = 'ready';
+    SH.live = true;
+    sendEnt();
+    remesh();
+  } catch (err) {
+    if (seq !== compileSeq) return;
+    SH.status = 'error';
+    SH.error = err.message;
+    toast(`Couldn't load ${packName(id)}`, err.message, { error: true });
+  }
+  renderShaderBits();
+}
+
+function loadPackImage(pack, path) {
+  return new Promise((res) => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.onerror = () => res(null);
+    img.src = `api/shaders/file?pack=${encodeURIComponent(pack)}&path=${encodeURIComponent(path)}`;
+  });
+}
+
+/** mc_Entity ids for the view's palette, from the pack's block.properties. */
+function sendEnt() {
+  if (!S.data || !SH.blocks) return;
+  const ent = new Float32Array(S.data.palette.length).fill(-1);
+  S.data.palette.forEach((e, i) => {
+    const rules = e && !e.air && SH.blocks[e.n];
+    if (!rules) return;
+    const props = Object.fromEntries((e.p || '').split(',').filter(Boolean).map((kv) => kv.split('=')));
+    const hit = rules.find(([, st]) => Object.entries(st).every(([k, vals]) => vals.includes(props[k])));
+    if (hit) ent[i] = hit[0];
+  });
+  worker.postMessage({ type: 'ent', ent });
+}
+
+let saveTimer = 0;
+function saveShaderSettings() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    api('api/shaders/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(SH.settings) }).catch(() => {});
+  }, 400);
+}
+
+function setShaderEnabled(on) {
+  if (!S.data) return;
+  if (on && !iris) {
+    toast("This browser can't run shader packs", 'It needs WebGL 2 with floating-point render targets.', { error: true });
+    return;
+  }
+  SH.settings.enabled = on;
+  saveShaderSettings();
+  if (on && !SH.settings.pack) { openShaderTab(); toast('Pick a shader pack', 'Choose one you have, or get a popular one.'); }
+  else if (on && !SH.live && SH.status !== 'compiling') compileShaders();
+  remesh();
+  renderShaderBits();
+}
+
+function openShaderTab() {
+  if ($('app').classList.contains('no-inspector')) toggle('inspector', true);
+  setTab('shaders');
+}
+
+function setTab(t) {
+  SH.tab = t;
+  try { localStorage.setItem('litweb.tab', t); } catch {}
+  if (t === 'shaders') loadFeatured();
+  renderInspector();
+}
+
+function selectPack(id) {
+  if (!iris) return;
+  const changed = id !== SH.settings.pack;
+  SH.settings.pack = id;
+  SH.settings.enabled = true;
+  SH.screen = [];
+  SH.query = '';
+  saveShaderSettings();
+  if (changed || !SH.live) compileShaders();
+  remesh();
+  renderShaderBits();
+}
+
+async function installPack(slug) {
+  if (SH.installing.has(slug)) return;
+  const f = (SH.featured?.list || SH.list?.featured || []).find((x) => x.slug === slug);
+  SH.installing.add(slug);
+  renderShaderBits();
+  try {
+    const r = await api(`api/shaders/install?slug=${encodeURIComponent(slug)}`, { method: 'POST' });
+    SH.list = await api('api/shaders');
+    toast(`${f?.name || 'Pack'} installed`, 'Saved to your shaderpacks folder, so Iris can use it too.');
+    selectPack(r.id);
+  } catch (err) {
+    toast(`Couldn't get ${f?.name || 'the pack'}`, err.message, { error: true, action: 'Retry', run: () => installPack(slug) });
+  } finally {
+    SH.installing.delete(slug);
+    renderShaderBits();
+  }
+}
+
+let compileTimer = 0;
+function setOptions(changes) {
+  const id = SH.settings.pack;
+  Object.assign(SH.values, changes);
+  // Store only what differs from the pack's defaults.
+  SH.settings.options[id] = Object.fromEntries(SH.schema.filter((o) => SH.values[o.n] !== o.d).map((o) => [o.n, SH.values[o.n]]));
+  saveShaderSettings();
+  clearTimeout(compileTimer);
+  compileTimer = setTimeout(compileShaders, 350);
+  renderInspector();
+}
+
+function setShaderScene(changes) {
+  Object.assign(SH.settings, changes);
+  saveShaderSettings();
+  if ('scale' in changes) renderIris.last = 0;
+  renderInspector();
+}
+
+// ---- pack settings: labels, screens and profiles from the pack's own files
+
+const stripFmt = (s) => String(s).replace(/§./g, '').trim();
+const L = (key, fallback) => (SH.lang[key] != null && SH.lang[key] !== '' ? stripFmt(SH.lang[key]) : fallback);
+const humanize = (n) => n.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase());
+const optLabel = (n) => L(`option.${n}`, humanize(n));
+const screenLabel = (n) => L(`screen.${n}`, humanize(n));
+function valLabel(n, v) {
+  if (v === 'true') return 'On';
+  if (v === 'false') return 'Off';
+  const named = L(`value.${n}.${v}`, null);
+  return named ?? `${L(`prefix.${n}`, '')}${v}${L(`suffix.${n}`, '')}`;
+}
+
+function profiles() {
+  return Object.keys(SH.props).filter((k) => k.startsWith('profile.')).map((k) => k.slice(8))
+    .map((name) => ({ name, label: L(`profile.${name}`, humanize(name)) }));
+}
+function profileValues(name, depth = 0) {
+  const out = {};
+  const def = SH.props[`profile.${name}`];
+  if (!def || depth > 8) return out;
+  for (const t of def.trim().split(/\s+/)) {
+    if (!t) continue;
+    if (t.startsWith('profile.')) Object.assign(out, profileValues(t.slice(8), depth + 1));
+    else if (t.startsWith('!')) out[t.slice(1)] = 'false';
+    else if (/[=:]/.test(t)) { const i = t.search(/[=:]/); out[t.slice(0, i)] = t.slice(i + 1); }
+    else out[t] = 'true';
+  }
+  return out;
+}
+const sameValue = (n, a, b) => a === b || (SH.byName.get(n)?.t === 'v' && Number(a) === Number(b) && a !== '' && b !== '');
+function currentProfile() {
+  let best = null, size = -1;
+  for (const p of profiles()) {
+    const vals = Object.entries(profileValues(p.name)).filter(([n]) => SH.byName.has(n) && !(n in SH.locked));
+    if (vals.every(([n, v]) => sameValue(n, SH.values[n], v)) && vals.length > size) { best = p.name; size = vals.length; }
+  }
+  return best;
+}
+function applyProfile(name) {
+  const changes = Object.fromEntries(SH.schema.map((o) => [o.n, o.d]));
+  for (const [n, v] of Object.entries(profileValues(name))) {
+    const o = SH.byName.get(n);
+    if (!o) continue;
+    changes[n] = o.t === 'v' ? o.vals.find((x) => sameValue(n, x, v)) ?? v : v;
+  }
+  setOptions(changes);
+}
+
+function screenTokens(name) {
+  const raw = name ? SH.props[`screen.${name}`] : SH.props.screen;
+  return raw == null ? null : raw.trim().split(/\s+/).filter(Boolean);
+}
+/** Screen entries: sub-screen links and options. `*` means every option no screen lists. */
+function screenItems(name) {
+  const toks = screenTokens(name);
+  if (!toks) return name ? [] : SH.schema.map((o) => ({ opt: o }));
+  const out = [];
+  for (const t of toks) {
+    if (t === '<empty>' || t === '<profile>') continue;
+    const m = /^\[(\w+)\]$/.exec(t);
+    if (m) { if (SH.props[`screen.${m[1]}`] != null) out.push({ screen: m[1] }); continue; }
+    if (t === '*') { const listed = listedOptions(); for (const o of SH.schema) if (!listed.has(o.n)) out.push({ opt: o }); continue; }
+    const o = SH.byName.get(t);
+    if (o) out.push({ opt: o });
+  }
+  return out;
+}
+function listedOptions() {
+  const s = new Set();
+  for (const [k, v] of Object.entries(SH.props)) if (k === 'screen' || /^screen\.\w+$/.test(k)) for (const t of v.split(/\s+/)) s.add(t);
+  return s;
+}
+/** Where an option lives, for search results: "Lighting › Shadows". */
+function optionPath(n) {
+  const parents = {};
+  for (const [k, v] of Object.entries(SH.props)) {
+    const m = /^screen\.(\w+)$/.exec(k);
+    if (m) for (const t of v.split(/\s+/)) { const sub = /^\[(\w+)\]$/.exec(t); parents[sub ? '[' + sub[1] : t] ??= m[1]; }
+  }
+  const path = [];
+  let cur = parents[n];
+  for (let i = 0; cur && i < 6; i++) { path.unshift(screenLabel(cur)); cur = parents['[' + cur]; }
+  return path.join(' › ');
+}
+
+function optRow(o, showPath) {
+  const v = SH.values[o.n] ?? o.d;
+  if (o.n in SH.locked) {
+    // The pack itself switches this off where it can't work (here: no compute shaders or image storage in WebGL).
+    return `<div class="opt locked"><span class="opt-text"><span class="opt-label" title="${esc(o.n)}">${esc(optLabel(o.n))}</span><span class="opt-sub">Not available in the browser</span></span><span class="opt-static">${esc(valLabel(o.n, SH.locked[o.n]))}</span></div>`;
+  }
+  const label = optLabel(o.n);
+  let comment = L(`option.${o.n}.comment`, o.c || '');
+  if (comment.replace(/[.\s]+$/, '').toLowerCase() === label.toLowerCase()) comment = ''; // a comment that only repeats the label
+  const mod = v !== o.d;
+  const sub = showPath ? optionPath(o.n) : comment;
+  let ctl;
+  if (o.t === 'b') ctl = `<button type="button" class="switch" role="switch" aria-checked="${v === 'true'}" aria-label="${esc(label)}" data-opt-toggle="${esc(o.n)}"></button>`;
+  else if (o.vals.length <= 1) ctl = `<span class="opt-static">${esc(valLabel(o.n, v))}</span>`;
+  else if (SH.sliders.has(o.n)) {
+    const i = Math.max(0, o.vals.indexOf(v));
+    ctl = `<span class="opt-range"><input type="range" min="0" max="${o.vals.length - 1}" value="${i}" step="1" aria-label="${esc(label)}" aria-valuetext="${esc(valLabel(o.n, v))}" data-opt-range="${esc(o.n)}"><output>${esc(valLabel(o.n, v))}</output></span>`;
+  } else ctl = `<select class="opt-select" aria-label="${esc(label)}" data-opt-select="${esc(o.n)}">${o.vals.map((x) => `<option value="${esc(x)}"${x === v ? ' selected' : ''}>${esc(valLabel(o.n, x))}</option>`).join('')}</select>`;
+  const reset = mod ? `<button type="button" class="opt-reset" data-opt-reset="${esc(o.n)}" aria-label="Reset ${esc(label)}" data-tip="Reset to ${esc(valLabel(o.n, o.d))}">${ICON.retry}</button>` : '';
+  return `<div class="opt${mod ? ' mod' : ''}${SH.sliders.has(o.n) && o.vals.length > 1 ? ' wide' : ''}">
+    <span class="opt-text"><span class="opt-label" title="${esc(o.n)}">${esc(label)}</span>${sub ? `<span class="opt-sub">${esc(sub)}</span>` : ''}</span>${reset}${ctl}</div>`;
+}
+
+function timeLabel(t) {
+  const h = Math.floor((t / 1000 + 6) % 24), m = Math.floor(((t % 1000) / 1000) * 60);
+  const part = t < 1000 || t >= 23000 ? 'Sunrise' : t < 5000 ? 'Morning' : t < 7000 ? 'Noon' : t < 11500 ? 'Afternoon' : t < 13000 ? 'Sunset' : 'Night';
+  return `${h}:${String(m).padStart(2, '0')} · ${part}`;
+}
+
+function renderShaders() {
+  let h = '';
+  const st = SH.settings, packs = SH.list?.packs || [];
+  const name = st.pack ? packName(st.pack) : '';
+  let lead;
+  if (!iris) lead = `<span class="sh-bad">This browser can't run shader packs. It needs WebGL 2 with floating-point render targets.</span>`;
+  else if (!st.pack) lead = 'Pick a pack below. It runs right here in the page, using the same packs as Iris.';
+  else if (SH.status === 'compiling') lead = `<span class="spinner xs"></span>Compiling ${esc(name)}…`;
+  else if (SH.status === 'error') lead = `<span class="sh-bad">${esc(SH.error)}</span> <button type="button" class="link" data-sh="retry">${ICON.retry}Try again</button>`;
+  else if (SH.status === 'ready') {
+    lead = st.enabled ? `Running <b>${esc(name)}</b>.` : `<b>${esc(name)}</b> is ready. Turn shaders on to see it.`;
+    if (SH.errors.length) lead += ` <button type="button" class="link warn" data-sh="problems">${SH.errors.length} ${SH.errors.length === 1 ? 'effect' : 'effects'} unavailable</button>`;
+  } else lead = `<b>${esc(name)}</b> is selected.`;
+  h += `<section class="panel"><div class="panel-head"><h3>Shaders</h3><button type="button" class="switch" role="switch" aria-checked="${!!st.enabled}" aria-label="Use shaders" data-sh="toggle" ${iris ? '' : 'disabled'} data-tip="Shaders" data-key="V"></button></div>
+    <p class="sh-lead">${lead}</p></section>`;
+
+  h += `<section class="panel"><div class="panel-head"><h3>Your packs</h3><button type="button" class="link" data-sh="folder" data-tip="${esc(SH.list?.dir || '')}">${ICON.folder}Open folder</button></div>`;
+  h += packs.length
+    ? `<div class="packs" role="radiogroup" aria-label="Shader pack">${packs.map((p) => `<button type="button" class="pack" role="radio" aria-checked="${p.id === st.pack}" data-pack="${esc(p.id)}" ${iris ? '' : 'disabled'}><span class="pack-dot"></span><span class="pack-name">${esc(p.name)}</span>${p.id === st.pack && SH.status === 'compiling' ? '<span class="spinner xs"></span>' : ''}</button>`).join('')}</div>`
+    : `<div class="nav-empty">No packs yet. Get a popular one below, or put .zip packs in your shaderpacks folder.</div>`;
+  h += '</section>';
+
+  const have = new Set(packs.map((p) => p.slug).filter(Boolean));
+  const feat = (SH.featured?.list || SH.list?.featured || []).filter((f) => !have.has(f.slug));
+  if (feat.length) {
+    // Collapsed once you have packs, so the pack's settings stay close to the top.
+    const head = `<h3>${packs.length ? `Get more packs` : 'Popular packs'}</h3><span class="row-meta">${SH.featured?.offline ? 'Modrinth is unreachable' : 'From Modrinth'}</span>`;
+    h += packs.length
+      ? `<section class="panel"><details class="more"${SH.moreOpen ? ' open' : ''}><summary class="panel-head">${head}</summary><div class="feats">`
+      : `<section class="panel"><div class="panel-head">${head}</div><div class="feats">`;
+    for (const f of feat) {
+      const busy = SH.installing.has(f.slug);
+      const dl = f.downloads ? `${new Intl.NumberFormat([], { notation: 'compact' }).format(f.downloads)} downloads` : '';
+      h += `<div class="feat">${f.icon ? `<img alt="" src="${esc(f.icon)}" loading="lazy">` : `<span class="feat-icon">${ICON.sparkle}</span>`}
+        <span class="feat-main"><span class="feat-name">${esc(f.name)}</span><span class="feat-sub">${esc(f.author)}${dl ? ' · ' + dl : ''}</span></span>
+        <button type="button" class="btn sm" data-install="${esc(f.slug)}" ${busy || !iris ? 'disabled' : ''}>${busy ? '<span class="spinner xs"></span>Getting…' : `${ICON.download}Get`}</button></div>`;
+    }
+    h += packs.length ? '</div></details></section>' : '</div></section>';
+  }
+
+  if (st.pack && SH.status !== 'error' && iris) {
+    h += `<section class="panel"><div class="panel-head"><h3>Scene</h3></div>
+      <div class="sh-field"><span>Time of day</span><output id="sh-time-out">${esc(timeLabel(st.time))}</output></div>
+      <div class="sh-time">${ICON.sun}<input type="range" id="sh-time" min="0" max="23900" step="100" value="${st.time}" aria-label="Time of day" aria-valuetext="${esc(timeLabel(st.time))}">${ICON.moon}</div>
+      <div class="sh-field"><span>Weather</span><span class="seg flat" role="radiogroup" aria-label="Weather">${[[0, 'Clear'], [1, 'Rain']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${st.rain === v}" data-rain="${v}">${l}</button>`).join('')}</span></div>
+      <div class="sh-field"><span>Resolution</span><span class="seg flat" role="radiogroup" aria-label="Resolution">${[[0.5, '50%'], [0.75, '75%'], [1, '100%']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${st.scale === v}" data-scale="${v}">${l}</button>`).join('')}</span></div>
+    </section>`;
+  }
+
+  if (st.pack && SH.status !== 'error' && SH.schema.length) {
+    const modified = SH.schema.filter((o) => SH.values[o.n] !== o.d).length;
+    const profs = profiles();
+    const cur = profs.length ? currentProfile() : null;
+    h += `<section class="panel"><div class="panel-head"><h3>Pack settings</h3>${modified ? `<button type="button" class="link" data-sh="reset" data-tip="Back to the pack's defaults">${ICON.retry}Reset ${modified}</button>` : ''}</div>`;
+    if (profs.length > 5) {
+      h += `<div class="sh-field"><span>Profile</span><select class="opt-select" id="sh-profile" aria-label="Profile">${cur ? '' : '<option value="" selected>Custom</option>'}${profs.map((p) => `<option value="${esc(p.name)}"${p.name === cur ? ' selected' : ''}>${esc(p.label)}</option>`).join('')}</select></div>`;
+    } else if (profs.length) {
+      h += `<div class="sh-field"><span>Profile</span>${cur ? '' : '<span class="chip">Custom</span>'}</div>
+        <div class="seg flat profiles" role="radiogroup" aria-label="Profile">${profs.map((p) => `<button type="button" role="radio" aria-checked="${p.name === cur}" data-profile="${esc(p.name)}">${esc(p.label)}</button>`).join('')}</div>`;
+    }
+    h += `<div class="mat-tools"><input class="mat-filter" id="sh-search" type="search" placeholder="Search ${SH.schema.length} settings" value="${esc(SH.query)}" aria-label="Search pack settings"></div>`;
+    const q = SH.query.trim().toLowerCase();
+    if (q) {
+      const hits = SH.schema.filter((o) => (optLabel(o.n) + ' ' + o.n + ' ' + L(`option.${o.n}.comment`, '')).toLowerCase().includes(q));
+      h += hits.length ? `<div class="opts">${hits.slice(0, 60).map((o) => optRow(o, true)).join('')}</div>${hits.length > 60 ? `<div class="mats-more">${hits.length - 60} more. Keep typing to narrow it down.</div>` : ''}`
+        : '<div class="mats-more">No settings match.</div>';
+    } else {
+      const path = SH.screen;
+      if (path.length) {
+        h += `<nav class="sh-crumbs" aria-label="Settings screens"><button type="button" class="link" data-screen-up="0">${ICON.back}All</button>${path.map((s, i) => `<span class="sep">›</span>${i === path.length - 1 ? `<b>${esc(screenLabel(s))}</b>` : `<button type="button" class="link" data-screen-up="${i + 1}">${esc(screenLabel(s))}</button>`}`).join('')}</nav>`;
+      }
+      const items = screenItems(path[path.length - 1] || '');
+      h += `<div class="opts">${items.map((it) => (it.screen
+        ? `<button type="button" class="opt opt-link" data-screen="${esc(it.screen)}"><span class="opt-text"><span class="opt-label">${esc(screenLabel(it.screen))}</span>${L(`screen.${it.screen}.comment`, '') ? `<span class="opt-sub">${esc(L(`screen.${it.screen}.comment`, ''))}</span>` : ''}</span>${ICON.chevron}</button>`
+        : optRow(it.opt, false))).join('') || '<div class="mats-more">This screen is empty.</div>'}</div>`;
+    }
+    h += '</section>';
+  }
+
+  if (SH.errors.length && SH.status === 'ready') {
+    h += `<section class="panel" id="sh-problems"><div class="panel-head"><h3>Unavailable in the browser</h3><span class="row-meta">${SH.errors.length}</span></div>
+      <p class="sh-lead">The pack still runs without these parts of it. Usually that means a missing effect, like colored lighting.</p>
+      <div class="problems">${SH.errors.map((e) => `<div class="problem"><code>${esc(e.program)}</code><span>${esc(e.message)}</span></div>`).join('')}</div></section>`;
+  }
+  return h;
+}
+
+function shaderClick(t) {
+  const sh = t.closest('[data-sh]')?.dataset.sh;
+  if (sh === 'toggle') { setShaderEnabled(!SH.settings.enabled); return true; }
+  if (sh === 'retry') { compileShaders(); return true; }
+  if (sh === 'folder') { api('api/shaders/open-folder', { method: 'POST' }).catch((e) => toast("Couldn't open the folder", e.message, { error: true })); return true; }
+  if (sh === 'reset') { setOptions(Object.fromEntries(SH.schema.map((o) => [o.n, o.d]))); toast('Pack settings reset', 'Back to the defaults.'); return true; }
+  if (sh === 'problems') { $('sh-problems')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return true; }
+  const pack = t.closest('[data-pack]')?.dataset.pack;
+  if (pack) { selectPack(pack); return true; }
+  const inst = t.closest('[data-install]')?.dataset.install;
+  if (inst) { installPack(inst); return true; }
+  const rain = t.closest('[data-rain]')?.dataset.rain;
+  if (rain != null) { setShaderScene({ rain: +rain }); return true; }
+  const scale = t.closest('[data-scale]')?.dataset.scale;
+  if (scale != null) { setShaderScene({ scale: +scale }); return true; }
+  const prof = t.closest('[data-profile]')?.dataset.profile;
+  if (prof) { applyProfile(prof); return true; }
+  const scr = t.closest('[data-screen]')?.dataset.screen;
+  if (scr) { SH.screen = [...SH.screen, scr]; renderInspector(); $('inspector').querySelector('.sh-crumbs .link')?.focus(); return true; }
+  const up = t.closest('[data-screen-up]')?.dataset.screenUp;
+  if (up != null) { SH.screen = SH.screen.slice(0, +up); renderInspector(); return true; }
+  const tog = t.closest('[data-opt-toggle]')?.dataset.optToggle;
+  if (tog) { setOptions({ [tog]: SH.values[tog] === 'true' ? 'false' : 'true' }); return true; }
+  const rs = t.closest('[data-opt-reset]')?.dataset.optReset;
+  if (rs) { setOptions({ [rs]: SH.byName.get(rs).d }); return true; }
+  return false;
+}
+
+function shaderChange(t) {
+  if (t.dataset.optSelect) setOptions({ [t.dataset.optSelect]: t.value });
+  if (t.dataset.optRange) setOptions({ [t.dataset.optRange]: SH.byName.get(t.dataset.optRange).vals[+t.value] });
+  if (t.id === 'sh-time') setShaderScene({ time: +t.value });
+  if (t.id === 'sh-profile' && t.value) applyProfile(t.value);
+}
+
+function shaderInput(t) {
+  if (t.id === 'sh-search') { SH.query = t.value; SH.searchFocus = true; renderInspector(); return; }
+  if (t.id === 'sh-time') {
+    SH.settings.time = +t.value; // live while dragging; saved on change
+    const l = timeLabel(+t.value);
+    $('sh-time-out').textContent = l;
+    t.setAttribute('aria-valuetext', l);
+  }
+  if (t.dataset.optRange) {
+    const n = t.dataset.optRange, l = valLabel(n, SH.byName.get(n).vals[+t.value]);
+    t.nextElementSibling.textContent = l;
+    t.setAttribute('aria-valuetext', l);
+  }
 }
 
 // ---------------------------------------------------------------- command palette
@@ -1074,6 +1653,11 @@ const COMMANDS = () => {
     st && { title: 'Show problems only', key: '3', run: () => setFilter('problems') },
     st && { title: S.ghosts ? 'Hide missing-block ghosts' : 'Show missing-block ghosts', key: 'G', run: () => { S.ghosts = !S.ghosts; renderInspector(); remesh(); } },
     has && { title: 'Copy material list', run: copyMaterials },
+    has && iris && { title: SH.settings.enabled ? 'Turn shaders off' : 'Turn shaders on', key: 'V', run: () => setShaderEnabled(!SH.settings.enabled) },
+    has && { title: 'Open shader settings', run: openShaderTab },
+    ...(has && iris ? (SH.list?.packs || []).filter((p) => p.id !== SH.settings.pack || !SH.settings.enabled).map((p) => ({ title: `Use shader pack: ${p.name}`, run: () => selectPack(p.id) })) : []),
+    ...(has && SH.settings.enabled ? [['Sunrise', 0], ['Noon', 6000], ['Sunset', 12000], ['Midnight', 18000]].map(([l, t]) => ({ title: `Shader time: ${l}`, run: () => setShaderScene({ time: t }) })) : []),
+    ...(has && SH.status === 'ready' ? profiles().map((p) => ({ title: `Shader profile: ${p.label}`, run: () => applyProfile(p.name) })) : []),
     pl && S.api.serverMod && { title: pl.sharedId ? 'Update shared copy' : 'Share this placement to the server', run: () => sharePlacement(pl.id) },
     pl?.sharedId && { title: 'Stop sharing this placement', run: () => unshare(pl.sharedId, pl.id) },
     { title: 'Toggle sidebar', key: `${MOD} B`, run: () => toggle('sidebar') },
@@ -1187,6 +1771,7 @@ document.addEventListener('keydown', (e) => {
     f: fit, r: () => open(S.desc, { force: true }), s: screenshot, i: () => toggle('inspector'),
     l: () => setLayer({ all: 'below', below: 'single', single: 'all' }[S.layerMode]),
     g: () => { if (S.status) { S.ghosts = !S.ghosts; renderInspector(); remesh(); } },
+    v: () => setShaderEnabled(!SH.settings.enabled),
     1: () => setFilter('all'), 2: () => setFilter('remaining'), 3: () => setFilter('problems'),
     ArrowUp: () => setLayer(S.layerMode === 'all' ? 'below' : null, S.layerMode === 'all' ? top : S.layerY + 1),
     ArrowDown: () => setLayer(S.layerMode === 'all' ? 'below' : null, S.layerMode === 'all' ? top - 1 : S.layerY - 1),
@@ -1232,6 +1817,7 @@ try {
   if (localStorage.getItem('litweb.hint') === '0') $('hint').style.opacity = '0';
   if (localStorage.getItem('litweb.sidebar') === '0' || innerWidth <= 900) toggle('sidebar', false);
   if (localStorage.getItem('litweb.inspector') === '0' || innerWidth <= 900) toggle('inspector', false);
+  if (localStorage.getItem('litweb.tab') === 'shaders') SH.tab = 'shaders';
 } catch {}
 document.querySelectorAll('[data-mod]').forEach((k) => { k.textContent = `${MOD} K`; });
 $('toggle-sidebar').setAttribute('aria-pressed', String(!$('app').classList.contains('no-sidebar')));
@@ -1241,5 +1827,6 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && S.
 setInterval(() => { if (S.counts && !$('app').classList.contains('no-inspector')) { const u = $('updated-at'); if (u && !S.statusErr) { const ago = Math.round((Date.now() - S.statusAt) / 1000); u.textContent = `Updated ${ago < 2 ? 'just now' : ago + 's ago'}`; } } }, 1000);
 applyTheme();
 resize();
-frame();
+requestAnimationFrame(frame);
 pollState();
+loadShaderIndex();

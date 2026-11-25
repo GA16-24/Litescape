@@ -40,6 +40,9 @@
           <button class="icon-btn" id="act-fit" type="button" aria-label="Fit to view" data-tip="Fit to view" data-key="F">
             <svg class="i" viewBox="0 0 24 24"><path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"/></svg>
           </button>
+          <button class="icon-btn" id="act-shaders" type="button" aria-label="Shaders" aria-pressed="false" data-tip="Shaders" data-key="V">
+            <svg class="i" viewBox="0 0 24 24"><path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.5l-1.9-5.7-5.6-1.9L10.1 9z"/><path d="M19 15.5v4M17 17.5h4"/></svg>
+          </button>
           <button class="icon-btn" id="act-shot" type="button" aria-label="Save screenshot" data-tip="Screenshot" data-key="S">
             <svg class="i" viewBox="0 0 24 24"><path d="M4 8a2 2 0 0 1 2-2h2l1.5-2h5L16 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/></svg>
           </button>
@@ -51,6 +54,8 @@
 
       <section class="stage" id="stage">
         <canvas id="gl" aria-label="3D view of the blocks"></canvas>
+        <canvas id="gl-iris" aria-hidden="true" hidden></canvas>
+        <div class="shader-pill" id="shader-pill" role="status" hidden></div>
         <div class="overlay" id="overlay" hidden></div>
         <div class="hover-card" id="hover" hidden></div>
         <div class="compass" id="compass" aria-hidden="true"><span>N</span></div>
