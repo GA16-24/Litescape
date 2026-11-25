@@ -80,6 +80,7 @@ const S = {
   accessQuery: '',
   accessSel: 0,
   accessOpen: false, // the player field has focus, so its suggestions show
+  scrollToAccess: false, // bring the Access panel into view once it renders
 };
 
 // ---------------------------------------------------------------- three.js
@@ -1019,8 +1020,8 @@ function liveNavHtml(a) {
     const tip = !a.serverMod
       ? 'The server needs Litematica Web Viewer to share'
       : shared
-        ? 'Shared with players on this server'
-        : 'Share so other players can follow the build';
+        ? 'Shared. Open it to choose who can see it'
+        : 'Share to the server. Only you see it until you choose who else can';
     const action = `<button class="row-action ${shared ? 'on' : ''}" data-share="${esc(p.id)}" aria-disabled="${!a.serverMod || busy}" data-tip="${esc(tip)}">${shared ? `${ICON.check}Shared` : ICON.share + (busy ? 'Sharing…' : 'Share')}</button>`;
     h += rowHtml({
       desc: { type: 'placement', id: p.id },
@@ -1323,7 +1324,7 @@ function renderInspector() {
       ? `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-share-now="${esc(pl.id)}" ${busy ? 'disabled' : ''}>${ICON.share}Update copy</button><button class="btn" data-unshare="${esc(pl.sharedId)}" data-key-of="${esc(pl.id)}">${ICON.stop}Stop sharing</button></div>
          <p class="updated" style="margin:0 0 12px">Shared. Use Update copy after you move or edit the placement.</p>`
       : `<div class="btn-row" style="margin:0 0 6px"><button class="btn primary" data-share-now="${esc(pl.id)}" ${!a.serverMod || busy ? 'disabled' : ''}>${ICON.share}${busy ? 'Sharing…' : 'Share to server'}</button></div>
-         <p class="updated" style="margin:0 0 12px">${a.serverMod ? 'Other players can then view it, follow the build from their browser and see who helped.' : 'The server needs Litematica Web Viewer to share schematics.'}</p>`;
+         <p class="updated" style="margin:0 0 12px">${a.serverMod ? 'Only you can see it at first. Then choose who else can view it, follow the build and see who helped.' : 'The server needs Litematica Web Viewer to share schematics.'}</p>`;
   }
   if ((sh?.manage ?? sh?.mine) && isLive())
     // `manage` is missing from servers on an older version of the mod
@@ -1362,6 +1363,10 @@ function renderInspector() {
   const typing = document.activeElement?.id === 'access-add' ? document.activeElement.selectionStart : -1;
   el.innerHTML = h;
   el.scrollTop = scrollTop;
+  if (S.scrollToAccess && $('access')) {
+    S.scrollToAccess = false;
+    $('access').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
   const add = $('access-add');
   if (add && typing >= 0) {
     add.focus(); // this re-render runs every 2 s while progress updates
@@ -1703,13 +1708,19 @@ async function sharePlacement(id) {
   renderInspector();
   try {
     await api(`api/share?id=${encodeURIComponent(id)}`, { method: 'POST' });
-    const here = S.desc?.type === 'placement' && S.desc.id === id;
     toast(
       p?.sharedId ? 'Shared copy updated' : `Shared “${p?.name ?? 'placement'}”`,
-      p?.sharedId ? 'Who can see it stays the same.' : 'Everyone on this server can follow the build.',
-      here && !p?.sharedId
-        ? { action: 'Change access', run: () => $('access')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }
-        : {},
+      p?.sharedId ? 'Who can see it stays the same.' : 'Only you can see it so far.',
+      p?.sharedId
+        ? {}
+        : {
+            action: 'Choose who',
+            run: () => {
+              S.scrollToAccess = true; // the Access panel shows once the placement and its shared copy are loaded
+              open({ type: 'placement', id });
+              renderInspector();
+            },
+          },
     );
   } catch (err) {
     toast("Couldn't share", err.message, { error: true });

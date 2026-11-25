@@ -99,6 +99,7 @@ public class EndToEndTest implements FabricClientGameTest {
 				String st3 = "";
 				for (int i = 0; i < 40 && !st3.contains("\"sharedId\":\"" + shared); i++, ctx.waitTicks(5)) st3 = call(ctx, "GET", "/api/state");
 				check(st3.contains("\"sharedId\":\"" + shared), "shared list push reached the client");
+				check(st3.contains("\"access\":\"private\""), "a new share starts private");
 				save("state-3.json", st3);
 				collectTextures(json(save("view-shared.json", call(ctx, "GET", "/api/view?type=shared&id=" + shared))));
 				JsonObject sst = json(save("status-shared.json", call(ctx, "GET", "/api/status?type=shared&id=" + shared)));
@@ -119,7 +120,7 @@ public class EndToEndTest implements FabricClientGameTest {
 					refused = e.getMessage();
 				}
 				check(refused.contains("Unknown access"), "bad access refused: " + refused);
-				call(ctx, "POST", "/api/access", "{\"id\":\"" + shared + "\",\"access\":\"everyone\",\"players\":{}}");
+				call(ctx, "POST", "/api/access", "{\"id\":\"" + shared + "\",\"access\":\"private\",\"players\":{}}"); // back to the default for the fixtures
 				// The world is remembered with its shared list and the copy downloaded above, for viewing after leaving.
 				JsonObject here = json(call(ctx, "GET", "/api/state")).getAsJsonArray("servers").get(0).getAsJsonObject();
 				check(here.getAsJsonArray("shared").toString().contains(shared), "remembered server lists the shared schematic");

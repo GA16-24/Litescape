@@ -272,6 +272,7 @@ public final class LitWeb implements ModInitializer {
 		s.size = new int[] {v.sx, v.sy, v.sz};
 		s.updated = System.currentTimeMillis();
 		if (meta.has("author")) s.author = meta.get("author").getAsString().substring(0, Math.min(64, meta.get("author").getAsString().length()));
+		s.access = "private"; // new shares stay with the owner until they choose who else sees them
 		Shared old = shared.get(id);
 		if (old != null) { // "Update copy" keeps who helped so far and who can see it
 			s.contributors = old.contributors;
