@@ -1,0 +1,166 @@
+// Web Worker: turns a block volume into vertex buffers.
+// Groups: 0 = solid + cutout, 1 = translucent, 2 = ghost (blocks still missing from a build).
+
+// Face order matches Minecraft's Direction: down, up, north (-z), south (+z), west (-x), east (+x).
+const DIRS = [[0, -1, 0], [0, 1, 0], [0, 0, -1], [0, 0, 1], [-1, 0, 0], [1, 0, 0]];
+const SHADE = [0.5, 1, 0.8, 0.8, 0.6, 0.6];
+// Status codes from Volume.java: 1 ok, 2 missing, 3 wrong block, 4 wrong state, 5 not loaded.
+const STATUS_TINT = { 3: [1, 0.33, 0.3], 4: [1, 0.72, 0.25] };
+
+let V = null;
+
+self.onmessage = (e) => {
+  const m = e.data;
+  if (m.type === 'load') {
+    V = m;
+    return;
+  }
+  if (m.type === 'mesh' && V) {
+    const out = build(m.opts);
+    out.seq = m.seq;
+    const transfer = [out.vis.buffer];
+    for (const g of out.groups) transfer.push(g.pos.buffer, g.uv.buffer, g.col.buffer, g.pid.buffer, g.idx.buffer);
+    self.postMessage(out, transfer);
+  }
+};
+
+class Buf {
+  constructor(Type, n = 4096) { this.a = new Type(n); this.n = 0; this.Type = Type; }
+  push(v) {
+    if (this.n === this.a.length) { const b = new this.Type(this.a.length * 2); b.set(this.a); this.a = b; }
+    this.a[this.n++] = v;
+  }
+  done() { return this.a.slice(0, this.n); }
+}
+
+function group() {
+  return { pos: new Buf(Float32Array), uv: new Buf(Float32Array), col: new Buf(Uint8Array), pid: new Buf(Float32Array), idx: new Buf(Uint32Array), verts: 0 };
+}
+
+function build(o) {
+  const { sx, sy, sz, blocks, pal, rects } = V;
+  const st = o.status;
+  const n = sx * sy * sz;
+  const layer = sx * sz;
+  const vis = new Uint8Array(n); // 0 hidden, 1 shown solid, 2 shown as ghost
+
+  for (let i = 0; i < n; i++) {
+    const p = blocks[i];
+    const e = pal[p];
+    if (!e || e.air) continue;
+    const y = (i / layer) | 0;
+    if (y < o.y0 || y > o.y1) continue;
+    if (o.iso >= 0 && e.mid !== o.iso) continue;
+    let g = 1;
+    if (st) {
+      const s = st[i];
+      if (o.filter === 'remaining' && s === 1) continue;
+      if (o.filter === 'problems' && s !== 3 && s !== 4) continue;
+      if (s === 2) g = o.ghosts ? 2 : 0;
+      if (g === 0) continue;
+    }
+    vis[i] = g;
+  }
+
+  const groups = [group(), group(), group()];
+  const col = [0, 0, 0];
+
+  const emit = (G, x, y, z, q, off, r, g2, b2, pidv) => {
+    // q: [tex, cull, tint, layer, shade, x,y,z,u,v ×4]
+    const t = q[off] * 4;
+    const u0 = rects[t], v0 = rects[t + 1], du = rects[t + 2] - u0, dv = rects[t + 3] - v0;
+    const base = G.verts;
+    for (let k = 0; k < 4; k++) {
+      const j = off + 5 + k * 5;
+      G.pos.push(x + q[j]); G.pos.push(y + q[j + 1]); G.pos.push(z + q[j + 2]);
+      G.uv.push(u0 + q[j + 3] * du); G.uv.push(v0 + q[j + 4] * dv);
+      G.col.push(r); G.col.push(g2); G.col.push(b2);
+      G.pid.push(pidv);
+    }
+    G.idx.push(base); G.idx.push(base + 1); G.idx.push(base + 2);
+    G.idx.push(base); G.idx.push(base + 2); G.idx.push(base + 3);
+    G.verts += 4;
+  };
+
+  const occludes = (i, d, x, y, z, e, p, gi) => {
+    const nx = x + DIRS[d][0], ny = y + DIRS[d][1], nz = z + DIRS[d][2];
+    if (nx < 0 || ny < 0 || nz < 0 || nx >= sx || ny >= sy || nz >= sz) return false;
+    const ni = (ny * sz + nz) * sx + nx;
+    if (vis[ni] !== gi) return false;
+    const np = blocks[ni];
+    const ne = pal[np];
+    return !!ne && (ne.opaque || (np === p && e.selfCull));
+  };
+
+  const fluidQuad = new Float32Array(25);
+  for (let i = 0; i < n; i++) {
+    const gi = vis[i];
+    if (!gi) continue;
+    const p = blocks[i];
+    const e = pal[p];
+    const x = i % sx, z = ((i / sx) | 0) % sz, y = (i / layer) | 0;
+    const s = st ? st[i] : 0;
+    const tintS = STATUS_TINT[s];
+    const q = e.q;
+    for (let off = 0; off < q.length; off += 25) {
+      const cull = q[off + 1];
+      if (cull >= 0 && occludes(i, cull, x, y, z, e, p, gi)) continue;
+      const G = gi === 2 ? groups[2] : q[off + 3] === 2 ? groups[1] : groups[0];
+      shadeColor(q[off + 2], q[off + 4], tintS, col);
+      emit(G, x, y, z, q, off, col[0], col[1], col[2], e.mid);
+    }
+    const f = e.f;
+    if (f) {
+      const above = y + 1 < sy ? pal[blocks[i + layer]] : null;
+      const h = above && above.f && above.f.k === f.k && vis[i + layer] ? 1 : f.h;
+      for (let d = 0; d < 6; d++) {
+        const nx = x + DIRS[d][0], ny = y + DIRS[d][1], nz = z + DIRS[d][2];
+        if (nx >= 0 && ny >= 0 && nz >= 0 && nx < sx && ny < sy && nz < sz) {
+          const ni = (ny * sz + nz) * sx + nx;
+          const ne = pal[blocks[ni]];
+          if (vis[ni] === gi && ne && ((ne.f && ne.f.k === f.k) || ne.opaque)) continue;
+        }
+        fluidFace(fluidQuad, d, h, f.t);
+        const G = gi === 2 ? groups[2] : f.l === 2 ? groups[1] : groups[0];
+        shadeColor(f.c, d, tintS, col);
+        emit(G, x, y, z, fluidQuad, 0, col[0], col[1], col[2], e.mid);
+      }
+    }
+  }
+
+  return {
+    vis,
+    groups: groups.map((G) => ({ pos: G.pos.done(), uv: G.uv.done(), col: G.col.done(), pid: G.pid.done(), idx: G.idx.done() })),
+  };
+}
+
+function shadeColor(tint, shadeDir, statusTint, out) {
+  const s = SHADE[shadeDir] ?? 1;
+  let r = s, g = s, b = s;
+  if (tint >= 0) {
+    r *= ((tint >> 16) & 255) / 255; g *= ((tint >> 8) & 255) / 255; b *= (tint & 255) / 255;
+  }
+  if (statusTint) {
+    r = r * 0.45 + statusTint[0] * 0.55; g = g * 0.45 + statusTint[1] * 0.55; b = b * 0.45 + statusTint[2] * 0.55;
+  }
+  // three.js treats vertex colors as linear; Minecraft multiplies in sRGB, so convert.
+  out[0] = Math.min(255, Math.pow(r, 2.2) * 255) | 0; out[1] = Math.min(255, Math.pow(g, 2.2) * 255) | 0; out[2] = Math.min(255, Math.pow(b, 2.2) * 255) | 0;
+}
+
+// Cube face for a fluid of height h, in the same [tex, cull, tint, layer, shade, verts...] layout.
+function fluidFace(q, d, h, tex) {
+  const F = [
+    [0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1],
+    [0, h, 0, 0, h, 1, 1, h, 1, 1, h, 0],
+    [1, h, 0, 1, 0, 0, 0, 0, 0, 0, h, 0],
+    [0, h, 1, 0, 0, 1, 1, 0, 1, 1, h, 1],
+    [0, h, 0, 0, 0, 0, 0, 0, 1, 0, h, 1],
+    [1, h, 1, 1, 0, 1, 1, 0, 0, 1, h, 0],
+  ][d];
+  const UV = [0, 0, 0, 1, 1, 1, 1, 0];
+  q[0] = tex; q[1] = d; q[2] = -1; q[3] = 0; q[4] = d;
+  for (let k = 0; k < 4; k++) {
+    q[5 + k * 5] = F[k * 3]; q[6 + k * 5] = F[k * 3 + 1]; q[7 + k * 5] = F[k * 3 + 2];
+    q[8 + k * 5] = UV[k * 2]; q[9 + k * 5] = d > 1 ? (k === 0 || k === 3 ? 1 - h : 1) : UV[k * 2 + 1];
+  }
+}

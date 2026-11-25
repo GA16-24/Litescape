@@ -1,0 +1,22 @@
+{
+	"schemaVersion": 1,
+	"id": "litweb",
+	"version": "${version}",
+	"name": "Litematica Web Viewer",
+	"description": "View your Litematica area selection as a live 3D model in your browser. Install on the server too for full-range data in multiplayer.",
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": ["dev.ga16.litweb.LitWeb"],
+		"client": ["dev.ga16.litweb.client.LitWebClient"]
+	},
+	"depends": {
+		"fabricloader": ">=0.20.1",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	},
+	"recommends": {
+		"litematica": "*"
+	}
+}

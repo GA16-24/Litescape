@@ -1,0 +1,9 @@
+{
+	"schemaVersion": 1,
+	"id": "litweb-gametest",
+	"version": "1.0.0",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-client-gametest": ["dev.ga16.litweb.test.EndToEndTest"]
+	}
+}
