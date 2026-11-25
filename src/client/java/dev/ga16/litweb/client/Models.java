@@ -36,12 +36,13 @@ import org.joml.Vector3fc;
  */
 final class Models {
 	private final Minecraft mc = Minecraft.getInstance();
-	private final ClientLevel level;
+	/** Null when viewing a remembered server from the menus; tints then use their default colors. */
+	private final @Nullable ClientLevel level;
 	private final BlockPos tintPos;
 	private final Map<TextureAtlasSprite, Integer> textures = new HashMap<>();
 	private final JsonArray tex = new JsonArray();
 
-	Models(ClientLevel level, BlockPos tintPos) {
+	Models(@Nullable ClientLevel level, BlockPos tintPos) {
 		this.level = level;
 		this.tintPos = tintPos;
 	}
@@ -161,7 +162,7 @@ final class Models {
 	}
 
 	private int tint(BlockTintSource src, BlockState state) {
-		return src.colorInWorld(state, level, tintPos) & 0xFFFFFF;
+		return (level == null ? src.color(state) : src.colorInWorld(state, level, tintPos)) & 0xFFFFFF;
 	}
 
 	private int texture(TextureAtlasSprite s) {

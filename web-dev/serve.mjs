@@ -20,7 +20,7 @@ const types = {
 };
 const json = async (f) => JSON.parse(await readFile(join(fx, f), 'utf8'));
 
-let mode = 'full'; // full | offline | noworld | empty (toggle with /dev?mode=...)
+let mode = 'full'; // full | offline | noworld | menu | empty (toggle with /dev?mode=...)
 const started = Date.now();
 const state = await json('state-3.json');
 
@@ -75,7 +75,61 @@ function withContributors(st) {
       '5c2e7a10-0000-4000-8000-000000000b0b': { name: 'bob', placed: 7 + steps * 10, last: Date.now() - 400_000 },
     },
   }));
-  return { ...st, shared, placements: st.placements.map((p) => ({ ...p, author: p.author || 'Kestrel_Builds' })) };
+  return {
+    ...st,
+    shared: shared.map((s) => ({ ...s, manage: true, ...access.get(s.id) })),
+    placements: st.placements.map((p) => ({ ...p, author: p.author || 'Kestrel_Builds' })),
+    ...servers(st),
+  };
+}
+
+// Access changes made in the page, by shared id (the real server keeps them in index.json).
+const access = new Map();
+const ALICE = 'b6d1f0f2-0000-4000-8000-00000000a1ce';
+const BOB = '5c2e7a10-0000-4000-8000-000000000b0b';
+
+// The world the game test ran in, plus a remembered server whose list was saved on an earlier visit.
+function servers(st) {
+  const here = { key: 'world:/saves/litweb-test', name: 'Test World', address: 'Singleplayer' };
+  const s0 = st.shared[0];
+  const saved = [
+    {
+      ...s0,
+      id: 'a7d0c3a2-1111-4000-8000-00000000beef',
+      name: 'Harbor Lighthouse',
+      owner: ALICE,
+      ownerName: 'Alice_Mines',
+      mine: false,
+      manage: false,
+      access: 'players',
+      players: { [st.shared[0]?.owner]: st.player },
+    },
+    {
+      ...s0,
+      id: 'a7d0c3a2-2222-4000-8000-00000000beef',
+      name: 'Spawn Market',
+      owner: BOB,
+      ownerName: 'bob',
+      mine: false,
+    },
+  ];
+  return {
+    server: here,
+    online: [
+      { uuid: ALICE, name: 'Alice_Mines' },
+      { uuid: BOB, name: 'bob' },
+    ],
+    servers: [
+      { ...here, seen: Date.now(), shared: st.shared },
+      {
+        key: 'server:smp.kestrel.net',
+        name: 'Kestrel SMP',
+        address: 'smp.kestrel.net',
+        seen: started - 2 * 86400e3,
+        shared: saved,
+      },
+    ],
+  };
 }
 
 createServer(async (req, res) => {
@@ -96,15 +150,29 @@ createServer(async (req, res) => {
     if (url.pathname.startsWith('/api/shaders')) return proxyShaders(req, res, send);
     switch (url.pathname) {
       case '/api/state':
-        if (mode === 'noworld') return send(200, { inWorld: false });
+        if (mode === 'noworld') return send(200, { inWorld: false, servers: [] });
+        if (mode === 'menu') return send(200, { inWorld: false, servers: withContributors(state).servers });
         if (mode === 'empty') return send(200, { ...state, selection: undefined, placements: [], shared: [] });
         return send(200, withContributors(state));
       case '/api/view': {
         await new Promise((r) => setTimeout(r, 250));
+        // Of the remembered server's two schematics, only the lighthouse was opened there before.
+        if (url.searchParams.get('server') && !url.searchParams.get('id').includes('1111'))
+          return send(404, { error: 'not-saved' });
         return send(200, await json(`view-${url.searchParams.get('type')}.json`));
       }
       case '/api/status':
         return send(200, await status(`status-${url.searchParams.get('type')}.json`));
+      case '/api/access': {
+        const chunks = [];
+        for await (const c of req) chunks.push(c);
+        const a = JSON.parse(Buffer.concat(chunks));
+        if (!['everyone', 'players', 'private'].includes(a.access))
+          return send(500, { error: `Unknown access ${a.access}` });
+        await new Promise((r) => setTimeout(r, 300));
+        access.set(a.id, { access: a.access, players: a.players });
+        return send(200, {});
+      }
       case '/api/share':
       case '/api/unshare':
         await new Promise((r) => setTimeout(r, 600));
