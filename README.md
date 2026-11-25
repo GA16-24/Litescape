@@ -53,16 +53,7 @@ It needs WebGL 2 with floating-point render targets, which current Chrome, Edge,
 
 ## Install
 
-| Where             | Needs                                                                        |
-| ----------------- | ---------------------------------------------------------------------------- |
-| Client            | Fabric Loader 0.20.1+, Fabric API, Litematica 0.29.1 (and MaLiLib), this mod |
-| Server (optional) | Fabric Loader, Fabric API, this mod. The server doesn't need Litematica.     |
-
-It's one jar for both sides. Without the server part, the client reads blocks from the chunks it has loaded and the page tells you what percentage of the area is covered.
-
-### Desktop app (optional)
-
-If you'd rather have the viewer in its own window than a browser tab, install the desktop app:
+Install the Litescape app. It finds your Minecraft instances and installs the mod into the ones you pick.
 
 ```sh
 brew install --cask GA16-24/tap/litescape   # macOS and Linux
@@ -70,11 +61,28 @@ brew install --cask GA16-24/tap/litescape   # macOS and Linux
 
 On Windows, run `Litescape-<version>-win-x64.exe` from the [releases page](https://github.com/GA16-24/homebrew-tap/releases). Linux users without Homebrew can download the `.AppImage` from the same page.
 
-Once you've opened the app while the game is running, `/litweb` and the chat link open the app instead of your browser, starting it if it's closed. If the app doesn't respond within 10 seconds, for example because you uninstalled it, the game opens your browser and goes back to using it. The setting is kept in `config/litweb-desktop-app`.
+When the game isn't running, the app lists the instances it found in the Minecraft Launcher, Prism Launcher, the Modrinth App and CurseForge. Click Install next to one, then start the game from that instance. If you use another launcher, click "Add instance folder…" and choose the instance's folder.
 
-The app shows "Waiting for Minecraft" until the game is running with the mod, then opens the viewer. If you quit the game it goes back to waiting, and it reconnects when you start the game again. Links to other sites open in your browser.
+- Install is only offered for instances that run Fabric on Minecraft 26.3 and already have Fabric API, because the game won't start otherwise. Get Fabric API and Litematica 0.29.1 (with MaLiLib) from your launcher or Modrinth; the app links to both. Without Litematica the mod loads but the viewer stays off.
+- Install removes any other copy of the mod in that instance, so you never end up with two. Remove takes it out again. Close the game in that instance first: Windows won't let the app replace a jar the game has open.
+- Minecraft Launcher profiles that share a game folder share its mods folder too, so installing into one puts the mod in all of them.
+
+Once the game is running, the app shows the viewer. If you quit the game it goes back to the instance list, and it reconnects when you start the game again. Links to other sites open in your browser.
+
+After you've opened the app with the game running, `/litweb` and the chat link open the app instead of your browser, starting it if it's closed. If the app doesn't respond within 10 seconds, for example because you uninstalled it, the game opens your browser and goes back to using it. The setting is kept in `config/litweb-desktop-app`.
 
 The macOS build isn't notarized yet. The Homebrew cask clears the download quarantine for you. If you install the `.dmg` by hand, macOS will block the first launch until you allow it under System Settings → Privacy & Security.
+
+### Without the app
+
+The mod also works on its own, with the viewer in a browser tab. Put the jar in your mods folder yourself:
+
+| Where             | Needs                                                                        |
+| ----------------- | ---------------------------------------------------------------------------- |
+| Client            | Fabric Loader 0.20.1+, Fabric API, Litematica 0.29.1 (and MaLiLib), this mod |
+| Server (optional) | Fabric Loader, Fabric API, this mod. The server doesn't need Litematica.     |
+
+It's one jar for both sides. Servers always install it by hand. Without the server part, the client reads blocks from the chunks it has loaded and the page tells you what percentage of the area is covered.
 
 ## Server settings
 
@@ -116,7 +124,8 @@ node web-dev/serve.mjs       # web app on :8194 using the fixtures the game test
 ./gradlew shaderDev -Ppacks=<folder>  # the shader API on :8195 without Minecraft; serve.mjs forwards /api/shaders to it
 node web-dev/expr.test.mjs   # custom-uniform expression tests
 node web-dev/ui-tokens.test.mjs  # style.css colors come from its tokens; font sizes and radii stay on the scale
-cd desktop && npm ci && npm start  # the desktop app, against a running game
+cd desktop && npm ci && npm start  # the desktop app; installs the jar from build/libs, so run ./gradlew build first
+node --test desktop/instances.test.mjs  # instance detection and install, against fake launcher folders
 cd desktop && npm run dist         # desktop installers for this OS in desktop/dist/
 ```
 
