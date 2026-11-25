@@ -1,4 +1,4 @@
-# Litematica Web Viewer
+# Litescape
 
 A Fabric mod for Minecraft 26.3 that shows your Litematica selection and schematic placements as 3D models in a browser tab. On a server that also runs the mod, players can share a placement so everyone can watch it get built.
 
