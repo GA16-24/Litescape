@@ -285,6 +285,12 @@ public final class Pipeline {
 			opts.values.put(o.name, v);
 			locked.addProperty(o.name, v);
 		}
+		// Complementary's World Space Reflections needs Advanced Color Tracing; with ACT pinned off it paints an error over the scene.
+		String act = after.value("COLORED_LIGHTING");
+		if (act != null && act.strip().equals("0") && opts.all.containsKey("WORLD_SPACE_REFLECTIONS")) {
+			opts.values.put("WORLD_SPACE_REFLECTIONS", "-1");
+			locked.addProperty("WORLD_SPACE_REFLECTIONS", "-1");
+		}
 		return locked;
 	}
 
