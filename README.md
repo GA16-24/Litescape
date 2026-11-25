@@ -6,7 +6,9 @@ A Fabric mod for Minecraft 26.3 that shows your Litematica selection and schemat
 
 - Select an area with Litematica's area selection tool and it appears at `http://127.0.0.1:8723/`, with the textures from your current resource pack. The view reloads when you move a corner.
 - Open one of your placements to compare it with the world. Correct blocks render normally, missing blocks show as ghosts, a wrong block is tinted red and a wrong orientation or state is tinted amber. The counts and the material list ("88 left") update every 2 seconds.
-- Click Share on a placement to upload it to the server. Other players with the mod see it under "Shared on this server" and can follow progress from anywhere. The server compares it against the world using whatever chunks it has loaded. Sharing is opt-in per placement, and only the owner or an operator can stop sharing.
+- Click Share on a placement to upload it to the server. Once you let them in from the Access panel, other players with the mod see it under "Shared on this server" and can follow progress from anywhere. The server compares it against the world using whatever chunks it has loaded. Sharing is opt-in per placement, and only the owner or an operator can stop sharing.
+- The Access panel sets who can see a shared schematic: everyone on the server, only the players you pick, or only you. A new share starts as only you. Players can be picked while they're online or once they've helped build it. Operators can always see and manage every shared schematic. The server enforces this: a player without access doesn't get the schematic in their list and can't download it or its progress. Update copy keeps the access you set.
+- The server switcher at the top of the sidebar lists every server you've joined with the mod. The one you're on is live. The others show what was shared with you on your last visit, and any schematic you opened there can still be viewed in 3D. Progress, placements and access changes need you to be on that server. Joining a server switches the page to it.
 - A shared schematic lists its contributors: who placed blocks that match it, how many and when they were last active. Blocks count when a player places them by hand after the schematic was shared; buckets, pistons and commands like `/fill` don't count, and re-placing the same block counts once. Each player shows with their Minecraft face, cropped from their skin. The skin comes from Mojang the same way the game loads skins for player heads; players without one get their default skin. Everyone who can see the shared schematic can see this list. The schematic's author from the Litematica file is shown too.
 - The viewer also has layer slicing (all, up to a layer, single layer), hover to identify a block, click to isolate a material, a filter for remaining blocks or problems, screenshots, and a <kbd>⌘K</kbd> command palette. Light and dark themes follow your system.
 
@@ -60,6 +62,8 @@ Server reads only touch chunks that are already loaded. They never load or gener
 ## Privacy and security
 
 The web server binds to `127.0.0.1` only. It rejects requests whose `Host` or `Origin` isn't the local page, so other websites can't read your world or share on your behalf.
+
+The server switcher keeps each server's shared list and the schematics you opened in `config/litweb-servers/`. A copy is deleted once it's unshared or you lose access and you next visit that server. Taking away someone's access doesn't remove a copy they already downloaded.
 
 Opening the Shaders tab asks Modrinth for the popular packs' icons and download counts. Getting a pack downloads it from Modrinth. Nothing else leaves your computer, and these requests carry no account or world details. Shader settings are saved in `config/litweb-shaders.json`.
 

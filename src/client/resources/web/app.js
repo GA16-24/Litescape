@@ -44,6 +44,11 @@ const ICON = {
   chevron: '<svg class="i" viewBox="0 0 24 24"><path d="m9.5 6 6 6-6 6"/></svg>',
   sun: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>',
   moon: '<svg class="i" viewBox="0 0 24 24"><path d="M19.5 14.5A7.5 7.5 0 0 1 9.5 4.5a7.5 7.5 0 1 0 10 10z"/></svg>',
+  lock: '<svg class="i" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>',
+  people:
+    '<svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="m15.5 11.5 2 2 3.5-4"/></svg>',
+  updown: '<svg class="i" viewBox="0 0 24 24"><path d="m8 9.5 4-4 4 4M8 14.5l4 4 4-4"/></svg>',
+  x: '<svg class="i" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7 7 17"/></svg>',
 };
 
 // ---------------------------------------------------------------- app state
@@ -69,6 +74,13 @@ const S = {
   matQuery: '',
   pct: new Map(), // view key -> last known build %
   busy: new Set(), // share/unshare in flight
+  server: null, // key of the server picked in the switcher; null follows the one Minecraft is on
+  liveKey: undefined, // the server Minecraft was on at the last poll
+  access: null, // {id, access, players} sent but not yet echoed back by the server
+  accessQuery: '',
+  accessSel: 0,
+  accessOpen: false, // the player field has focus, so its suggestions show
+  scrollToAccess: false, // bring the Access panel into view once it renders
 };
 
 // ---------------------------------------------------------------- three.js
@@ -244,6 +256,18 @@ const boxSize = (boxes) => {
   return [u[3] - u[0] + 1, u[4] - u[1] + 1, u[5] - u[2] + 1];
 };
 const keyOf = (d) => (d ? `${d.type}:${d.id || ''}` : '');
+
+// Servers: the one Minecraft is on is live; any other shows the shared list saved when you were last there.
+const viewServer = () => S.server || S.api?.server?.key || S.api?.servers?.[0]?.key || '';
+const isLive = () => !!S.api?.inWorld && S.api.server?.key === viewServer();
+const serverInfo = (key = viewServer()) => {
+  const saved = S.api?.servers?.find((s) => s.key === key);
+  return S.api?.server?.key === key ? { ...saved, ...S.api.server } : saved;
+};
+const sharedList = () => (isLive() ? S.api.shared : serverInfo()?.shared) || [];
+const findShared = (id) => sharedList().find((s) => s.id === id);
+const monogram = (name, key) =>
+  `<span class="mono" style="--h:${[...key].reduce((x, ch) => (x * 31 + ch.charCodeAt(0)) % 360, 7)}" aria-hidden="true">${esc((name || '?').trim()[0]?.toUpperCase() || '?')}</span>`;
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -351,7 +375,8 @@ async function open(desc, { force = false } = {}) {
   const big = S.data && !changedView;
   showOverlay(loadingHtml(desc), big);
   try {
-    const data = await api(`api/view?type=${desc.type}&id=${encodeURIComponent(desc.id || '')}`);
+    const saved = desc.type === 'shared' && !isLive() ? `&server=${encodeURIComponent(viewServer())}` : '';
+    const data = await api(`api/view?type=${desc.type}&id=${encodeURIComponent(desc.id || '')}${saved}`);
     if (S.loadingKey !== token) return;
     setLoadingText('Loading textures…');
     const atlas = await buildAtlas(data.tex);
@@ -432,8 +457,8 @@ function viewSig(desc) {
     const p = (a.placements || []).find((x) => x.id === desc.id);
     return p ? JSON.stringify(p.boxes) : null;
   }
-  const s = (a.shared || []).find((x) => x.id === desc.id);
-  return s ? String(s.updated) : null;
+  const s = findShared(desc.id);
+  return s ? `${isLive()}:${s.updated}` : null; // joining its server swaps the saved copy for the live one
 }
 
 function buildHelpers(data) {
@@ -521,7 +546,7 @@ function currentBoxes() {
   if (!d || !a) return [];
   if (d.type === 'selection') return a.selection?.boxes || [];
   if (d.type === 'placement') return (a.placements || []).find((p) => p.id === d.id)?.boxes || [];
-  const s = (a.shared || []).find((x) => x.id === d.id);
+  const s = findShared(d.id);
   return s
     ? [
         [
@@ -578,7 +603,7 @@ let statusTimer = 0;
 async function pollStatus(now) {
   clearTimeout(statusTimer);
   const d = S.desc;
-  if (!d || d.type === 'selection' || !S.data) return;
+  if (!d || d.type === 'selection' || !S.data || !isLive()) return; // a saved copy has no world to compare with
   if (!now && document.hidden) {
     statusTimer = setTimeout(pollStatus, 2000);
     return;
@@ -696,11 +721,24 @@ async function pollState() {
 
 let reloadTimer = 0;
 function onState() {
+  const a = S.api;
+  const live = a.inWorld ? a.server?.key || '' : null;
+  // Joining a server switches the page to it, unless it's the one already on screen or this is the first poll.
+  if (live && S.liveKey !== undefined && live !== S.liveKey && live !== S.viewing) resetView(null);
+  S.liveKey = live;
+  // Your selection and placements left with the world; show the saved copy of the server instead.
+  if (S.desc && S.desc.type !== 'shared' && !isLive()) resetView(S.server);
+  S.viewing = viewServer();
+  if (S.access) {
+    const sh = findShared(S.access.id);
+    if (!sh || (sh.access === S.access.access && JSON.stringify(sh.players) === JSON.stringify(S.access.players)))
+      S.access = null; // the server has it now
+  }
   renderConn();
   renderNav();
   renderFoot();
-  const a = S.api;
-  if (!a.inWorld) {
+  if (!a.inWorld && !a.servers?.length) {
+    S.desc = null;
     S.data = null;
     S.loadingKey = null;
     clearScene();
@@ -713,16 +751,16 @@ function onState() {
     const first =
       fromHash && exists(fromHash)
         ? fromHash
-        : a.selection
+        : isLive() && a.selection
           ? { type: 'selection' }
-          : a.placements?.[0]
+          : isLive() && a.placements?.[0]
             ? { type: 'placement', id: a.placements[0].id }
-            : a.shared?.[0]
-              ? { type: 'shared', id: a.shared[0].id }
+            : sharedList()[0]
+              ? { type: 'shared', id: sharedList()[0].id }
               : null;
     if (first) open(first);
     else {
-      showOverlay(emptyHtml('selection'));
+      showOverlay(emptyHtml(isLive() ? 'selection' : a.inWorld ? 'nothing-shared' : 'world'));
       renderAll();
     }
     return;
@@ -752,10 +790,10 @@ function onState() {
 
 function exists(d) {
   const a = S.api;
-  if (!a?.inWorld) return false;
+  if (d.type === 'shared') return !!findShared(d.id);
+  if (!isLive()) return false; // your selection and placements belong to the world you're in
   if (d.type === 'selection') return !!a.selection;
   if (d.type === 'placement') return !!(a.placements || []).find((p) => p.id === d.id);
-  if (d.type === 'shared') return !!(a.shared || []).find((p) => p.id === d.id);
   return false;
 }
 
@@ -816,6 +854,14 @@ function showOffline() {
     <div class="progress-line"><i></i></div></div>`);
 }
 function showError(desc, msg) {
+  if (msg === 'not-saved') {
+    // Retrying can't help: the copy only exists once it's been opened on its server.
+    showOverlay(`<div class="empty">
+    <div class="empty-icon">${ICON.download}</div>
+    <h2>Not downloaded yet</h2>
+    <p>You haven't opened this one on ${esc(serverInfo()?.name || 'its server')}, so there's no saved copy. Join the server in Minecraft and open it once to keep it here.</p></div>`);
+    return;
+  }
   const nice =
     {
       'no-permission':
@@ -833,6 +879,11 @@ function emptyHtml(kind) {
     <div class="empty-icon">${ICON.globe}</div>
     <h2>Join a world</h2>
     <p>Open a singleplayer world or join a server. Your selection and placements show up here as soon as you're in.</p></div>`;
+  if (kind === 'nothing-shared')
+    return `<div class="empty">
+    <div class="empty-icon">${ICON.shared}</div>
+    <h2>Nothing shared on ${esc(serverInfo()?.name || 'this server')}</h2>
+    <p>Nobody had shared a schematic with you when you last visited. Pick another server from the switcher.</p></div>`;
   if (kind === 'gone')
     return `<div class="empty">
     <div class="empty-icon">${ICON.placement}</div>
@@ -885,11 +936,72 @@ let lastNav = null;
 function renderNav() {
   const a = S.api;
   const nav = $('nav');
-  if (!a?.inWorld) {
+  renderServer();
+  if (!a?.inWorld && !a?.servers?.length) {
     nav.innerHTML = '';
     lastNav = null;
     return;
   }
+  const h = isLive() ? liveNavHtml(a) + sharedNavHtml() : savedNoteHtml() + sharedNavHtml();
+  if (h !== lastNav) {
+    // re-rendering every poll would drop keyboard focus
+    const focused = document.activeElement?.closest?.('#nav [data-desc]')?.dataset.desc;
+    nav.innerHTML = lastNav = h;
+    if (focused) [...nav.querySelectorAll('[data-desc]')].find((r) => r.dataset.desc === focused)?.focus();
+  }
+}
+
+function savedNoteHtml() {
+  const info = serverInfo();
+  return `<div class="saved-note" role="note">${ICON.server}<p><b>Saved copy</b> from ${info?.seen ? ago(info.seen) : 'your last visit'}. Join ${esc(info?.name || 'this server')} in Minecraft for your placements and live progress.</p></div>`;
+}
+
+function sharedNavHtml() {
+  const a = S.api;
+  const live = isLive();
+  let h = `<div class="nav-section"><div class="nav-head">${live ? 'Shared on this server' : `Shared on ${esc(serverInfo()?.name || 'this server')}`}</div>`;
+  if (live && !a.serverMod)
+    h +=
+      '<div class="nav-empty">Install Litematica Web Viewer on the server to see what other players are building.</div>';
+  else if (!sharedList().length)
+    h += live
+      ? '<div class="nav-empty">Nothing shared yet. Share one of your placements so others can follow it.</div>'
+      : '<div class="nav-empty">Nothing was shared with you here on your last visit.</div>';
+  for (const s of sharedList()) {
+    h += rowHtml({
+      desc: { type: 'shared', id: s.id },
+      icon: ICON.shared,
+      title: s.name,
+      sub: `${s.mine ? 'You' : esc(s.ownerName)} · ${dims(s.size)}${live && s.dim !== a.dim ? ` · ${esc(s.dim.replace('minecraft:', '').replace('the_', ''))}` : ''}`,
+      meta: accessBadge(s),
+      pct: live ? S.pct.get(`shared:${s.id}`) : null,
+    });
+  }
+  return `${h}</div>`;
+}
+
+/** Who can see a shared schematic, counting a change that's still on its way to the server. */
+function accessOf(sh) {
+  return S.access?.id === sh.id ? S.access : { access: sh.access || 'everyone', players: sh.players || {} };
+}
+function accessText(sh) {
+  const { access, players } = accessOf(sh);
+  const n = Object.keys(players).length;
+  if (access === 'everyone') return 'Everyone on the server';
+  if (access === 'private' || !n) return `Only ${sh.mine ? 'you' : sh.ownerName}`; // nobody picked yet
+  if (sh.mine) return `You and ${n} player${n === 1 ? '' : 's'}`;
+  const me = Object.values(players).includes(S.api?.player) ? 1 : 0; // names: the page doesn't know your UUID
+  const others = n - me;
+  return `${sh.ownerName}${me ? (others ? ', you' : ' and you') : ''}${others ? ` and ${others} other${others === 1 ? '' : 's'}` : ''}`;
+}
+function accessBadge(sh) {
+  const { access } = accessOf(sh);
+  if (access === 'everyone') return '';
+  const tip = accessText(sh);
+  return `<span class="row-badge" role="img" aria-label="${esc(tip)}" data-tip="${esc(tip)}">${access === 'private' ? ICON.lock : ICON.people}</span>`;
+}
+
+function liveNavHtml(a) {
   let h = '<div class="nav-section"><div class="nav-head">Selection</div>';
   h += a.selection
     ? rowHtml({
@@ -908,8 +1020,8 @@ function renderNav() {
     const tip = !a.serverMod
       ? 'The server needs Litematica Web Viewer to share'
       : shared
-        ? 'Shared with players on this server'
-        : 'Share so other players can follow the build';
+        ? 'Shared. Open it to choose who can see it'
+        : 'Share to the server. Only you see it until you choose who else can';
     const action = `<button class="row-action ${shared ? 'on' : ''}" data-share="${esc(p.id)}" aria-disabled="${!a.serverMod || busy}" data-tip="${esc(tip)}">${shared ? `${ICON.check}Shared` : ICON.share + (busy ? 'Sharing…' : 'Share')}</button>`;
     h += rowHtml({
       desc: { type: 'placement', id: p.id },
@@ -920,29 +1032,131 @@ function renderNav() {
       pct: S.pct.get(`placement:${p.id}`),
     });
   }
-  h += '</div><div class="nav-section"><div class="nav-head">Shared on this server</div>';
-  if (!a.serverMod)
-    h +=
-      '<div class="nav-empty">Install Litematica Web Viewer on the server to see what other players are building.</div>';
-  else if (!a.shared?.length)
-    h += '<div class="nav-empty">Nothing shared yet. Share one of your placements so others can follow it.</div>';
-  for (const s of a.shared || []) {
-    h += rowHtml({
-      desc: { type: 'shared', id: s.id },
-      icon: ICON.shared,
-      title: s.name,
-      sub: `${s.mine ? 'You' : esc(s.ownerName)} · ${dims(s.size)}${s.dim !== a.dim ? ` · ${esc(s.dim.replace('minecraft:', '').replace('the_', ''))}` : ''}`,
-      pct: S.pct.get(`shared:${s.id}`),
-    });
+  return `${h}</div>`;
+}
+
+// ---------------------------------------------------------------- server switcher
+
+/** The connected server first, then the rest by last visit. */
+function serverList() {
+  const a = S.api;
+  const list = [...(a?.servers || [])];
+  if (a?.inWorld && a.server) {
+    const i = list.findIndex((s) => s.key === a.server.key);
+    list.unshift({ ...(i >= 0 ? list.splice(i, 1)[0] : { shared: [] }), ...a.server, live: true });
   }
-  h += '</div>';
-  if (h !== lastNav) {
-    // re-rendering every poll would drop keyboard focus
-    const focused = document.activeElement?.closest?.('#nav [data-desc]')?.dataset.desc;
-    nav.innerHTML = lastNav = h;
-    if (focused) [...nav.querySelectorAll('[data-desc]')].find((r) => r.dataset.desc === focused)?.focus();
+  return list;
+}
+
+let lastServer = null;
+function renderServer() {
+  const info = serverInfo();
+  const el = $('server-pick');
+  const h = info
+    ? `<button type="button" class="server-btn" id="server-btn" aria-haspopup="listbox" aria-expanded="${!$('server-menu').hidden}" aria-controls="server-menu">${monogram(info.name, info.key)}<span class="row-main"><span class="row-title">${esc(info.name)}</span><span class="row-sub">${
+        isLive()
+          ? `<span class="live-dot"></span>Connected${info.address ? ` · ${esc(info.address)}` : ''}`
+          : `Saved copy · ${info.seen ? ago(info.seen) : ''}`
+      }</span></span>${ICON.updown}</button>`
+    : '';
+  el.hidden = !info;
+  if (h !== lastServer) {
+    const focused = document.activeElement?.id === 'server-btn';
+    el.innerHTML = lastServer = h;
+    if (focused) $('server-btn')?.focus();
   }
 }
+
+let srvSel = 0,
+  srvItems = [];
+function openServerMenu() {
+  $('server-menu').hidden = false;
+  $('server-search').value = '';
+  srvSel = Math.max(
+    0,
+    serverList().findIndex((s) => s.key === viewServer()),
+  );
+  const btn = $('server-btn');
+  $('server-menu').style.top = `${btn.offsetTop + btn.offsetHeight + 4}px`;
+  renderServerMenu();
+  $('server-search').focus();
+  renderServer();
+}
+function closeServerMenu(refocus = true) {
+  if ($('server-menu').hidden) return;
+  $('server-menu').hidden = true;
+  renderServer();
+  if (refocus) $('server-btn')?.focus();
+}
+function renderServerMenu() {
+  const q = $('server-search').value.trim().toLowerCase();
+  srvItems = serverList().filter((s) => !q || `${s.name} ${s.address}`.toLowerCase().includes(q));
+  srvSel = Math.min(srvSel, Math.max(0, srvItems.length - 1));
+  $('server-list').innerHTML =
+    srvItems
+      .map((s, i) => {
+        const sub = s.live ? `Connected${s.address ? ` · ${esc(s.address)}` : ''}` : esc(s.address || '');
+        const meta = s.live ? '' : `<span class="row-meta">${ago(s.seen)}</span>`;
+        return `<button type="button" class="pal-item" role="option" id="srv-${i}" data-srv="${i}" aria-selected="${i === srvSel}">${monogram(s.name, s.key)}<span class="row-main"><span class="row-title">${esc(s.name)}</span><span class="row-sub">${sub}</span></span>${s.key === viewServer() ? `<span class="srv-check" aria-label="Showing">${ICON.check}</span>` : meta}</button>`;
+      })
+      .join('') || '<div class="pal-empty">No matching servers</div>';
+  $('server-search').setAttribute('aria-activedescendant', srvItems.length ? `srv-${srvSel}` : '');
+  document.getElementById(`srv-${srvSel}`)?.scrollIntoView({ block: 'nearest' });
+}
+
+/** Clears the open view so the next state poll opens the first thing on the picked server. */
+function resetView(key) {
+  S.server = key && key !== S.api?.server?.key ? key : null; // picking the connected server means "follow it"
+  try {
+    if (S.server) localStorage.setItem('litweb.server', S.server);
+    else localStorage.removeItem('litweb.server');
+  } catch {}
+  S.desc = null;
+  S.data = null;
+  S.loadingKey = null;
+  S.status = null;
+  S.counts = null;
+  S.access = null;
+  clearScene();
+  history.replaceState(null, '', location.pathname + location.search);
+}
+function pickServer(key) {
+  closeServerMenu();
+  if (key === viewServer()) return;
+  resetView(key);
+  lastNav = null;
+  if (S.api) onState();
+  renderAll();
+}
+
+$('server-pick').addEventListener('click', (e) => {
+  if (e.target.closest('#server-btn')) $('server-menu').hidden ? openServerMenu() : closeServerMenu();
+});
+$('server-search').addEventListener('input', () => {
+  srvSel = 0;
+  renderServerMenu();
+});
+$('server-search').addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    srvSel = (srvSel + (e.key === 'ArrowDown' ? 1 : -1) + srvItems.length) % Math.max(1, srvItems.length);
+    renderServerMenu();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (srvItems[srvSel]) pickServer(srvItems[srvSel].key);
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    e.stopPropagation();
+    closeServerMenu();
+  } else if (e.key === 'Tab') closeServerMenu(false);
+});
+$('server-list').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-srv]');
+  if (b) pickServer(srvItems[+b.dataset.srv].key);
+});
+document.addEventListener('mousedown', (e) => {
+  if (!$('server-menu').hidden && !e.target.closest('#server-menu, #server-pick')) closeServerMenu(false);
+});
 
 function renderFoot() {
   const a = S.api;
@@ -966,13 +1180,16 @@ function renderTop() {
     data = S.data;
   let crumbs = '';
   if (d && a) {
-    const group = { selection: 'Selection', placement: 'Your placements', shared: 'Shared' }[d.type];
+    const group =
+      d.type === 'shared'
+        ? esc(serverInfo()?.name || 'Shared')
+        : { selection: 'Selection', placement: 'Your placements' }[d.type];
     const name =
       d.type === 'selection'
         ? a.selection?.name
         : d.type === 'placement'
           ? a.placements?.find((p) => p.id === d.id)?.name
-          : a.shared?.find((s) => s.id === d.id)?.name;
+          : findShared(d.id)?.name;
     crumbs = `<span class="muted">${group}</span>${name ? `<span class="sep">/</span><strong>${esc(name)}</strong>` : ''}`;
   }
   $('crumbs').innerHTML = crumbs;
@@ -993,6 +1210,8 @@ function renderTop() {
     }
     if (S.counts && S.connected)
       chips += `<span class="chip live" data-tip="Build progress updates every 2 seconds">Live</span>`;
+    if (d.type === 'shared' && !isLive())
+      chips += `<span class="chip" data-tip="The copy you downloaded on your last visit. Build progress is live only while you're on this server.">Saved copy</span>`;
     if (S.connected === false) chips += `<span class="chip warn">Offline</span>`;
   }
   if (data && SH.settings.enabled && SH.settings.pack) {
@@ -1071,7 +1290,12 @@ function renderInspector() {
       <div class="updated" id="updated-at">${S.statusErr ? `<span style="color:var(--danger)">${esc(S.statusErr)}</span>` : `Updated ${ago < 2 ? 'just now' : `${ago}s ago`}`}</div>
     </section>`;
   } else if (d.type !== 'selection') {
-    h += `<section class="panel"><div class="panel-head"><h3>Build progress</h3></div><div class="updated">${S.statusErr ? `<span style="color:var(--danger)">${esc(S.statusErr)}</span>` : 'Checking the world…'}</div></section>`;
+    const why = !isLive()
+      ? `Build progress shows while you're on ${esc(serverInfo()?.name || 'its server')}.`
+      : S.statusErr
+        ? `<span style="color:var(--danger)">${esc(S.statusErr)}</span>`
+        : 'Checking the world…';
+    h += `<section class="panel"><div class="panel-head"><h3>Build progress</h3></div><div class="updated">${why}</div></section>`;
   }
 
   const facts = [
@@ -1083,12 +1307,13 @@ function renderInspector() {
     facts.push(['Source', data.source === 'server' ? 'Server' : 'Your loaded chunks']);
     if (data.unknown) facts.push(['Not loaded', `${fmt.format(data.unknown)} blocks`]);
   }
-  const sh = d.type === 'shared' ? a.shared?.find((s) => s.id === d.id) : null;
+  const sh = d.type === 'shared' ? findShared(d.id) : null;
   const pl = d.type === 'placement' ? a.placements?.find((p) => p.id === d.id) : null;
   const author = sh?.author || pl?.author;
   if (author) facts.push(['Author', author]);
   if (sh) {
     facts.push(['Shared by', sh.mine ? 'You' : sh.ownerName]);
+    if (!sh.manage || !isLive()) facts.push(['Visible to', accessText(sh)]);
     facts.push(['Dimension', sh.dim.replace('minecraft:', '')]);
     facts.push(['Shared', new Date(sh.updated).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })]);
   }
@@ -1099,12 +1324,14 @@ function renderInspector() {
       ? `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-share-now="${esc(pl.id)}" ${busy ? 'disabled' : ''}>${ICON.share}Update copy</button><button class="btn" data-unshare="${esc(pl.sharedId)}" data-key-of="${esc(pl.id)}">${ICON.stop}Stop sharing</button></div>
          <p class="updated" style="margin:0 0 12px">Shared. Use Update copy after you move or edit the placement.</p>`
       : `<div class="btn-row" style="margin:0 0 6px"><button class="btn primary" data-share-now="${esc(pl.id)}" ${!a.serverMod || busy ? 'disabled' : ''}>${ICON.share}${busy ? 'Sharing…' : 'Share to server'}</button></div>
-         <p class="updated" style="margin:0 0 12px">${a.serverMod ? 'Other players can then view it, follow the build from their browser and see who helped.' : 'The server needs Litematica Web Viewer to share schematics.'}</p>`;
+         <p class="updated" style="margin:0 0 12px">${a.serverMod ? 'Only you can see it at first. Then choose who else can view it, follow the build and see who helped.' : 'The server needs Litematica Web Viewer to share schematics.'}</p>`;
   }
-  if (sh?.mine)
+  if ((sh?.manage ?? sh?.mine) && isLive())
+    // `manage` is missing from servers on an older version of the mod
     h += `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-unshare="${esc(sh.id)}">${ICON.stop}Stop sharing</button></div>`;
   h += '</section>';
-  const shared = sh || (pl?.sharedId && a.shared?.find((s) => s.id === pl.sharedId));
+  const shared = sh || (pl?.sharedId && findShared(pl.sharedId));
+  if (shared?.manage && isLive()) h += accessHtml(shared);
   if (shared) h += contributorsHtml(shared, a.player);
 
   const q = S.matQuery.toLowerCase();
@@ -1133,13 +1360,109 @@ function renderInspector() {
         '',
       )}${mats.length > 300 ? `<div class="mats-more">${mats.length - 300} more. Filter to find them.</div>` : ''}${!mats.length ? '<div class="mats-more">No matching materials</div>' : ''}</div></section>`;
 
+  const typing = document.activeElement?.id === 'access-add' ? document.activeElement.selectionStart : -1;
   el.innerHTML = h;
   el.scrollTop = scrollTop;
+  if (S.scrollToAccess && $('access')) {
+    S.scrollToAccess = false;
+    $('access').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  const add = $('access-add');
+  if (add && typing >= 0) {
+    add.focus(); // this re-render runs every 2 s while progress updates
+    add.setSelectionRange(typing, typing);
+  }
   const f = $('mat-filter');
   if (f && document.activeElement?.id !== 'mat-filter' && S.matFocus) {
     f.focus();
     f.setSelectionRange(f.value.length, f.value.length);
   }
+}
+
+/** A player's face, cropped from their skin; the initial shows until it loads, or if it can't. */
+function avatar(uuid, name) {
+  const hue = [...uuid].reduce((x, ch) => (x * 31 + ch.charCodeAt(0)) % 360, 7);
+  return `<span class="avatar" style="--h:${hue}" aria-hidden="true">${esc((name || '?')[0].toUpperCase())}<i style="--skin:url('api/skin?uuid=${encodeURIComponent(uuid)}')"></i></span>`;
+}
+
+const ACCESS = [
+  ['everyone', ICON.globe, 'Everyone on this server', 'Anyone with the mod can view it and follow the build.'],
+  ['players', ICON.people, 'Only people you choose', 'Pick the players who can see it.'],
+  ['private', ICON.lock, 'Only you', 'Hidden from everyone else.'],
+];
+
+/** Who can see a schematic you manage. Changes apply right away, like the rest of the page. */
+function accessHtml(sh) {
+  const cur = accessOf(sh);
+  let h = `<section class="panel" id="access" data-id="${esc(sh.id)}"><div class="panel-head"><h3 id="access-label">Access</h3>${S.access?.id === sh.id ? '<span class="row-meta">Saving…</span>' : ''}</div>
+    <div class="access-opts" role="radiogroup" aria-labelledby="access-label">`;
+  for (const [k, icon, title, sub] of ACCESS)
+    h += `<label class="access-opt"><input type="radio" name="access" value="${k}" ${cur.access === k ? 'checked' : ''}><span class="row-icon">${icon}</span><span class="row-main"><span class="row-title">${title}</span><span class="row-sub">${sub}</span></span><span class="access-check">${ICON.check}</span></label>`;
+  h += '</div>';
+  if (cur.access === 'players') {
+    const people = Object.entries(cur.players);
+    h += `<div class="people">${people
+      .map(
+        ([uuid, name]) =>
+          `<div class="person">${avatar(uuid, name)}<span class="c-name">${esc(name)}</span><button type="button" class="icon-btn sm" data-remove-player="${esc(uuid)}" aria-label="Remove ${esc(name)}" data-tip="Remove">${ICON.x}</button></div>`,
+      )
+      .join('')}</div>`;
+    const picks = candidates(sh, cur.players);
+    S.accessSel = Math.min(S.accessSel, Math.max(0, picks.length - 1));
+    const q = S.accessQuery.trim();
+    h += `<div class="person-add">
+      <input id="access-add" class="mat-filter" placeholder="${people.length ? 'Add another player' : 'Add a player by name'}" value="${esc(S.accessQuery)}" autocomplete="off" spellcheck="false"
+        role="combobox" aria-autocomplete="list" aria-controls="access-sugg" aria-expanded="${S.accessOpen}" aria-activedescendant="${picks.length ? `sugg-${S.accessSel}` : ''}">
+      <div class="sugg" id="access-sugg" role="listbox" aria-label="Players">${
+        picks
+          .map(
+            (p, i) =>
+              `<button type="button" tabindex="-1" class="pal-item" role="option" id="sugg-${i}" data-add-player="${i}" aria-selected="${i === S.accessSel}">${avatar(p.uuid, p.name)}<span class="row-main"><span class="row-title">${esc(p.name)}</span><span class="row-sub">${p.why}</span></span></button>`,
+          )
+          .join('') ||
+        `<div class="pal-empty">${q ? `Nobody online or among the builders is called “${esc(q)}”.` : 'Nobody else is online.'} Players can be added while they're online or once they've helped build.</div>`
+      }</div></div>`;
+  }
+  return `${h}<p class="updated" style="margin:8px 0 12px">Operators can always see shared schematics.</p></section>`;
+}
+
+/** Players who can be added: those online now, then people who helped build it. */
+function candidates(sh, players) {
+  const all = new Map();
+  for (const p of S.api.online || []) all.set(p.uuid, { ...p, why: 'Online now' });
+  for (const [uuid, c] of Object.entries(sh.contributors || {}))
+    if (!all.has(uuid)) all.set(uuid, { uuid, name: c.name, why: 'Helped build' });
+  all.delete(sh.owner);
+  for (const uuid of Object.keys(players)) all.delete(uuid);
+  const q = S.accessQuery.trim().toLowerCase();
+  return [...all.values()].filter((p) => !q || p.name.toLowerCase().includes(q));
+}
+
+async function setAccess(id, access, players) {
+  S.access = { id, access, players };
+  renderInspector();
+  renderNav();
+  try {
+    await api('api/access', { method: 'POST', body: JSON.stringify({ id, access, players }) });
+  } catch (err) {
+    S.access = null;
+    toast("Couldn't change who can see it", err.message, { error: true });
+    renderInspector();
+    renderNav();
+  }
+}
+function accessTarget() {
+  const id = $('access')?.dataset.id;
+  const sh = id && findShared(id);
+  return sh ? { id, ...accessOf(sh), sh } : null;
+}
+function addPlayer(i) {
+  const t = accessTarget();
+  const p = t && candidates(t.sh, t.players)[i];
+  if (!p) return;
+  S.accessQuery = '';
+  S.accessSel = 0;
+  setAccess(t.id, 'players', { ...t.players, [p.uuid]: p.name });
 }
 
 /** Who placed blocks of a shared schematic. The server counts placed blocks that match it, from when it was shared. */
@@ -1157,10 +1480,8 @@ function contributorsHtml(sh, me) {
   }
   h += '<div class="contribs">';
   for (const c of list) {
-    const hue = [...c.uuid].reduce((x, ch) => (x * 31 + ch.charCodeAt(0)) % 360, 7);
     const pct = (100 * c.placed) / total;
-    // The face is cropped from the player's skin; the initial shows until it loads, or if it can't.
-    h += `<div class="contrib"><span class="avatar" style="--h:${hue}" aria-hidden="true">${esc((c.name || '?')[0].toUpperCase())}<i style="--skin:url('api/skin?uuid=${encodeURIComponent(c.uuid)}')"></i></span>
+    h += `<div class="contrib">${avatar(c.uuid, c.name)}
       <span class="c-main"><span class="c-name">${esc(c.name)}${c.name === me ? '<span class="you">you</span>' : ''}</span><span class="c-sub">Active ${ago(c.last)}</span></span>
       <span class="c-count"><b class="num">${fmt.format(c.placed)}</b><span class="c-pct num">${pct < 1 ? '<1' : Math.round(pct)}%</span></span>
       <span class="c-bar"><i style="width:${pct.toFixed(1)}%"></i></span></div>`;
@@ -1264,12 +1585,28 @@ $('inspector').addEventListener('click', (e) => {
   if (sn) return sharePlacement(sn.dataset.shareNow);
   const us = t.closest('[data-unshare]');
   if (us) return unshare(us.dataset.unshare, us.dataset.keyOf);
+  const rm = t.closest('[data-remove-player]')?.dataset.removePlayer;
+  if (rm) {
+    const a = accessTarget();
+    const { [rm]: _, ...rest } = a.players;
+    return setAccess(a.id, 'players', rest);
+  }
+  const addp = t.closest('[data-add-player]');
+  if (addp) return addPlayer(+addp.dataset.addPlayer);
   if (t.closest('#copy-mats')) return copyMaterials();
+});
+$('inspector').addEventListener('mousedown', (e) => {
+  if (e.target.closest('[data-add-player]')) e.preventDefault(); // keep focus in the field so the list stays open
 });
 $('inspector').addEventListener('change', (e) => {
   if (e.target.id === 'ghosts') {
     S.ghosts = e.target.checked;
     remesh();
+  }
+  if (e.target.name === 'access') {
+    const a = accessTarget();
+    setAccess(a.id, e.target.value, a.players);
+    if (e.target.value === 'players') requestAnimationFrame(() => $('access-add')?.focus());
   }
   shaderChange(e.target);
 });
@@ -1279,9 +1616,23 @@ $('inspector').addEventListener('input', (e) => {
     S.matFocus = true;
     renderInspector();
   }
+  if (e.target.id === 'access-add') {
+    S.accessQuery = e.target.value;
+    S.accessSel = 0;
+    renderInspector();
+  }
   shaderInput(e.target);
 });
+$('inspector').addEventListener('focusin', (e) => {
+  if (e.target.id !== 'access-add') return;
+  S.accessOpen = true;
+  e.target.setAttribute('aria-expanded', 'true');
+});
 $('inspector').addEventListener('focusout', (e) => {
+  if (e.target.id === 'access-add') {
+    S.accessOpen = false;
+    e.target.setAttribute('aria-expanded', 'false');
+  }
   if (e.target.id === 'mat-filter') S.matFocus = false;
   if (e.target.id === 'sh-search') SH.searchFocus = false;
 });
@@ -1290,6 +1641,23 @@ $('inspector').addEventListener('keydown', (e) => {
     e.stopPropagation();
     SH.query = '';
     renderInspector();
+  }
+  if (e.target.id === 'access-add') {
+    const n = $('access-sugg').querySelectorAll('[data-add-player]').length;
+    if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && n) {
+      e.preventDefault();
+      S.accessSel = (S.accessSel + (e.key === 'ArrowDown' ? 1 : -1) + n) % n;
+      renderInspector();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      addPlayer(S.accessSel);
+    } else if (e.key === 'Escape') {
+      e.stopPropagation();
+      if (S.accessQuery) {
+        S.accessQuery = '';
+        renderInspector();
+      } else e.target.blur();
+    }
   }
   if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && e.target.matches('[role="tab"]')) {
     e.preventDefault();
@@ -1342,7 +1710,17 @@ async function sharePlacement(id) {
     await api(`api/share?id=${encodeURIComponent(id)}`, { method: 'POST' });
     toast(
       p?.sharedId ? 'Shared copy updated' : `Shared “${p?.name ?? 'placement'}”`,
-      'Players on this server can now follow the build.',
+      p?.sharedId ? 'Who can see it stays the same.' : 'Only you can see it so far.',
+      p?.sharedId
+        ? {}
+        : {
+            action: 'Choose who',
+            run: () => {
+              S.scrollToAccess = true; // the Access panel shows once the placement and its shared copy are loaded
+              open({ type: 'placement', id });
+              renderInspector();
+            },
+          },
     );
   } catch (err) {
     toast("Couldn't share", err.message, { error: true });
@@ -1388,10 +1766,7 @@ function screenshot() {
   else renderer.render(scene, camera);
   (shaded ? $('gl-iris') : canvas).toBlob((blob) => {
     const a = document.createElement('a');
-    const name = (S.data.name || S.api?.shared?.find((s) => s.id === S.desc.id)?.name || 'view').replace(
-      /[^\w-]+/g,
-      '_',
-    );
+    const name = (S.data.name || findShared(S.desc.id)?.name || 'view').replace(/[^\w-]+/g, '_');
     a.href = URL.createObjectURL(blob);
     a.download = `${name}.png`;
     a.click();
@@ -2316,7 +2691,7 @@ const COMMANDS = () => {
 function paletteItems(q) {
   const a = S.api;
   const items = [];
-  if (a?.inWorld) {
+  if (isLive()) {
     if (a.selection)
       items.push({
         group: 'Views',
@@ -2333,15 +2708,24 @@ function paletteItems(q) {
         sub: `Your placement · ${dims(boxSize(p.boxes))}`,
         run: () => open({ type: 'placement', id: p.id }),
       });
-    for (const s of a.shared || [])
-      items.push({
-        group: 'Views',
-        icon: ICON.shared,
-        title: s.name,
-        sub: `Shared by ${s.mine ? 'you' : s.ownerName} · ${dims(s.size)}`,
-        run: () => open({ type: 'shared', id: s.id }),
-      });
   }
+  for (const s of sharedList())
+    items.push({
+      group: 'Views',
+      icon: ICON.shared,
+      title: s.name,
+      sub: `Shared by ${s.mine ? 'you' : s.ownerName} · ${dims(s.size)}`,
+      run: () => open({ type: 'shared', id: s.id }),
+    });
+  for (const s of serverList())
+    if (s.key !== viewServer())
+      items.push({
+        group: 'Servers',
+        icon: ICON.server,
+        title: `Switch to ${s.name}`,
+        sub: s.live ? 'Connected' : `Saved copy · ${ago(s.seen)}`,
+        run: () => pickServer(s.key),
+      });
   for (const c of COMMANDS()) items.push({ group: 'Commands', icon: ICON.cmd, ...c });
   if (!q) return items;
   const ql = q.toLowerCase();
@@ -2556,6 +2940,7 @@ try {
   if (localStorage.getItem('litweb.sidebar') === '0' || innerWidth <= 900) toggle('sidebar', false);
   if (localStorage.getItem('litweb.inspector') === '0' || innerWidth <= 900) toggle('inspector', false);
   if (localStorage.getItem('litweb.tab') === 'shaders') SH.tab = 'shaders';
+  S.server = localStorage.getItem('litweb.server');
 } catch {}
 document.querySelectorAll('[data-mod]').forEach((k) => {
   k.textContent = `${MOD} K`;

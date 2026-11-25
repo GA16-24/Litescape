@@ -56,6 +56,8 @@ public final class LitWeb implements ModInitializer {
 	/** Region reads run on the server thread, so they get a smaller cap than local views. */
 	static final int SERVER_READ_MAX = 4_194_304;
 	static final int MAX_UPLOAD_BYTES = 32 << 20;
+	/** Players one schematic can be shared with by name; keeps index.json and the list push small. */
+	static final int MAX_PLAYERS = 100;
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
 	/** Metadata for one shared schematic; the blocks live in <id>.bin. */
@@ -63,6 +65,10 @@ public final class LitWeb implements ModInitializer {
 		public String id, name, owner, ownerName, dim, author;
 		public int[] origin, size;
 		public long updated;
+		/** Who can see it besides the owner and operators: everyone | players | private. Null (older index.json) = everyone. */
+		public @org.jspecify.annotations.Nullable String access;
+		/** Player UUID -> name; the players who can see it when access is "players". */
+		public Map<String, String> players = new LinkedHashMap<>();
 		/** Player UUID -> blocks they placed that match the schematic, counted since it was shared. */
 		public Map<String, Contributor> contributors = new LinkedHashMap<>();
 	}
@@ -142,6 +148,7 @@ public final class LitWeb implements ModInitializer {
 				List<Shared> list = GSON.fromJson(Files.readString(index), new TypeToken<List<Shared>>() {}.getType());
 				if (list != null) for (Shared s : list) {
 					if (s.contributors == null) s.contributors = new LinkedHashMap<>(); // index.json from before contributors existed
+					if (s.players == null) s.players = new LinkedHashMap<>(); // index.json from before access existed
 					shared.put(s.id, s);
 				}
 			}
@@ -158,9 +165,22 @@ public final class LitWeb implements ModInitializer {
 		};
 	}
 
+	private static boolean isOp(ServerPlayer player) {
+		return player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
+	}
+
+	static boolean canManage(ServerPlayer player, Shared s) {
+		return s.owner.equals(player.getStringUUID()) || isOp(player);
+	}
+
+	static boolean canSee(ServerPlayer player, Shared s) {
+		if (s.access == null || s.access.equals("everyone") || canManage(player, s)) return true;
+		return s.access.equals("players") && s.players.containsKey(player.getStringUUID());
+	}
+
 	private void handle(MinecraftServer server, ServerPlayer player, Req req) throws IOException {
 		switch (req.op()) {
-			case "list" -> send(player, req.req(), "", listJson());
+			case "list" -> send(player, req.req(), "", listJson(player));
 			case "region" -> {
 				if (!allowed(player, "region-read")) throw new IOException("no-permission");
 				List<int[]> boxes = readBoxes(req.data());
@@ -173,7 +193,7 @@ public final class LitWeb implements ModInitializer {
 				send(player, req.req(), "", v.encode());
 			}
 			case "get" -> {
-				Shared s = require(req.arg());
+				Shared s = require(player, req.arg());
 				send(player, req.req(), "", Files.readAllBytes(dir.resolve(s.id + ".bin")));
 			}
 			case "status" -> {
@@ -181,17 +201,32 @@ public final class LitWeb implements ModInitializer {
 				long now = System.currentTimeMillis();
 				if (now - lastStatus.getOrDefault(player.getUUID(), 0L) < 750) throw new IOException("rate-limited");
 				lastStatus.put(player.getUUID(), now);
-				Shared s = require(req.arg());
+				Shared s = require(player, req.arg());
 				ServerLevel level = server.getLevel(ResourceKey.create(Registries.DIMENSION, Identifier.parse(s.dim)));
 				if (level == null) throw new IOException("Dimension " + s.dim + " does not exist");
 				send(player, req.req(), "", status(volume(s), level));
 			}
 			case "upload" -> upload(server, player, req);
-			case "delete" -> {
-				Shared s = require(req.arg());
-				if (!s.owner.equals(player.getStringUUID()) && !player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
-					throw new IOException("Only " + s.ownerName + " or an operator can stop sharing this schematic");
+			case "access" -> {
+				JsonObject a = GSON.fromJson(req.arg(), JsonObject.class);
+				Shared s = require(player, a.get("id").getAsString());
+				if (!canManage(player, s)) throw new IOException("Only " + s.ownerName + " or an operator can change who sees this schematic");
+				String access = a.get("access").getAsString();
+				if (!List.of("everyone", "players", "private").contains(access)) throw new IOException("Unknown access " + access);
+				Map<String, String> players = new LinkedHashMap<>();
+				for (var e : a.getAsJsonObject("players").entrySet()) {
+					String name = e.getValue().getAsString();
+					if (players.size() >= MAX_PLAYERS || !name.matches("[\\w.]{1,32}")) throw new IOException("Bad player list");
+					players.put(UUID.fromString(e.getKey()).toString(), name); // throws on a bad UUID
 				}
+				s.access = access;
+				s.players = players;
+				saveIndexAndBroadcast(server);
+				send(player, req.req(), "", new byte[0]);
+			}
+			case "delete" -> {
+				Shared s = require(player, req.arg());
+				if (!canManage(player, s)) throw new IOException("Only " + s.ownerName + " or an operator can stop sharing this schematic");
 				shared.remove(s.id);
 				loaded.remove(s.id);
 				credited.remove(s.id);
@@ -237,8 +272,13 @@ public final class LitWeb implements ModInitializer {
 		s.size = new int[] {v.sx, v.sy, v.sz};
 		s.updated = System.currentTimeMillis();
 		if (meta.has("author")) s.author = meta.get("author").getAsString().substring(0, Math.min(64, meta.get("author").getAsString().length()));
+		s.access = "private"; // new shares stay with the owner until they choose who else sees them
 		Shared old = shared.get(id);
-		if (old != null) s.contributors = old.contributors; // "Update copy" keeps who helped so far
+		if (old != null) { // "Update copy" keeps who helped so far and who can see it
+			s.contributors = old.contributors;
+			s.access = old.access;
+			s.players = old.players;
+		}
 		Files.write(dir.resolve(id + ".bin"), data);
 		shared.put(id, s);
 		loaded.put(id, v);
@@ -302,9 +342,10 @@ public final class LitWeb implements ModInitializer {
 		}
 	}
 
-	private Shared require(String id) throws IOException {
+	/** A schematic the player can't see reads as gone, so its existence doesn't leak. */
+	private Shared require(ServerPlayer player, String id) throws IOException {
 		Shared s = shared.get(id);
-		if (s == null) throw new IOException("That schematic is no longer shared");
+		if (s == null || !canSee(player, s)) throw new IOException("That schematic is no longer shared");
 		return s;
 	}
 
@@ -376,17 +417,24 @@ public final class LitWeb implements ModInitializer {
 		return bytes.toByteArray();
 	}
 
-	private byte[] listJson() {
-		return GSON.toJson(shared.values()).getBytes(StandardCharsets.UTF_8);
+	/** The schematics this player can see, each with whether they may manage it. */
+	private byte[] listJson(ServerPlayer player) {
+		com.google.gson.JsonArray list = new com.google.gson.JsonArray();
+		for (Shared s : shared.values()) {
+			if (!canSee(player, s)) continue;
+			JsonObject o = GSON.toJsonTree(s).getAsJsonObject();
+			o.addProperty("manage", canManage(player, s));
+			list.add(o);
+		}
+		return GSON.toJson(list).getBytes(StandardCharsets.UTF_8);
 	}
 
 	private void saveIndexAndBroadcast(MinecraftServer server) throws IOException {
 		Path tmp = dir.resolve("index.json.tmp");
 		Files.writeString(tmp, GSON.toJson(shared.values()));
 		Files.move(tmp, dir.resolve("index.json"), java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
-		byte[] list = listJson();
 		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-			if (ServerPlayNetworking.canSend(p, Reply.TYPE)) send(p, Net.PUSH_LIST, "", list);
+			if (ServerPlayNetworking.canSend(p, Reply.TYPE)) send(p, Net.PUSH_LIST, "", listJson(p));
 		}
 	}
 

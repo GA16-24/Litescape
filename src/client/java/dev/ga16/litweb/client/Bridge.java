@@ -76,7 +76,7 @@ final class Bridge {
 			// A list over one reply part arrives in several pushes.
 			if (r.part() == 0) pushed.reset();
 			pushed.writeBytes(r.data());
-			if (r.part() == r.parts() - 1) sharedJson = pushed.toString(StandardCharsets.UTF_8);
+			if (r.part() == r.parts() - 1) setShared(pushed.toString(StandardCharsets.UTF_8));
 			return;
 		}
 		Pending p = pending.get(r.req());
@@ -89,6 +89,12 @@ final class Bridge {
 		if (r.part() == r.parts() - 1) p.future.complete(p.buf.toByteArray());
 	}
 
+	/** Client thread (replies complete there). */
+	private static void setShared(String json) {
+		sharedJson = json;
+		Servers.remember(json);
+	}
+
 	static void reset() {
 		sharedJson = "[]";
 		pending.values().forEach(p -> p.future.completeExceptionally(new IllegalStateException("Disconnected")));
@@ -96,7 +102,7 @@ final class Bridge {
 	}
 
 	static void refreshList() {
-		request("list", "", new byte[0]).thenAccept(b -> sharedJson = new String(b, StandardCharsets.UTF_8));
+		request("list", "", new byte[0]).thenAccept(b -> setShared(new String(b, StandardCharsets.UTF_8)));
 	}
 
 	private Bridge() {}
