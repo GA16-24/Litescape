@@ -2,15 +2,18 @@ name: Desktop release
 
 # Push a tag like desktop-v0.1.0 (matching desktop/package.json) to build the Electron app,
 # publish it on the public GA16-24/homebrew-tap repo and point the cask at it.
+# PRs that touch the app only run the builds. Keep them out of required checks: the path filter means most PRs never run them.
 on:
   push:
     tags: ["desktop-v*"]
+  pull_request:
+    paths: ["desktop/**", ".github/workflows/desktop.yml"]
 
 permissions: {}
 
 concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || 'release' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -35,10 +38,13 @@ jobs:
           package-manager-cache: false
       - run: npm ci
       - name: Tag matches package.json version
+        if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: test "desktop-v$(node -p 'require("./package.json").version')" = "$GITHUB_REF_NAME"
       - run: npm run dist
-      - uses: actions/upload-artifact@v7.0.2
+      # Release builds are ~550 MB per run, too much to keep for every PR push.
+      - if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: desktop-${{ matrix.os }}
           path: |
@@ -51,6 +57,7 @@ jobs:
   publish:
     name: Publish release and cask
     needs: build
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: homebrew-tap
@@ -66,12 +73,13 @@ jobs:
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME#desktop-v}"
-          gh release create "v$version" dist/* --repo GA16-24/homebrew-tap --title "Litescape $version" \
-            --notes "Desktop app for Litescape $version. Install with \`brew install --cask GA16-24/tap/litescape\`."
+          # Checksum first, so a renamed artifact fails the job before anything is published.
           sha() { sha256sum "dist/Litescape-$version-$1" | cut -d' ' -f1; }
           mac=$(sha mac-universal.dmg)
           x64=$(sha linux-x86_64.AppImage)
           arm=$(sha linux-arm64.AppImage)
+          gh release create "v$version" dist/* --repo GA16-24/homebrew-tap --title "Litescape $version" \
+            --notes "Desktop app for Litescape $version. Install with \`brew install --cask GA16-24/tap/litescape\`."
 
           git clone --depth 1 "https://x-access-token:$GH_TOKEN@github.com/GA16-24/homebrew-tap.git" tap
           mkdir -p tap/Casks
