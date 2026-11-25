@@ -95,7 +95,7 @@ jobs:
     timeout-minutes: 10
     environment: homebrew-tap
     permissions:
-      contents: write
+      contents: write # upload the apps and mod jar to this repo's release
     steps:
       - uses: actions/download-artifact@v8.0.2
         with:
