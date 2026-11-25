@@ -1514,15 +1514,15 @@ function surroundingsHtml(sh) {
           ? `Capture ${m} blocks`
           : 'Remove surroundings';
     h += `<div class="updated" style="margin:0 0 4px">Blocks around it</div>${marginSeg(sh.id, m, sh.origin, sh.size)}<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-recapture="${esc(sh.id)}" ${busy || (!m && !sh.margin) ? 'disabled' : ''}>${ICON.retry}${label}</button></div>`;
-  }
+  } else if (sh.margin && sh.manage && isLive())
+    // Removing needs no capture permission, and it's the way out when a moved placement can't be recaptured.
+    h += `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-recapture="${esc(sh.id)}" data-remove ${S.busy.has(`cap:${sh.id}`) ? 'disabled' : ''}>${ICON.stop}Remove surroundings</button></div>`;
   return `${h}</section>`;
 }
 
-async function recapture(id) {
+async function recapture(id, margin = S.margin.get(id) ?? findShared(id)?.margin ?? 0) {
   const key = `cap:${id}`;
   if (S.busy.has(key)) return;
-  const sh = findShared(id);
-  const margin = S.margin.get(id) ?? sh?.margin ?? 0;
   S.busy.add(key);
   renderInspector();
   try {
@@ -1748,7 +1748,7 @@ $('inspector').addEventListener('click', (e) => {
     return renderInspector();
   }
   const rc = t.closest('[data-recapture]');
-  if (rc) return recapture(rc.dataset.recapture);
+  if (rc) return recapture(rc.dataset.recapture, 'remove' in rc.dataset ? 0 : undefined);
   const tm = t.closest('[data-terrain]')?.dataset.terrain;
   if (tm) {
     S.terrain = tm;
@@ -1884,13 +1884,12 @@ async function sharePlacement(id) {
   try {
     // Update copy keeps the surroundings it had (and recaptures them where the placement now is).
     const t = S.api.terrain;
-    const margin = !t?.capture
-      ? 0
-      : p?.sharedId
-        ? Math.min(findShared(p.sharedId)?.margin ?? 0, t.maxMargin)
-        : p
-          ? pickedMargin(p)
-          : 0;
+    // Without permission the stored margin still goes along, so the server keeps (not drops) the snapshot.
+    const margin = p?.sharedId
+      ? Math.min(findShared(p.sharedId)?.margin ?? 0, t?.capture ? t.maxMargin : Infinity)
+      : t?.capture && p
+        ? pickedMargin(p)
+        : 0;
     await api(`api/share?id=${encodeURIComponent(id)}&margin=${margin}`, { method: 'POST' });
     toast(
       p?.sharedId ? 'Shared copy updated' : `Shared “${p?.name ?? 'placement'}”`,
@@ -2008,8 +2007,9 @@ canvas.addEventListener('pointerdown', (e) => {
 canvas.addEventListener('pointerup', (e) => {
   if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 4 || e.button !== 0) return;
   const hit = voxelAt(e);
-  if (hit) isolate(S.data.palette[S.data.blocks16[hit.i]].mid);
-  else if (S.iso >= 0) isolate(S.iso);
+  const e = hit && S.data.palette[S.data.blocks16[hit.i]];
+  if (e && !e.t) isolate(e.mid);
+  else if (S.iso >= 0) isolate(S.iso); // empty space or the surroundings: show everything again
 });
 canvas.addEventListener('wheel', hideHint, { passive: true });
 
