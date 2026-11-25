@@ -52,6 +52,8 @@ public class EndToEndTest implements FabricClientGameTest {
 	public void runTest(ClientGameTestContext ctx) {
 		try {
 			Files.createDirectories(out);
+			// The singleplayer host isn't an operator, and surroundings default to operators only; allow them like an admin would.
+			Files.writeString(FabricLoader.getInstance().getConfigDir().resolve("litweb-server.properties"), "terrain-capture=everyone\n");
 			try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
 				sp.getConnection().waitForChunksRender();
 				buildCottage(sp.getServer());
@@ -95,13 +97,21 @@ public class EndToEndTest implements FabricClientGameTest {
 				JsonArray c = st.getAsJsonArray("counts");
 				check(c.get(1).getAsInt() > 0 && c.get(2).getAsInt() > 0 && c.get(3).getAsInt() == 1 && c.get(4).getAsInt() >= 1, "placement status counts " + c);
 
-				String shared = json(call(ctx, "POST", "/api/share?id=" + placement)).get("id").getAsString();
+				check(state.getAsJsonObject("terrain").get("capture").getAsBoolean(), "the host may capture surroundings: " + state.get("terrain"));
+				// Share with 8 blocks of surroundings: the view is the schematic set into the terrain around it.
+				String shared = json(call(ctx, "POST", "/api/share?id=" + placement + "&margin=8")).get("id").getAsString();
 				String st3 = "";
 				for (int i = 0; i < 40 && !st3.contains("\"sharedId\":\"" + shared); i++, ctx.waitTicks(5)) st3 = call(ctx, "GET", "/api/state");
 				check(st3.contains("\"sharedId\":\"" + shared), "shared list push reached the client");
 				check(st3.contains("\"access\":\"private\""), "a new share starts private");
 				save("state-3.json", st3);
-				collectTextures(json(save("view-shared.json", call(ctx, "GET", "/api/view?type=shared&id=" + shared))));
+				JsonObject sv = json(save("view-shared.json", call(ctx, "GET", "/api/view?type=shared&id=" + shared)));
+				collectTextures(sv);
+				// The copy sits at 31 -63 1 and is 20×14×19; 8 blocks below it is under the world floor (-64).
+				check(sv.getAsJsonArray("size").toString().equals("[36,23,35]"), "view with surroundings " + sv.get("size"));
+				check(sv.getAsJsonArray("inner").toString().equals("[8,1,8,20,14,19]"), "schematic inside its surroundings " + sv.get("inner"));
+				check(sv.get("terrainFrom").getAsInt() > 1, "surroundings palette follows the schematic's");
+				check(st3.contains("\"margin\":8") && st3.contains("\"chunksCaptured\""), "shared list carries the capture");
 				JsonObject sst = json(save("status-shared.json", call(ctx, "GET", "/api/status?type=shared&id=" + shared)));
 				check(sst.getAsJsonArray("counts").toString().equals(c.toString()), "server status " + sst.get("counts") + " matches client " + c);
 
@@ -111,8 +121,23 @@ public class EndToEndTest implements FabricClientGameTest {
 				String limited = "";
 				for (int i = 0; i < 40 && !limited.contains("\"access\":\"players\""); i++, ctx.waitTicks(5)) limited = call(ctx, "GET", "/api/state");
 				check(limited.contains("\"access\":\"players\"") && limited.contains(alice), "access change reached the client");
-				call(ctx, "POST", "/api/share?id=" + placement);
-				check(call(ctx, "GET", "/api/state").contains("\"access\":\"players\""), "Update copy keeps access");
+				call(ctx, "POST", "/api/share?id=" + placement + "&margin=8");
+				String updated = call(ctx, "GET", "/api/state");
+				check(updated.contains("\"access\":\"players\""), "Update copy keeps access");
+				check(updated.contains("\"margin\":8"), "Update copy keeps the surroundings");
+				call(ctx, "POST", "/api/capture?id=" + shared + "&margin=0");
+				String bare = "";
+				for (int i = 0; i < 40 && !bare.contains("\"margin\":0"); i++, ctx.waitTicks(5)) bare = call(ctx, "GET", "/api/state");
+				check(bare.contains("\"margin\":0"), "surroundings removed");
+				check(!json(call(ctx, "GET", "/api/view?type=shared&id=" + shared)).has("inner"), "view without surroundings is just the schematic");
+				String tooFar = "";
+				try {
+					call(ctx, "POST", "/api/capture?id=" + shared + "&margin=65");
+				} catch (AssertionError e) {
+					tooFar = e.getMessage();
+				}
+				check(tooFar.contains("at most"), "margin over the server's limit refused: " + tooFar);
+				call(ctx, "POST", "/api/capture?id=" + shared + "&margin=8"); // back to the shared state the fixtures show
 				String refused = "";
 				try {
 					call(ctx, "POST", "/api/access", "{\"id\":\"" + shared + "\",\"access\":\"friends\",\"players\":{}}");

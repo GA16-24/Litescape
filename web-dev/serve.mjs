@@ -175,6 +175,7 @@ createServer(async (req, res) => {
       }
       case '/api/share':
       case '/api/unshare':
+      case '/api/capture':
         await new Promise((r) => setTimeout(r, 600));
         return send(200, {});
     }
