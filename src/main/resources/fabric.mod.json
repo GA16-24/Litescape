@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "litweb",
   "version": "${version}",
-  "name": "Litematica Web Viewer",
+  "name": "Litescape",
   "description": "View your Litematica area selection as a live 3D model in your browser. Install on the server too for full-range data in multiplayer.",
   "license": "MIT",
   "environment": "*",

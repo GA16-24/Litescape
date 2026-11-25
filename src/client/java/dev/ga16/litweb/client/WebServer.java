@@ -74,7 +74,7 @@ final class WebServer {
 				server.createContext("/", WebServer::handle);
 				server.start();
 				port = p;
-				LitWeb.LOG.info("Litematica Web Viewer at http://127.0.0.1:{}/", p);
+				LitWeb.LOG.info("Litescape at http://127.0.0.1:{}/", p);
 				return;
 			} catch (BindException e) {
 				// port taken, try the next one

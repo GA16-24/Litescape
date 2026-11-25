@@ -912,7 +912,7 @@ function showOffline() {
   showOverlay(`<div class="empty">
     <div class="empty-icon">${ICON.plug}</div>
     <h2>Can't reach Minecraft</h2>
-    <p>This page is served by the Litematica Web Viewer mod. Start Minecraft with the mod installed and this page reconnects on its own.</p>
+    <p>This page is served by the Litescape mod. Start Minecraft with the mod installed and this page reconnects on its own.</p>
     <div class="progress-line"><i></i></div></div>`);
 }
 function showError(desc, msg) {
@@ -1027,8 +1027,7 @@ function sharedNavHtml() {
     : '';
   let h = `<div class="nav-section"><div class="nav-head">${live ? 'Shared on this server' : `Shared on ${esc(serverInfo()?.name || 'this server')}`}${toggle}</div>`;
   if (live && !a.serverMod)
-    h +=
-      '<div class="nav-empty">Install Litematica Web Viewer on the server to see what other players are building.</div>';
+    h += '<div class="nav-empty">Install Litescape on the server to see what other players are building.</div>';
   else if (!sharedList().length)
     h += live
       ? '<div class="nav-empty">Nothing shared yet. Share one of your placements so others can follow it.</div>'
@@ -1089,7 +1088,7 @@ function liveNavHtml(a) {
     const shared = !!p.sharedId;
     const busy = S.busy.has(p.id);
     const tip = !a.serverMod
-      ? 'The server needs Litematica Web Viewer to share'
+      ? 'The server needs Litescape to share'
       : shared
         ? 'Shared. Open it to choose who can see it'
         : 'Share to the server. Only you see it until you choose who else can';
@@ -1396,7 +1395,7 @@ function renderInspector() {
       ? `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-share-now="${esc(pl.id)}" ${busy ? 'disabled' : ''}>${ICON.share}Update copy</button><button class="btn" data-unshare="${esc(pl.sharedId)}" data-key-of="${esc(pl.id)}">${ICON.stop}Stop sharing</button></div>
          <p class="updated" style="margin:0 0 12px">Shared. Use Update copy after you move or edit the placement.</p>`
       : `${a.terrain?.capture ? shareMarginHtml(pl) : ''}<div class="btn-row" style="margin:0 0 6px"><button class="btn primary" data-share-now="${esc(pl.id)}" ${!a.serverMod || busy ? 'disabled' : ''}>${ICON.share}${busy ? 'Sharing…' : 'Share to server'}</button></div>
-         <p class="updated" style="margin:0 0 12px">${a.serverMod ? 'Only you can see it at first. Then choose who else can view it, follow the build and see who helped.' : 'The server needs Litematica Web Viewer to share schematics.'}</p>`;
+         <p class="updated" style="margin:0 0 12px">${a.serverMod ? 'Only you can see it at first. Then choose who else can view it, follow the build and see who helped.' : 'The server needs Litescape to share schematics.'}</p>`;
   }
   if ((sh?.manage ?? sh?.mine) && isLive())
     // `manage` is missing from servers on an older version of the mod
