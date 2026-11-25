@@ -1,0 +1,147 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  gradle:
+    name: Build, lint (-Werror) and client game test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6.3.0
+        with:
+          distribution: temurin
+          java-version: 25
+      # Also validates gradle-wrapper.jar checksums against the official Gradle releases.
+      - uses: gradle/actions/setup-gradle@v6.4.1
+      - name: Build with all javac lints as errors and Gradle deprecations as errors
+        run: ./gradlew build compileGametestJava --init-script .github/ci.init.gradle --warning-mode=fail --stacktrace
+      - name: Install virtual display and software Vulkan/GL
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb mesa-vulkan-drivers
+      - name: Client game test (real Minecraft client under Xvfb)
+        run: xvfb-run -a ./gradlew runClientGameTest --init-script .github/ci.init.gradle --warning-mode=fail --stacktrace
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: gradle-reports
+          path: |
+            build/reports/
+            build/test-results/
+            build/run/clientGameTest/logs/
+            build/run/clientGameTest/screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  web:
+    name: Web lint, format and tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: biomejs/setup-biome@v2.7.1
+        with:
+          version: 2.6.6
+      - name: Biome (lint + format + import order, warnings fail)
+        run: biome ci --error-on-warnings .
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+      - name: Node tests
+        if: ${{ !cancelled() }} # report test results even when Biome already failed
+        run: node --test 'web-dev/*.test.mjs'
+
+  secrets:
+    name: Secret scan (full history)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: TruffleHog 3.100.1
+        run: >-
+          docker run --rm -v "$PWD:/repo"
+          ghcr.io/trufflesecurity/trufflehog@sha256:9c7a8325d43a4af2960d3f21d61a08981d8a1bf0542e007efa2e47097e386452
+          git file:///repo --fail --no-update --results=verified,unknown
+
+  workflows:
+    name: Workflow lint, lockfile and security audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: actionlint 1.7.12
+        run: >-
+          docker run --rm -v "$PWD:/repo" --workdir /repo
+          rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 -color
+      - name: Verify actions.lock pins every action to its upstream commit
+        run: |
+          gh extension install github/gh-actions-lock --pin v0.5.1
+          gh actions-lock --verify
+      - uses: zizmorcore/zizmor-action@v0.8.1
+        with:
+          advanced-security: false
+          version: 1.32.0
+          persona: pedantic
+
+  dependency-submission:
+    name: Submit Gradle dependency graph
+    # Fork PRs get a read-only token, so only pushes and same-repo PRs (incl. Dependabot) can submit.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write # the dependency graph API needs it; feeds Dependabot alerts and dependency review
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6.3.0
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/dependency-submission@v6.4.1
+
+  dependency-review:
+    name: Dependency review
+    needs: dependency-submission
+    if: ${{ !cancelled() && !failure() && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/dependency-review-action@v5.0.1
+        with:
+          fail-on-severity: low
+          fail-on-scopes: runtime, development, unknown
+          # Wait for the Gradle snapshot only when dependency-submission actually ran.
+          retry-on-snapshot-warnings: ${{ needs.dependency-submission.result == 'success' }}

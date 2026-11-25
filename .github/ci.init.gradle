@@ -1,0 +1,8 @@
+// CI-only strictness, applied with --init-script so build.gradle stays contributor-friendly.
+// Run locally: ./gradlew build --init-script .github/ci.init.gradle
+allprojects {
+	tasks.withType(JavaCompile).configureEach {
+		// classfile: noise from third-party jars (gson's missing errorprone annotations), not our code.
+		options.compilerArgs += ['-Xlint:all', '-Xlint:-processing', '-Xlint:-classfile', '-Werror']
+	}
+}
