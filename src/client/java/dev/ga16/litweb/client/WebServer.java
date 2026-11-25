@@ -7,6 +7,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import dev.ga16.litweb.LitWeb;
 import dev.ga16.litweb.Volume;
+import dev.ga16.litweb.client.shaders.ShaderApi;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -16,6 +17,7 @@ import java.io.OutputStream;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -47,6 +49,12 @@ final class WebServer {
 	static volatile @Nullable Boolean regionRead;
 
 	private record Cached(String key, Volume volume) {}
+	/** Iris shader packs for the web renderer; uses the same shaderpacks folder as Iris. */
+	private static final ShaderApi shaders = new ShaderApi(
+		net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir().resolve("shaderpacks"),
+		net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("litweb-shaders.json"),
+		net.fabricmc.loader.api.FabricLoader.getInstance().getModContainer("minecraft").map(m -> m.getMetadata().getVersion().getFriendlyString()).orElse(""),
+		dir -> mc.execute(() -> com.mojang.blaze3d.Blaze3D.openPath(dir)));
 	private static volatile @Nullable Cached placementCache, sharedCache;
 
 	static void start() {
@@ -110,7 +118,13 @@ final class WebServer {
 						json(ex, 200, new JsonObject());
 					}
 					default -> {
-						if (path.startsWith("/tex/")) texture(ex, path.substring(5));
+						ShaderApi.Response r = path.startsWith("/api/shaders")
+							? shaders.handle(ex.getRequestMethod(), path, q, ex.getRequestBody().readNBytes(1 << 20)) : null;
+						if (r != null) {
+							ex.getResponseHeaders().set("Cache-Control", r.type().equals("application/json") ? "no-store" : "no-cache");
+							send(ex, r.code(), r.type(), r.body());
+						} else if (path.equals("/api/skin")) skin(ex, q.getOrDefault("uuid", ""));
+						else if (path.startsWith("/tex/")) texture(ex, path.substring(5));
 						else file(ex, path.equals("/") ? "/index.html" : path);
 					}
 				}
@@ -161,6 +175,7 @@ final class WebServer {
 			j.addProperty("id", key);
 			j.addProperty("name", p.getName());
 			j.addProperty("enabled", p.isEnabled());
+			j.addProperty("author", Lit.author(p));
 			j.add("boxes", boxes(Lit.boxes(p)));
 			String sharedId = sharedId(uuid, key);
 			if (sharedById.containsKey(sharedId)) j.addProperty("sharedId", sharedId);
@@ -267,10 +282,10 @@ final class WebServer {
 	private static JsonObject share(String key) throws Exception {
 		Object[] r = onClient(() -> {
 			SchematicPlacement p = Lit.placement(key);
-			return p == null ? null : new Object[] {p.getName(), placementVolume(p)};
+			return p == null ? null : new Object[] {p.getName(), placementVolume(p), Lit.author(p)};
 		});
 		if (r == null) throw new HttpError(404, "That placement no longer exists");
-		byte[] id = await(Bridge.upload(key, (String) r[0], ((Volume) r[1]).encode()));
+		byte[] id = await(Bridge.upload(key, (String) r[0], (String) r[2], ((Volume) r[1]).encode()));
 		JsonObject out = new JsonObject();
 		out.addProperty("id", new String(id, StandardCharsets.UTF_8));
 		return out;
@@ -304,6 +319,57 @@ final class WebServer {
 		Cached c = sharedCache;
 		if (c == null || !c.key.equals(id + updated)) sharedCache = c = new Cached(id + updated, Volume.decode(await(Bridge.request("get", id, new byte[0]))));
 		return c.volume;
+	}
+
+	// ---- player skins, for contributor faces ----
+
+	private static final Map<UUID, byte[]> skins = new java.util.concurrent.ConcurrentHashMap<>();
+	private static final java.net.http.HttpClient skinHttp = java.net.http.HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(8)).build();
+
+	private static void skin(HttpExchange ex, String id) throws Exception {
+		UUID uuid;
+		try {
+			uuid = UUID.fromString(id);
+		} catch (IllegalArgumentException e) {
+			throw new HttpError(400, "Bad player id");
+		}
+		byte[] png = skins.get(uuid);
+		if (png == null) skins.put(uuid, png = loadSkin(uuid));
+		ex.getResponseHeaders().set("Cache-Control", "max-age=3600");
+		send(ex, 200, "image/png", png);
+	}
+
+	/**
+	 * The player's skin from Mojang, found the way the game finds skins for player heads (the online player list,
+	 * else a profile lookup), or their default skin when there is none. The page crops the face.
+	 */
+	private static byte[] loadSkin(UUID uuid) throws Exception {
+		com.mojang.authlib.GameProfile profile = onClient(() -> {
+			var conn = mc.getConnection();
+			var info = conn == null ? null : conn.getPlayerInfo(uuid);
+			return info == null ? null : info.getProfile();
+		});
+		var session = mc.services().sessionService();
+		try {
+			if (profile == null || session.getTextures(profile).skin() == null) {
+				var result = session.fetchProfile(uuid, false);
+				if (result != null) profile = result.profile();
+			}
+			var tex = profile == null ? null : session.getTextures(profile).skin();
+			if (tex != null) {
+				URI url = URI.create(tex.getUrl().replaceFirst("^http:", "https:"));
+				if ("textures.minecraft.net".equals(url.getHost())) {
+					var r = skinHttp.send(java.net.http.HttpRequest.newBuilder(url).timeout(java.time.Duration.ofSeconds(10)).build(), java.net.http.HttpResponse.BodyHandlers.ofByteArray());
+					if (r.statusCode() == 200) return r.body();
+				}
+			}
+		} catch (Exception e) {
+			LitWeb.LOG.debug("No skin for {}", uuid, e); // offline server or Mojang unreachable: use the default skin
+		}
+		Identifier path = net.minecraft.client.resources.DefaultPlayerSkin.get(uuid).body().texturePath();
+		try (InputStream in = mc.getResourceManager().open(path)) {
+			return in.readAllBytes();
+		}
 	}
 
 	// ---- static files and textures ----

@@ -18,7 +18,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
@@ -27,6 +29,15 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Boots the real client, builds a cottage, drives Litematica, and calls the web API
@@ -93,6 +104,36 @@ public class EndToEndTest implements FabricClientGameTest {
 				JsonObject sst = json(save("status-shared.json", call(ctx, "GET", "/api/status?type=shared&id=" + shared)));
 				check(sst.getAsJsonArray("counts").toString().equals(c.toString()), "server status " + sst.get("counts") + " matches client " + c);
 
+				// The player places one block the copy needs and one it doesn't: only the first counts.
+				sp.getServer().runOnServer(server -> {
+					ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
+					place(player, Items.OAK_PLANKS, new BlockPos(37, -58, 6), Direction.UP); // lands on 37 -57 6, a wall block
+					place(player, Items.STONE, new BlockPos(37, -57, 6), Direction.SOUTH); // lands on 37 -57 7, which should stay air
+					server.overworld().destroyBlock(new BlockPos(37, -57, 6), false);
+					place(player, Items.OAK_PLANKS, new BlockPos(37, -58, 6), Direction.UP); // same spot again: no extra credit
+				});
+				JsonObject contrib = null;
+				for (int i = 0; i < 60 && contrib == null; i++, ctx.waitTicks(10)) {
+					for (JsonElement e : json(call(ctx, "GET", "/api/state")).getAsJsonArray("shared")) {
+						JsonObject cs = e.getAsJsonObject().getAsJsonObject("contributors");
+						if (e.getAsJsonObject().get("id").getAsString().equals(shared) && cs != null && !cs.isEmpty()) contrib = cs;
+					}
+				}
+				save("state-3.json", call(ctx, "GET", "/api/state"));
+				// Contributor faces: the test player plus the two example players web-dev/serve.mjs adds.
+				List<String> faces = new ArrayList<>(contrib.keySet());
+				faces.addAll(List.of("b6d1f0f2-0000-4000-8000-00000000a1ce", "5c2e7a10-0000-4000-8000-000000000b0b"));
+				for (String uuid : faces) {
+					CompletableFuture<HttpResponse<byte[]>> f = HTTP.sendAsync(req("GET", "/api/skin?uuid=" + uuid), HttpResponse.BodyHandlers.ofByteArray());
+					ctx.waitFor(mc -> f.isDone(), 600);
+					byte[] png = f.join().body();
+					check(f.join().statusCode() == 200 && png.length > 8 && png[1] == 'P' && png[2] == 'N' && png[3] == 'G', "skin for " + uuid);
+					Files.createDirectories(out.resolve("skins"));
+					Files.write(out.resolve("skins/" + uuid + ".png"), png);
+				}
+				check(contrib != null && contrib.size() == 1, "one contributor " + contrib);
+				check(contrib.entrySet().iterator().next().getValue().getAsJsonObject().get("placed").getAsInt() == 1, "only the matching block counts " + contrib);
+
 				for (String t : textures) {
 					int colon = t.indexOf(':');
 					String path = "/tex/" + t.substring(0, colon) + "/" + t.substring(colon + 1);
@@ -103,11 +144,18 @@ public class EndToEndTest implements FabricClientGameTest {
 					Files.createDirectories(file.getParent());
 					Files.write(file, f.join().body());
 				}
+				shaderPack(ctx);
 				ctx.takeScreenshot("litweb-scene");
 			}
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	private static void place(ServerPlayer player, Item item, BlockPos on, Direction face) {
+		player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(item));
+		BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(on).relative(face, 0.5), face, on, false);
+		check(player.getMainHandItem().useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, hit)).consumesAction(), "placed " + item);
 	}
 
 	private static void buildCottage(TestServerContext s) {
@@ -150,6 +198,55 @@ public class EndToEndTest implements FabricClientGameTest {
 		return body;
 	}
 
+	/** A tiny OptiFine-style pack: checks option discovery, profiles, program toggles and the GLSL ES translation in the real game. */
+	private static void shaderPack(ClientGameTestContext ctx) throws IOException {
+		Path pack = FabricLoader.getInstance().getGameDir().resolve("shaderpacks/litweb-test/shaders");
+		Files.createDirectories(pack);
+		Files.writeString(pack.resolve("shaders.properties"), "profile.LOW=!SHADOWS\nprofile.HIGH=SHADOWS\nscreen=SHADOWS STRENGTH\nprogram.composite.enabled=SHADOWS\n");
+		Files.writeString(pack.resolve("block.properties"), "block.10001=minecraft:oak_planks oak_stairs:half=top\n");
+		Files.writeString(pack.resolve("gbuffers_terrain.vsh"), """
+			#version 120
+			attribute vec4 mc_Entity;
+			varying vec2 uv; varying vec2 lm; varying vec4 color;
+			void main() { gl_Position = ftransform(); uv = gl_MultiTexCoord0.xy; lm = (gl_TextureMatrix[1] * gl_MultiTexCoord1).xy; color = gl_Color; if (mc_Entity.x == 10001) color.rgb *= 0.5; }
+			""");
+		Files.writeString(pack.resolve("gbuffers_terrain.fsh"), """
+			#version 120
+			#define STRENGTH 1.0 // [0.5 1.0 2.0]
+			uniform sampler2D texture; uniform sampler2D lightmap;
+			varying vec2 uv; varying vec2 lm; varying vec4 color;
+			void main() { vec4 c = texture2D(texture, uv) * color * STRENGTH; c.rgb *= texture2D(lightmap, lm).rgb;
+			/* DRAWBUFFERS:0 */ gl_FragData[0] = c; }
+			""");
+		String quad = "#version 120\nvarying vec2 tc;\nvoid main() { gl_Position = ftransform(); tc = gl_MultiTexCoord0.xy; }\n";
+		Files.writeString(pack.resolve("composite.vsh"), quad);
+		Files.writeString(pack.resolve("composite.fsh"), """
+			#version 120
+			#define SHADOWS // Sun shadows
+			uniform sampler2D colortex0; uniform sampler2DShadow shadowtex0; varying vec2 tc;
+			void main() { vec3 c = texture2D(colortex0, tc).rgb;
+			#ifdef SHADOWS
+			c *= shadow2D(shadowtex0, vec3(tc, 0.5)).r;
+			#endif
+			/* DRAWBUFFERS:0 */ gl_FragData[0] = vec4(c, 1); }
+			""");
+		Files.writeString(pack.resolve("final.vsh"), quad);
+		Files.writeString(pack.resolve("final.fsh"), "#version 120\nuniform sampler2D colortex0; varying vec2 tc;\nvoid main() { gl_FragColor = texture2D(colortex0, tc); }\n");
+
+		check(call(ctx, "GET", "/api/shaders").contains("\"id\":\"litweb-test\""), "test pack is listed");
+		JsonObject on = json(call(ctx, "POST", "/api/shaders/load", "{\"pack\":\"litweb-test\"}"));
+		JsonObject progs = on.getAsJsonObject("programs");
+		for (String n : new String[] {"gbuffers_terrain", "composite", "final"}) {
+			JsonObject p = progs.getAsJsonObject(n);
+			check(p != null && !p.has("error") && p.get("fs").getAsString().startsWith("#version 300 es"), n + " translated: " + p);
+		}
+		check(on.toString().contains("\"n\":\"SHADOWS\",\"t\":\"b\"") && on.toString().contains("\"n\":\"STRENGTH\",\"t\":\"v\""), "options found " + on.get("options"));
+		check(on.getAsJsonObject("blocks").has("minecraft:oak_stairs"), "block.properties parsed");
+		JsonObject off = json(call(ctx, "POST", "/api/shaders/load", "{\"pack\":\"litweb-test\",\"options\":{\"SHADOWS\":\"false\",\"STRENGTH\":\"2.0\"}}"));
+		check(!off.getAsJsonObject("programs").has("composite"), "program.composite.enabled follows the option");
+		check(off.getAsJsonObject("programs").getAsJsonObject("gbuffers_terrain").get("fs").getAsString().contains("2.0"), "option value reaches the shader");
+	}
+
 	private static JsonObject json(String s) {
 		return JsonParser.parseString(s).getAsJsonObject();
 	}
@@ -159,13 +256,21 @@ public class EndToEndTest implements FabricClientGameTest {
 	}
 
 	private static HttpRequest req(String method, String path) {
+		return req(method, path, null);
+	}
+
+	private static HttpRequest req(String method, String path, String body) {
 		return HttpRequest.newBuilder(URI.create(LitWebClient.url() + path.substring(1)))
-			.method(method, HttpRequest.BodyPublishers.noBody()).build();
+			.method(method, body == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(body)).build();
 	}
 
 	/** The HTTP handlers hop onto the client thread, so keep ticking while waiting. */
 	private static String call(ClientGameTestContext ctx, String method, String path) {
-		CompletableFuture<HttpResponse<String>> f = HTTP.sendAsync(req(method, path), HttpResponse.BodyHandlers.ofString());
+		return call(ctx, method, path, null);
+	}
+
+	private static String call(ClientGameTestContext ctx, String method, String path, String body) {
+		CompletableFuture<HttpResponse<String>> f = HTTP.sendAsync(req(method, path, body), HttpResponse.BodyHandlers.ofString());
 		ctx.waitFor(mc -> f.isDone(), 2400);
 		HttpResponse<String> r = f.join();
 		if (r.statusCode() != 200) throw new AssertionError(method + " " + path + " -> " + r.statusCode() + " " + r.body());

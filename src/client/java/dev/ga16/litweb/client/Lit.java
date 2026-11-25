@@ -97,4 +97,10 @@ final class Lit {
 	}
 
 	private Lit() {}
+
+	/** The author saved in the schematic file, or "" when it has none. */
+	static String author(SchematicPlacement p) {
+		String a = p.getSchematic().getMetadata().getAuthor();
+		return a == null || a.isBlank() || a.equals("?") ? "" : a.strip();
+	}
 }

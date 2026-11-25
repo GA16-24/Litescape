@@ -58,3 +58,12 @@ tasks.withType(JavaCompile).configureEach {
 	it.options.release = 25
 	it.options.encoding = "UTF-8"
 }
+
+// Serves /api/shaders without Minecraft, for web-dev/serve.mjs: ./gradlew shaderDev [-Ppacks=<shaderpacks folder>]
+tasks.register('shaderDev', JavaExec) {
+	group = 'development'
+	classpath = sourceSets.gametest.runtimeClasspath
+	mainClass = 'dev.ga16.litweb.test.ShaderDev'
+	args = ['8195', project.findProperty('packs') ?: file('run/shaderpacks').path, layout.buildDirectory.file('shader-dev-settings.json').get().asFile.path]
+}
+
