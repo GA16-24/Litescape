@@ -49,6 +49,17 @@ const ICON = {
     '<svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="m15.5 11.5 2 2 3.5-4"/></svg>',
   updown: '<svg class="i" viewBox="0 0 24 24"><path d="m8 9.5 4-4 4 4M8 14.5l4 4 4-4"/></svg>',
   x: '<svg class="i" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7 7 17"/></svg>',
+  fit: '<svg class="i" viewBox="0 0 24 24"><path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"/></svg>',
+  camera:
+    '<svg class="i" viewBox="0 0 24 24"><path d="M4 8a2 2 0 0 1 2-2h2l1.5-2h5L16 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/></svg>',
+  layers:
+    '<svg class="i" viewBox="0 0 24 24"><path d="m12 3.5 8.5 4.5-8.5 4.5L3.5 8z"/><path d="m3.5 12 8.5 4.5 8.5-4.5M3.5 16l8.5 4.5 8.5-4.5"/></svg>',
+  filter: '<svg class="i" viewBox="0 0 24 24"><path d="M4 5h16l-6 7.5V19l-4-2v-4.5z"/></svg>',
+  eye: '<svg class="i" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  sidebar:
+    '<svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9 4v16"/></svg>',
+  panel:
+    '<svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M15 4v16"/></svg>',
 };
 
 // ---------------------------------------------------------------- app state
@@ -156,15 +167,28 @@ function applyTheme() {
 matchMedia('(prefers-color-scheme: light)').addEventListener('change', applyTheme);
 
 let needsRender = true;
+let inset = 0; // pixels at the stage's right edge that the floating details card covers
 function resize() {
   const r = $('stage').getBoundingClientRect();
   if (!r.width || !r.height) return;
+  const w = $('inspector').offsetWidth; // not its rect: that moves while the card animates in
+  inset = innerWidth > 900 && w ? w + 24 : 0; // the card, its right margin and a gutter
+  $('stage').style.setProperty('--inset', `${inset}px`);
   renderer.setSize(r.width, r.height, false);
-  camera.aspect = r.width / r.height;
-  camera.updateProjectionMatrix();
+  frameCamera(r.width, r.height, inset);
   needsRender = true;
 }
+/** Centres the view in the part of the stage left of the card, so the build doesn't hide behind it. */
+function frameCamera(w, h, cut) {
+  if (cut) camera.setViewOffset(w + cut, h, cut, 0, w, h);
+  else {
+    camera.clearViewOffset();
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+}
 new ResizeObserver(resize).observe($('stage'));
+new ResizeObserver(resize).observe($('inspector'));
 controls.addEventListener('change', () => {
   needsRender = true;
 });
@@ -585,7 +609,8 @@ function fit() {
   const center = new THREE.Vector3((lo[0] + hi[0] + 1) / 2, (lo[1] + hi[1] + 1) / 2, (lo[2] + hi[2] + 1) / 2);
   const radius = Math.max(2.5, Math.hypot(hi[0] - lo[0] + 1, hi[1] - lo[1] + 1, hi[2] - lo[2] + 1) / 2);
   const vfov = THREE.MathUtils.degToRad(camera.fov);
-  const fov = Math.min(vfov, 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect)); // portrait screens are width-bound
+  const aspect = (canvas.clientWidth - inset) / canvas.clientHeight;
+  const fov = Math.min(vfov, 2 * Math.atan(Math.tan(vfov / 2) * aspect)); // portrait screens are width-bound
   const dist = (radius / Math.sin(fov / 2)) * 0.95;
   const dir = new THREE.Vector3(1, 0.75, 1.25).normalize();
   controls.target.copy(center);
@@ -1286,7 +1311,7 @@ function renderInspector() {
             `<button type="button" role="radio" aria-checked="${S.filter === k}" data-filter="${k}" data-tip="Show ${l.toLowerCase()} blocks" data-key="${key}">${l}</button>`,
         )
         .join('')}</div>
-      <label class="updated"><input type="checkbox" id="ghosts" ${S.ghosts ? 'checked' : ''}> Show missing blocks as ghosts <kbd class="kbd">G</kbd></label>
+      <div class="sh-field"><span>Show missing blocks as ghosts</span><button type="button" class="switch" role="switch" id="ghosts" aria-checked="${S.ghosts}" aria-label="Show missing blocks as ghosts" data-tip="Ghosts" data-key="G"></button></div>
       <div class="updated" id="updated-at">${S.statusErr ? `<span style="color:var(--danger)">${esc(S.statusErr)}</span>` : `Updated ${ago < 2 ? 'just now' : `${ago}s ago`}`}</div>
     </section>`;
   } else if (d.type !== 'selection') {
@@ -1594,15 +1619,12 @@ $('inspector').addEventListener('click', (e) => {
   const addp = t.closest('[data-add-player]');
   if (addp) return addPlayer(+addp.dataset.addPlayer);
   if (t.closest('#copy-mats')) return copyMaterials();
+  if (t.closest('#ghosts')) return toggleGhosts();
 });
 $('inspector').addEventListener('mousedown', (e) => {
   if (e.target.closest('[data-add-player]')) e.preventDefault(); // keep focus in the field so the list stays open
 });
 $('inspector').addEventListener('change', (e) => {
-  if (e.target.id === 'ghosts') {
-    S.ghosts = e.target.checked;
-    remesh();
-  }
   if (e.target.name === 'access') {
     const a = accessTarget();
     setAccess(a.id, e.target.value, a.players);
@@ -1685,6 +1707,12 @@ $('inspector').addEventListener('mouseleave', () => {
   needsRender = true;
 });
 
+function toggleGhosts() {
+  S.ghosts = !S.ghosts;
+  renderInspector();
+  remesh();
+}
+
 function setFilter(f) {
   if (!S.status || S.filter === f) return;
   S.filter = f;
@@ -1763,7 +1791,10 @@ function screenshot() {
   if (!S.data) return;
   const shaded = shaderOn();
   if (shaded) renderIris(performance.now());
-  else renderer.render(scene, camera);
+  else {
+    frameCamera(canvas.clientWidth, canvas.clientHeight, 0); // the saved image is centred on the whole canvas
+    renderer.render(scene, camera);
+  }
   (shaded ? $('gl-iris') : canvas).toBlob((blob) => {
     const a = document.createElement('a');
     const name = (S.data.name || findShared(S.desc.id)?.name || 'view').replace(/[^\w-]+/g, '_');
@@ -1773,6 +1804,7 @@ function screenshot() {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     toast('Screenshot saved', `${name}.png`);
   });
+  resize();
 }
 
 function toggle(which, force) {
@@ -1902,7 +1934,7 @@ function pick() {
     y = lastMouse.clientY - r.top;
   const w = card.offsetWidth,
     h = card.offsetHeight;
-  card.style.left = `${Math.min(r.width - w - 8, x + 16)}px`;
+  card.style.left = `${Math.min(r.width - inset - w - 8, x + 16)}px`;
   card.style.top = `${y + 16 + h > r.height ? y - h - 12 : y + 16}px`;
 }
 function hideHover() {
@@ -1974,7 +2006,7 @@ function renderIris(now) {
   if (!r.width || !r.height) return;
   const c = $('gl-iris');
   const scale = Math.min(devicePixelRatio, 1.5) * SH.settings.scale; // heavy packs at full retina resolution are too slow
-  const W = Math.max(1, Math.round(r.width * scale)),
+  const W = Math.max(1, Math.round((r.width - inset) * scale)), // the card covers the rest
     H = Math.max(1, Math.round(r.height * scale));
   if (c.width !== W || c.height !== H) {
     c.width = W;
@@ -2006,6 +2038,7 @@ function renderIris(now) {
 function syncShaderView() {
   const on = shaderOn();
   $('gl-iris').hidden = !on;
+  canvas.style.opacity = on ? '0' : ''; // keeps orbiting and picking; hides the stale frame beside the card
   if (!on) needsRender = true;
   const pill = $('shader-pill');
   const showPill = !!S.data && SH.settings.enabled && SH.status === 'compiling';
@@ -2625,36 +2658,34 @@ const COMMANDS = () => {
     st = !!S.status;
   const pl = S.desc?.type === 'placement' ? S.api?.placements?.find((p) => p.id === S.desc.id) : null;
   return [
-    has && { title: 'Fit to view', key: 'F', run: fit },
-    has && { title: 'Reload view', key: 'R', run: () => open(S.desc, { force: true }) },
-    has && { title: 'Save screenshot', key: 'S', run: screenshot },
-    has && { title: 'Layers: show all', key: 'L', run: () => setLayer('all') },
-    has && { title: 'Layers: up to current layer', run: () => setLayer('below') },
-    has && { title: 'Layers: single layer', run: () => setLayer('single') },
-    st && { title: 'Show all blocks', key: '1', run: () => setFilter('all') },
-    st && { title: 'Show remaining blocks', key: '2', run: () => setFilter('remaining') },
-    st && { title: 'Show problems only', key: '3', run: () => setFilter('problems') },
+    has && { title: 'Fit to view', key: 'F', icon: ICON.fit, run: fit },
+    has && { title: 'Reload view', key: 'R', icon: ICON.retry, run: () => open(S.desc, { force: true }) },
+    has && { title: 'Save screenshot', key: 'S', icon: ICON.camera, run: screenshot },
+    has && { title: 'Layers: show all', key: 'L', icon: ICON.layers, run: () => setLayer('all') },
+    has && { title: 'Layers: up to current layer', icon: ICON.layers, run: () => setLayer('below') },
+    has && { title: 'Layers: single layer', icon: ICON.layers, run: () => setLayer('single') },
+    st && { title: 'Show all blocks', key: '1', icon: ICON.filter, run: () => setFilter('all') },
+    st && { title: 'Show remaining blocks', key: '2', icon: ICON.filter, run: () => setFilter('remaining') },
+    st && { title: 'Show problems only', key: '3', icon: ICON.filter, run: () => setFilter('problems') },
     st && {
       title: S.ghosts ? 'Hide missing-block ghosts' : 'Show missing-block ghosts',
       key: 'G',
-      run: () => {
-        S.ghosts = !S.ghosts;
-        renderInspector();
-        remesh();
-      },
+      icon: ICON.eye,
+      run: toggleGhosts,
     },
-    has && { title: 'Copy material list', run: copyMaterials },
+    has && { title: 'Copy material list', icon: ICON.copy, run: copyMaterials },
     has &&
       iris && {
         title: SH.settings.enabled ? 'Turn shaders off' : 'Turn shaders on',
         key: 'V',
+        icon: ICON.sparkle,
         run: () => setShaderEnabled(!SH.settings.enabled),
       },
-    has && { title: 'Open shader settings', run: openShaderTab },
+    has && { title: 'Open shader settings', icon: ICON.sparkle, run: openShaderTab },
     ...(has && iris
       ? (SH.list?.packs || [])
           .filter((p) => p.id !== SH.settings.pack || !SH.settings.enabled)
-          .map((p) => ({ title: `Use shader pack: ${p.name}`, run: () => selectPack(p.id) }))
+          .map((p) => ({ title: `Use shader pack: ${p.name}`, icon: ICON.sparkle, run: () => selectPack(p.id) }))
       : []),
     ...(has && SH.settings.enabled
       ? [
@@ -2662,20 +2693,26 @@ const COMMANDS = () => {
           ['Noon', 6000],
           ['Sunset', 12000],
           ['Midnight', 18000],
-        ].map(([l, t]) => ({ title: `Shader time: ${l}`, run: () => setShaderScene({ time: t }) }))
+        ].map(([l, t]) => ({ title: `Shader time: ${l}`, icon: ICON.sun, run: () => setShaderScene({ time: t }) }))
       : []),
     ...(has && SH.status === 'ready'
-      ? profiles().map((p) => ({ title: `Shader profile: ${p.label}`, run: () => applyProfile(p.name) }))
+      ? profiles().map((p) => ({
+          title: `Shader profile: ${p.label}`,
+          icon: ICON.sparkle,
+          run: () => applyProfile(p.name),
+        }))
       : []),
     pl &&
       S.api.serverMod && {
         title: pl.sharedId ? 'Update shared copy' : 'Share this placement to the server',
+        icon: ICON.share,
         run: () => sharePlacement(pl.id),
       },
-    pl?.sharedId && { title: 'Stop sharing this placement', run: () => unshare(pl.sharedId, pl.id) },
-    { title: 'Toggle sidebar', key: `${MOD} B`, run: () => toggle('sidebar') },
-    { title: 'Toggle details panel', key: 'I', run: () => toggle('inspector') },
+    pl?.sharedId && { title: 'Stop sharing this placement', icon: ICON.stop, run: () => unshare(pl.sharedId, pl.id) },
+    { title: 'Toggle sidebar', key: `${MOD} B`, icon: ICON.sidebar, run: () => toggle('sidebar') },
+    { title: 'Toggle details panel', key: 'I', icon: ICON.panel, run: () => toggle('inspector') },
     {
+      icon: document.documentElement.dataset.theme === 'light' ? ICON.moon : ICON.sun,
       title:
         'Switch theme: ' +
         (document.documentElement.dataset.theme === 'light'
@@ -2867,13 +2904,7 @@ document.addEventListener('keydown', (e) => {
     s: screenshot,
     i: () => toggle('inspector'),
     l: () => setLayer({ all: 'below', below: 'single', single: 'all' }[S.layerMode]),
-    g: () => {
-      if (S.status) {
-        S.ghosts = !S.ghosts;
-        renderInspector();
-        remesh();
-      }
-    },
+    g: () => S.status && toggleGhosts(),
     v: () => setShaderEnabled(!SH.settings.enabled),
     1: () => setFilter('all'),
     2: () => setFilter('remaining'),
