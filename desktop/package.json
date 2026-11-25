@@ -1,7 +1,7 @@
 {
   "name": "litescape",
   "productName": "Litescape",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Desktop window for the Litescape mod's 3D schematic viewer",
   "author": "GA16-24",
   "license": "MIT",
@@ -23,6 +23,14 @@
       "waiting.html"
     ],
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "protocols": [
+      {
+        "name": "Litescape",
+        "schemes": [
+          "litescape"
+        ]
+      }
+    ],
     "mac": {
       "target": [
         {
