@@ -134,3 +134,7 @@ To release the desktop app, bump `version` in `desktop/package.json`, merge, and
 The game test writes its API responses and textures to `build/run/clientGameTest/litweb-fixtures/`. The dev server replays them and simulates a build in progress, so you can work on the UI without Minecraft running. `/dev?mode=offline|noworld|empty|full` switches between the page's states.
 
 The web app is plain ES modules with a vendored copy of three.js r170 (MIT). It has no build step.
+
+## Acknowledgments
+
+A lot of this project was inspired by [T3 Code](https://github.com/pingdotgg/t3code). The web viewer's look and feel, including its design tokens, light and dark themes and command palette, used T3 Code as the reference for polish.
