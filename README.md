@@ -82,6 +82,7 @@ Opening the Shaders tab asks Modrinth for the popular packs' icons and download 
 node web-dev/serve.mjs       # web app on :8194 using the fixtures the game test recorded
 ./gradlew shaderDev -Ppacks=<folder>  # the shader API on :8195 without Minecraft; serve.mjs forwards /api/shaders to it
 node web-dev/expr.test.mjs   # custom-uniform expression tests
+node web-dev/ui-tokens.test.mjs  # style.css colors come from its tokens; font sizes and radii stay on the scale
 ```
 
 The game test writes its API responses and textures to `build/run/clientGameTest/litweb-fixtures/`. The dev server replays them and simulates a build in progress, so you can work on the UI without Minecraft running. `/dev?mode=offline|noworld|empty|full` switches between the page's states.
