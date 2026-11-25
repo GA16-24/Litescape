@@ -36,10 +36,10 @@ It needs WebGL 2 with floating-point render targets, which current Chrome, Edge,
 
 ## Install
 
-| Where | Needs |
-| --- | --- |
-| Client | Fabric Loader 0.20.1+, Fabric API, Litematica 0.29.1 (and MaLiLib), this mod |
-| Server (optional) | Fabric Loader, Fabric API, this mod. The server doesn't need Litematica. |
+| Where             | Needs                                                                        |
+| ----------------- | ---------------------------------------------------------------------------- |
+| Client            | Fabric Loader 0.20.1+, Fabric API, Litematica 0.29.1 (and MaLiLib), this mod |
+| Server (optional) | Fabric Loader, Fabric API, this mod. The server doesn't need Litematica.     |
 
 It's one jar for both sides. Without the server part, the client reads blocks from the chunks it has loaded and the page tells you what percentage of the area is covered.
 
@@ -47,11 +47,11 @@ It's one jar for both sides. Without the server part, the client reads blocks fr
 
 `config/litweb-server.properties` is created on first start:
 
-| Key | Default | Meaning |
-| --- | --- | --- |
-| `region-read` | `ops` | Who may read areas from the server for the selection view (`ops`, `everyone`, `none`). Everyone else falls back to their own loaded chunks. |
-| `shared-progress` | `everyone` | Who may request build progress for shared schematics. Progress reveals whether each position matches, so set `ops` if you worry about players using it to scout. |
-| `max-shared-per-player` | `20` | How many schematics one player can share at once. |
+| Key                     | Default    | Meaning                                                                                                                                                          |
+| ----------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `region-read`           | `ops`      | Who may read areas from the server for the selection view (`ops`, `everyone`, `none`). Everyone else falls back to their own loaded chunks.                      |
+| `shared-progress`       | `everyone` | Who may request build progress for shared schematics. Progress reveals whether each position matches, so set `ops` if you worry about players using it to scout. |
+| `max-shared-per-player` | `20`       | How many schematics one player can share at once.                                                                                                                |
 
 Shared schematics are stored in `<world>/litweb/`.
 

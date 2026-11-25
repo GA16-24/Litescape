@@ -23,6 +23,8 @@ import org.lwjgl.system.MemoryUtil;
  */
 public final class Translator {
 	public static final class Failure extends Exception {
+		private static final long serialVersionUID = 1L;
+
 		Failure(String message) {
 			super(message);
 		}
