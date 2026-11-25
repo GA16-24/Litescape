@@ -1,0 +1,400 @@
+package dev.ga16.litweb;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
+import dev.ga16.litweb.Net.Reply;
+import dev.ga16.litweb.Net.Req;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.UUID;
+import java.util.zip.DeflaterOutputStream;
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.permissions.Permissions;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.storage.LevelResource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Server half: reads world regions for the web viewer, stores schematics that players
+ * choose to share, and diffs them against the live world to report build progress.
+ */
+public final class LitWeb implements ModInitializer {
+	public static final Logger LOG = LoggerFactory.getLogger("litweb");
+	/** Region reads run on the server thread, so they get a smaller cap than local views. */
+	static final int SERVER_READ_MAX = 4_194_304;
+	static final int MAX_UPLOAD_BYTES = 32 << 20;
+	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+
+	/** Metadata for one shared schematic; the blocks live in <id>.bin. */
+	public static final class Shared {
+		public String id, name, owner, ownerName, dim, author;
+		public int[] origin, size;
+		public long updated;
+		/** Player UUID -> blocks they placed that match the schematic, counted since it was shared. */
+		public Map<String, Contributor> contributors = new LinkedHashMap<>();
+	}
+
+	public static final class Contributor {
+		public String name;
+		public int placed;
+		public long last;
+	}
+
+	private static @org.jspecify.annotations.Nullable LitWeb instance;
+	private @org.jspecify.annotations.Nullable MinecraftServer server;
+	private boolean contributorsDirty;
+	/** Positions already credited, so breaking and re-placing a block doesn't count twice. Saved as <id>.credited. */
+	private final Map<String, java.util.BitSet> credited = new HashMap<>();
+	private final Set<String> creditedDirty = new HashSet<>();
+
+	private final Map<String, Shared> shared = new LinkedHashMap<>();
+	private final Map<String, Volume> loaded = new HashMap<>();
+	private final Map<UUID, ByteArrayOutputStream> uploads = new HashMap<>();
+	private final Map<UUID, Long> lastStatus = new HashMap<>();
+	private final Properties config = new Properties();
+	private Path dir;
+
+	@Override
+	public void onInitialize() {
+		PayloadTypeRegistry.serverboundPlay().register(Req.TYPE, Req.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(Reply.TYPE, Reply.CODEC);
+		instance = this;
+		ServerLifecycleEvents.SERVER_STARTED.register(this::load);
+		ServerLifecycleEvents.SERVER_STOPPING.register(s -> flushContributors());
+		// Contribution counts change on every placed block; save and push them at most every 5 seconds.
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(s -> {
+			if (s.getTickCount() % 100 == 0) flushContributors();
+		});
+		ServerPlayConnectionEvents.DISCONNECT.register((h, s) -> {
+			uploads.remove(h.player.getUUID());
+			lastStatus.remove(h.player.getUUID());
+		});
+		ServerPlayNetworking.registerGlobalReceiver(Req.TYPE, (req, ctx) -> {
+			ServerPlayer player = ctx.player();
+			try {
+				handle(ctx.server(), player, req);
+			} catch (IOException e) { // expected refusals: permission, limits, missing schematic
+				send(player, req.req(), e.getMessage(), new byte[0]);
+			} catch (Exception e) {
+				LOG.warn("Request {} from {} failed", req.op(), player.getPlainTextName(), e);
+				send(player, req.req(), e.getMessage() == null ? e.toString() : e.getMessage(), new byte[0]);
+			}
+		});
+	}
+
+	private void load(MinecraftServer server) {
+		this.server = server;
+		shared.clear();
+		loaded.clear();
+		credited.clear();
+		creditedDirty.clear();
+		Path cfg = FabricLoader.getInstance().getConfigDir().resolve("litweb-server.properties");
+		config.setProperty("region-read", "ops");
+		config.setProperty("shared-progress", "everyone");
+		config.setProperty("max-shared-per-player", "20");
+		try {
+			if (Files.exists(cfg)) {
+				try (Reader r = Files.newBufferedReader(cfg)) {
+					config.load(r);
+				}
+			} else {
+				try (Writer w = Files.newBufferedWriter(cfg)) {
+					config.store(w, "Litematica Web Viewer. region-read / shared-progress: ops | everyone | none");
+				}
+			}
+			dir = server.getWorldPath(LevelResource.ROOT).resolve("litweb");
+			Files.createDirectories(dir);
+			Path index = dir.resolve("index.json");
+			if (Files.exists(index)) {
+				List<Shared> list = GSON.fromJson(Files.readString(index), new TypeToken<List<Shared>>() {}.getType());
+				if (list != null) for (Shared s : list) {
+					if (s.contributors == null) s.contributors = new LinkedHashMap<>(); // index.json from before contributors existed
+					shared.put(s.id, s);
+				}
+			}
+		} catch (IOException e) {
+			LOG.error("Could not load litweb data", e);
+		}
+	}
+
+	private boolean allowed(ServerPlayer player, String key) {
+		return switch (config.getProperty(key, "ops")) {
+			case "everyone" -> true;
+			case "ops" -> player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
+			default -> false;
+		};
+	}
+
+	private void handle(MinecraftServer server, ServerPlayer player, Req req) throws IOException {
+		switch (req.op()) {
+			case "list" -> send(player, req.req(), "", listJson());
+			case "region" -> {
+				if (!allowed(player, "region-read")) throw new IOException("no-permission");
+				List<int[]> boxes = readBoxes(req.data());
+				int[] u = Volume.union(boxes);
+				long volume = (long) (u[3] - u[0] + 1) * (u[4] - u[1] + 1) * (u[5] - u[2] + 1);
+				if (volume > SERVER_READ_MAX) throw new IOException("Area is too large for a server read (" + volume + " > " + SERVER_READ_MAX + " blocks)");
+				ServerLevel level = player.level();
+				Volume v = Volume.ofBoxes(boxes);
+				v.fill(boxes, loadedOnly(level));
+				send(player, req.req(), "", v.encode());
+			}
+			case "get" -> {
+				Shared s = require(req.arg());
+				send(player, req.req(), "", Files.readAllBytes(dir.resolve(s.id + ".bin")));
+			}
+			case "status" -> {
+				if (!allowed(player, "shared-progress")) throw new IOException("no-permission");
+				long now = System.currentTimeMillis();
+				if (now - lastStatus.getOrDefault(player.getUUID(), 0L) < 750) throw new IOException("rate-limited");
+				lastStatus.put(player.getUUID(), now);
+				Shared s = require(req.arg());
+				ServerLevel level = server.getLevel(ResourceKey.create(Registries.DIMENSION, Identifier.parse(s.dim)));
+				if (level == null) throw new IOException("Dimension " + s.dim + " does not exist");
+				send(player, req.req(), "", status(volume(s), level));
+			}
+			case "upload" -> upload(server, player, req);
+			case "delete" -> {
+				Shared s = require(req.arg());
+				if (!s.owner.equals(player.getStringUUID()) && !player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
+					throw new IOException("Only " + s.ownerName + " or an operator can stop sharing this schematic");
+				}
+				shared.remove(s.id);
+				loaded.remove(s.id);
+				credited.remove(s.id);
+				creditedDirty.remove(s.id);
+				Files.deleteIfExists(dir.resolve(s.id + ".bin"));
+				Files.deleteIfExists(dir.resolve(s.id + ".credited"));
+				saveIndexAndBroadcast(server);
+				send(player, req.req(), "", new byte[0]);
+			}
+			default -> throw new IOException("Unknown op " + req.op());
+		}
+	}
+
+	private void upload(MinecraftServer server, ServerPlayer player, Req req) throws IOException {
+		JsonObject meta = GSON.fromJson(req.arg(), JsonObject.class);
+		int part = meta.get("part").getAsInt(), parts = meta.get("parts").getAsInt();
+		ByteArrayOutputStream buf = part == 0 ? new ByteArrayOutputStream() : uploads.get(player.getUUID());
+		if (buf == null) throw new IOException("Upload out of order");
+		if (buf.size() + req.data().length > MAX_UPLOAD_BYTES) {
+			uploads.remove(player.getUUID());
+			throw new IOException("Schematic is too large to share");
+		}
+		buf.write(req.data());
+		uploads.put(player.getUUID(), buf);
+		if (part < parts - 1) return; // the client waits for the reply to the last part only
+		uploads.remove(player.getUUID());
+
+		byte[] data = buf.toByteArray();
+		Volume v = Volume.decode(data); // validates before anything touches disk
+		String owner = player.getStringUUID();
+		String id = UUID.nameUUIDFromBytes((owner + ":" + meta.get("key").getAsString()).getBytes(StandardCharsets.UTF_8)).toString();
+		long mine = shared.values().stream().filter(s -> s.owner.equals(owner) && !s.id.equals(id)).count();
+		if (mine >= Integer.parseInt(config.getProperty("max-shared-per-player", "20"))) {
+			throw new IOException("You are already sharing " + mine + " schematics. Stop sharing one first.");
+		}
+		Shared s = new Shared();
+		s.id = id;
+		s.name = meta.get("name").getAsString();
+		s.owner = owner;
+		s.ownerName = player.getPlainTextName();
+		s.dim = player.level().dimension().identifier().toString();
+		s.origin = new int[] {v.x0, v.y0, v.z0};
+		s.size = new int[] {v.sx, v.sy, v.sz};
+		s.updated = System.currentTimeMillis();
+		if (meta.has("author")) s.author = meta.get("author").getAsString().substring(0, Math.min(64, meta.get("author").getAsString().length()));
+		Shared old = shared.get(id);
+		if (old != null) s.contributors = old.contributors; // "Update copy" keeps who helped so far
+		Files.write(dir.resolve(id + ".bin"), data);
+		shared.put(id, s);
+		loaded.put(id, v);
+		saveIndexAndBroadcast(server);
+		send(player, req.req(), "", id.getBytes(StandardCharsets.UTF_8));
+	}
+
+	/** Called by the BlockItem mixin on the server thread after a player places a block. */
+	public static void onPlaced(ServerPlayer player, BlockPos pos, BlockState placed) {
+		if (instance != null) instance.placed(player, pos, placed);
+	}
+
+	private void placed(ServerPlayer player, BlockPos pos, BlockState placed) {
+		String dim = player.level().dimension().identifier().toString();
+		for (Shared s : shared.values()) {
+			int x = pos.getX() - s.origin[0], y = pos.getY() - s.origin[1], z = pos.getZ() - s.origin[2];
+			if (!s.dim.equals(dim) || x < 0 || y < 0 || z < 0 || x >= s.size[0] || y >= s.size[1] || z >= s.size[2]) continue;
+			BlockState want;
+			try {
+				Volume v = volume(s);
+				want = v.palette.get(v.blocks[v.at(x, y, z)]);
+			} catch (IOException e) {
+				continue;
+			}
+			// The right block counts even if its orientation still needs fixing.
+			if (want == null || want.isAir() || want.getBlock() != placed.getBlock()) continue;
+			java.util.BitSet done = credited.computeIfAbsent(s.id, this::readCredited);
+			int index = (y * s.size[2] + z) * s.size[0] + x;
+			if (done.get(index)) continue;
+			done.set(index);
+			creditedDirty.add(s.id);
+			Contributor c = s.contributors.computeIfAbsent(player.getStringUUID(), k -> new Contributor());
+			c.name = player.getPlainTextName();
+			c.placed++;
+			c.last = System.currentTimeMillis();
+			contributorsDirty = true;
+		}
+	}
+
+	private void flushContributors() {
+		if (!contributorsDirty || server == null || dir == null) return;
+		contributorsDirty = false;
+		try {
+			for (String id : creditedDirty) {
+				if (shared.containsKey(id)) Files.write(dir.resolve(id + ".credited"), credited.get(id).toByteArray());
+			}
+			creditedDirty.clear();
+			saveIndexAndBroadcast(server);
+		} catch (IOException e) {
+			LOG.warn("Could not save contribution counts", e);
+		}
+	}
+
+	private java.util.BitSet readCredited(String id) {
+		Path file = dir.resolve(id + ".credited");
+		try {
+			return Files.exists(file) ? java.util.BitSet.valueOf(Files.readAllBytes(file)) : new java.util.BitSet();
+		} catch (IOException e) {
+			LOG.warn("Could not read credited blocks for {}", id, e);
+			return new java.util.BitSet();
+		}
+	}
+
+	private Shared require(String id) throws IOException {
+		Shared s = shared.get(id);
+		if (s == null) throw new IOException("That schematic is no longer shared");
+		return s;
+	}
+
+	private Volume volume(Shared s) throws IOException {
+		Volume v = loaded.get(s.id);
+		if (v == null) {
+			v = Volume.decode(Files.readAllBytes(dir.resolve(s.id + ".bin")));
+			loaded.put(s.id, v);
+		}
+		return v;
+	}
+
+	static byte[] status(Volume v, ServerLevel level) {
+		int[] counts = new int[6];
+		byte[] st = v.diff(loadedOnly(level), counts);
+		return encodeStatus(counts, st);
+	}
+
+	/**
+	 * Reads only chunks that are already loaded (null = unknown). Loading on demand would
+	 * block the server thread and could generate terrain for a far-away selection.
+	 */
+	static java.util.function.Function<BlockPos, BlockState> loadedOnly(ServerLevel level) {
+		LevelChunk[] last = {null};
+		return pos -> {
+			int cx = pos.getX() >> 4, cz = pos.getZ() >> 4;
+			LevelChunk c = last[0];
+			if (c == null || c.getPos().x() != cx || c.getPos().z() != cz) {
+				c = level.getChunkSource().getChunkNow(cx, cz);
+				if (c == null) return null;
+				last[0] = c;
+			}
+			return c.getBlockState(pos);
+		};
+	}
+
+	private static byte[] encodeStatus(int[] counts, byte[] st) {
+		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+		try (DataOutputStream out = new DataOutputStream(new DeflaterOutputStream(bytes))) {
+			for (int c : counts) out.writeInt(c);
+			out.write(st);
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
+		}
+		return bytes.toByteArray();
+	}
+
+	public static List<int[]> readBoxes(byte[] data) throws IOException {
+		DataInputStream in = new DataInputStream(new ByteArrayInputStream(data));
+		int n = in.readInt();
+		if (n < 1 || n > 256) throw new IOException("Bad box count");
+		List<int[]> boxes = new ArrayList<>();
+		for (int i = 0; i < n; i++) {
+			int[] b = new int[6];
+			for (int j = 0; j < 6; j++) b[j] = in.readInt();
+			boxes.add(b);
+		}
+		return boxes;
+	}
+
+	public static byte[] writeBoxes(List<int[]> boxes) {
+		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+		try (DataOutputStream out = new DataOutputStream(bytes)) {
+			out.writeInt(boxes.size());
+			for (int[] b : boxes) for (int v : b) out.writeInt(v);
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
+		}
+		return bytes.toByteArray();
+	}
+
+	private byte[] listJson() {
+		return GSON.toJson(shared.values()).getBytes(StandardCharsets.UTF_8);
+	}
+
+	private void saveIndexAndBroadcast(MinecraftServer server) throws IOException {
+		Path tmp = dir.resolve("index.json.tmp");
+		Files.writeString(tmp, GSON.toJson(shared.values()));
+		Files.move(tmp, dir.resolve("index.json"), java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+		byte[] list = listJson();
+		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+			if (ServerPlayNetworking.canSend(p, Reply.TYPE)) send(p, Net.PUSH_LIST, "", list);
+		}
+	}
+
+	static void send(ServerPlayer player, int req, String error, byte[] data) {
+		int parts = Math.max(1, (data.length + Net.DOWN_PART - 1) / Net.DOWN_PART);
+		for (int i = 0; i < parts; i++) {
+			byte[] chunk = Arrays.copyOfRange(data, i * Net.DOWN_PART, Math.min(data.length, (i + 1) * Net.DOWN_PART));
+			ServerPlayNetworking.send(player, new Reply(req, i, parts, error, chunk));
+		}
+	}
+}
