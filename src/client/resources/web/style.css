@@ -954,6 +954,10 @@ button {
 .filter-seg button {
   flex: 1;
 }
+.seg button[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .updated {
   color: var(--muted);
   font-size: 12px;

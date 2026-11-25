@@ -90,6 +90,11 @@ function build(o) {
     if (!e || e.air) continue;
     const y = (i / layer) | 0;
     if (y < o.y0 || y > o.y1) continue;
+    if (e.t) {
+      // Captured surroundings: no build status, so they step aside while a filter or material is picked.
+      if (o.terrain !== 'off' && o.iso < 0 && (!st || o.filter === 'all')) vis[i] = 1;
+      continue;
+    }
     if (o.iso >= 0 && e.mid !== o.iso) continue;
     let g = 1;
     if (st) {
@@ -168,6 +173,7 @@ function build(o) {
       if (cull >= 0 && occludes(i, cull, x, y, z, e, p, gi)) continue;
       const G = gi === 2 ? groups[2] : q[off + 3] === 2 ? groups[1] : groups[0];
       (iris ? irisColor : shadeColor)(q[off + 2], q[off + 4], tintS, col);
+      if (e.t && o.terrain === 'faded') fade(col);
       emit(G, x, y, z, q, off, col[0], col[1], col[2], e.mid, i, e);
     }
     const f = e.f;
@@ -186,6 +192,7 @@ function build(o) {
         fluidFace(fluidQuad, d, h, f.t);
         const G = gi === 2 ? groups[2] : f.l === 2 ? groups[1] : groups[0];
         (iris ? irisColor : shadeColor)(f.c, d, tintS, col);
+        if (e.t && o.terrain === 'faded') fade(col);
         emit(G, x, y, z, fluidQuad, 0, col[0], col[1], col[2], e.mid, i, e);
       }
     }
@@ -351,6 +358,12 @@ function build(o) {
       }
     }
   }
+}
+
+/** Mostly greys out a surroundings color so the build stands out against it. */
+function fade(c) {
+  const l = (c[0] + c[1] + c[2]) / 3;
+  for (let k = 0; k < 3; k++) c[k] = c[k] * 0.3 + l * 0.7;
 }
 
 function norm(v) {

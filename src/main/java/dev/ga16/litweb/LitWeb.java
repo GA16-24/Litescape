@@ -71,6 +71,11 @@ public final class LitWeb implements ModInitializer {
 		public Map<String, String> players = new LinkedHashMap<>();
 		/** Player UUID -> blocks they placed that match the schematic, counted since it was shared. */
 		public Map<String, Contributor> contributors = new LinkedHashMap<>();
+		/** Blocks of terrain captured around it (0 = none); the snapshot lives in <id>.terrain.bin. */
+		public int margin;
+		/** When the surroundings were captured, and how many of their chunks the server had loaded then. */
+		public long captured;
+		public int chunks, chunksCaptured;
 	}
 
 	public static final class Contributor {
@@ -131,6 +136,8 @@ public final class LitWeb implements ModInitializer {
 		config.setProperty("region-read", "ops");
 		config.setProperty("shared-progress", "everyone");
 		config.setProperty("max-shared-per-player", "20");
+		config.setProperty("terrain-capture", "ops");
+		config.setProperty("terrain-max-margin", "32");
 		try {
 			if (Files.exists(cfg)) {
 				try (Reader r = Files.newBufferedReader(cfg)) {
@@ -138,7 +145,7 @@ public final class LitWeb implements ModInitializer {
 				}
 			} else {
 				try (Writer w = Files.newBufferedWriter(cfg)) {
-					config.store(w, "Litematica Web Viewer. region-read / shared-progress: ops | everyone | none");
+					config.store(w, "Litematica Web Viewer. region-read / shared-progress / terrain-capture: ops | everyone | none");
 				}
 			}
 			dir = server.getWorldPath(LevelResource.ROOT).resolve("litweb");
@@ -181,6 +188,28 @@ public final class LitWeb implements ModInitializer {
 	private void handle(MinecraftServer server, ServerPlayer player, Req req) throws IOException {
 		switch (req.op()) {
 			case "list" -> send(player, req.req(), "", listJson(player));
+			case "config" -> {
+				JsonObject o = new JsonObject();
+				o.addProperty("capture", allowed(player, "terrain-capture"));
+				o.addProperty("maxMargin", maxMargin());
+				send(player, req.req(), "", GSON.toJson(o).getBytes(StandardCharsets.UTF_8));
+			}
+			case "terrain" -> {
+				Shared s = require(player, req.arg());
+				Path file = dir.resolve(s.id + ".terrain.bin");
+				if (s.margin == 0 || !Files.exists(file)) throw new IOException("No surroundings were captured for this schematic");
+				send(player, req.req(), "", Files.readAllBytes(file));
+			}
+			case "capture" -> { // Recapture, or change how much surrounding terrain to keep
+				JsonObject a = GSON.fromJson(req.arg(), JsonObject.class);
+				Shared s = require(player, a.get("id").getAsString());
+				if (!canManage(player, s)) throw new IOException("Only " + s.ownerName + " or an operator can recapture its surroundings");
+				ServerLevel level = server.getLevel(ResourceKey.create(Registries.DIMENSION, Identifier.parse(s.dim)));
+				if (level == null) throw new IOException("Dimension " + s.dim + " does not exist");
+				capture(player, s, volume(s), level, a.get("margin").getAsInt());
+				saveIndexAndBroadcast(server);
+				send(player, req.req(), "", new byte[0]);
+			}
 			case "region" -> {
 				if (!allowed(player, "region-read")) throw new IOException("no-permission");
 				List<int[]> boxes = readBoxes(req.data());
@@ -233,6 +262,7 @@ public final class LitWeb implements ModInitializer {
 				creditedDirty.remove(s.id);
 				Files.deleteIfExists(dir.resolve(s.id + ".bin"));
 				Files.deleteIfExists(dir.resolve(s.id + ".credited"));
+				Files.deleteIfExists(dir.resolve(s.id + ".terrain.bin"));
 				saveIndexAndBroadcast(server);
 				send(player, req.req(), "", new byte[0]);
 			}
@@ -279,11 +309,64 @@ public final class LitWeb implements ModInitializer {
 			s.access = old.access;
 			s.players = old.players;
 		}
+		// Old clients send no margin; they get no surroundings rather than stale ones from before a move.
+		capture(player, s, v, player.level(), meta.has("margin") ? meta.get("margin").getAsInt() : 0);
 		Files.write(dir.resolve(id + ".bin"), data);
 		shared.put(id, s);
 		loaded.put(id, v);
 		saveIndexAndBroadcast(server);
 		send(player, req.req(), "", id.getBytes(StandardCharsets.UTF_8));
+	}
+
+	private int maxMargin() {
+		try {
+			return Math.max(0, Math.min(64, Integer.parseInt(config.getProperty("terrain-max-margin", "32").trim())));
+		} catch (NumberFormatException e) {
+			return 32;
+		}
+	}
+
+	/**
+	 * Snapshots the terrain up to margin blocks around a shared schematic, from loaded chunks only, minus the
+	 * schematic's own blocks: progress there comes from the live world. margin 0 drops any earlier snapshot.
+	 */
+	private void capture(ServerPlayer player, Shared s, Volume schem, ServerLevel level, int margin) throws IOException {
+		Path file = dir.resolve(s.id + ".terrain.bin");
+		if (margin == 0) {
+			Files.deleteIfExists(file);
+			s.margin = 0;
+			s.captured = 0;
+			s.chunks = s.chunksCaptured = 0;
+			return;
+		}
+		if (margin < 0 || margin > maxMargin()) throw new IOException("Surroundings can reach at most " + maxMargin() + " blocks on this server");
+		if (!allowed(player, "terrain-capture")) throw new IOException("This server doesn't let you capture surroundings");
+		int[] box = {schem.x0 - margin, Math.max(level.getMinY(), schem.y0 - margin), schem.z0 - margin,
+			schem.x0 + schem.sx - 1 + margin, Math.min(level.getMaxY(), schem.y0 + schem.sy - 1 + margin), schem.z0 + schem.sz - 1 + margin};
+		long volume = (long) (box[3] - box[0] + 1) * Math.max(0, box[4] - box[1] + 1) * (box[5] - box[2] + 1);
+		if (box[4] < box[1] || volume > SERVER_READ_MAX) {
+			throw new IOException("Surroundings of " + margin + " blocks are too large to capture (" + volume + " > " + SERVER_READ_MAX + " blocks)");
+		}
+		var world = loadedOnly(level);
+		BlockState air = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+		Volume t = Volume.ofBoxes(List.of(box));
+		t.fill(List.of(box), pos -> {
+			int x = pos.getX() - schem.x0, y = pos.getY() - schem.y0, z = pos.getZ() - schem.z0;
+			if (x >= 0 && y >= 0 && z >= 0 && x < schem.sx && y < schem.sy && z < schem.sz) {
+				BlockState want = schem.palette.get(schem.blocks[schem.at(x, y, z)]);
+				if (want != null && !want.isAir()) return air;
+			}
+			return world.apply(pos);
+		});
+		int chunks = 0, loaded = 0;
+		for (int cx = box[0] >> 4; cx <= box[3] >> 4; cx++)
+			for (int cz = box[2] >> 4; cz <= box[5] >> 4; cz++, chunks++)
+				if (level.getChunkSource().getChunkNow(cx, cz) != null) loaded++;
+		Files.write(file, t.encode());
+		s.margin = margin;
+		s.captured = System.currentTimeMillis();
+		s.chunks = chunks;
+		s.chunksCaptured = loaded;
 	}
 
 	/** Called by the BlockItem mixin on the server thread after a player places a block. */
