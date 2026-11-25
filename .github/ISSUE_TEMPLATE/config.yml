@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/GA16-24/Litescape/security/advisories/new
+    about: Report vulnerabilities privately, as SECURITY.md describes. Don't open a public issue.
