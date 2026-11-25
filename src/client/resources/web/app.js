@@ -56,6 +56,8 @@ const ICON = {
     '<svg class="i" viewBox="0 0 24 24"><path d="m12 3.5 8.5 4.5-8.5 4.5L3.5 8z"/><path d="m3.5 12 8.5 4.5 8.5-4.5M3.5 16l8.5 4.5 8.5-4.5"/></svg>',
   filter: '<svg class="i" viewBox="0 0 24 24"><path d="M4 5h16l-6 7.5V19l-4-2v-4.5z"/></svg>',
   eye: '<svg class="i" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  eyeOff:
+    '<svg class="i" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>',
   sidebar:
     '<svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9 4v16"/></svg>',
   panel:
@@ -94,6 +96,8 @@ const S = {
   scrollToAccess: false, // bring the Access panel into view once it renders
   terrain: 'faded', // captured surroundings: faded | on | off
   margin: new Map(), // placement id -> surroundings picked before sharing
+  hidden: new Set(), // "server:sharedId" of others' shared schematics hidden from the sidebar, kept in this browser
+  showHidden: false,
 };
 
 // ---------------------------------------------------------------- three.js
@@ -292,6 +296,14 @@ const serverInfo = (key = viewServer()) => {
 };
 const sharedList = () => (isLive() ? S.api.shared : serverInfo()?.shared) || [];
 const findShared = (id) => sharedList().find((s) => s.id === id);
+const isHidden = (s) => S.hidden.has(`${viewServer()}:${s.id}`);
+function setHidden(id, on) {
+  S.hidden[on ? 'add' : 'delete'](`${viewServer()}:${id}`);
+  try {
+    localStorage.setItem('litweb.hidden', JSON.stringify([...S.hidden]));
+  } catch {}
+  renderNav();
+}
 const monogram = (name, key) =>
   `<span class="mono" style="--h:${[...key].reduce((x, ch) => (x * 31 + ch.charCodeAt(0)) % 360, 7)}" aria-hidden="true">${esc((name || '?').trim()[0]?.toUpperCase() || '?')}</span>`;
 const esc = (s) =>
@@ -805,8 +817,8 @@ function onState() {
           ? { type: 'selection' }
           : isLive() && a.placements?.[0]
             ? { type: 'placement', id: a.placements[0].id }
-            : sharedList()[0]
-              ? { type: 'shared', id: sharedList()[0].id }
+            : sharedList().find((s) => !isHidden(s))
+              ? { type: 'shared', id: sharedList().find((s) => !isHidden(s)).id }
               : null;
     if (first) open(first);
     else {
@@ -1009,7 +1021,11 @@ function savedNoteHtml() {
 function sharedNavHtml() {
   const a = S.api;
   const live = isLive();
-  let h = `<div class="nav-section"><div class="nav-head">${live ? 'Shared on this server' : `Shared on ${esc(serverInfo()?.name || 'this server')}`}</div>`;
+  const nHidden = sharedList().filter(isHidden).length;
+  const toggle = nHidden
+    ? `<button type="button" class="link" data-show-hidden aria-pressed="${S.showHidden}">${S.showHidden ? ICON.eye : ICON.eyeOff}${nHidden} hidden</button>`
+    : '';
+  let h = `<div class="nav-section"><div class="nav-head">${live ? 'Shared on this server' : `Shared on ${esc(serverInfo()?.name || 'this server')}`}${toggle}</div>`;
   if (live && !a.serverMod)
     h +=
       '<div class="nav-empty">Install Litematica Web Viewer on the server to see what other players are building.</div>';
@@ -1018,12 +1034,17 @@ function sharedNavHtml() {
       ? '<div class="nav-empty">Nothing shared yet. Share one of your placements so others can follow it.</div>'
       : '<div class="nav-empty">Nothing was shared with you here on your last visit.</div>';
   for (const s of sharedList()) {
+    const hid = isHidden(s);
+    if (hid && !S.showHidden) continue;
     h += rowHtml({
       desc: { type: 'shared', id: s.id },
       icon: ICON.shared,
       title: s.name,
       sub: `${s.mine ? 'You' : esc(s.ownerName)} · ${dims(s.size)}${live && s.dim !== a.dim ? ` · ${esc(s.dim.replace('minecraft:', '').replace('the_', ''))}` : ''}`,
       meta: accessBadge(s),
+      action: s.mine
+        ? ''
+        : `<button class="row-action" data-hide="${esc(s.id)}" data-tip="${hid ? 'Show it in your list again' : 'Hide it from your list. Only this browser remembers.'}">${hid ? `${ICON.eye}Unhide` : `${ICON.eyeOff}Hide`}</button>`,
       pct: live ? S.pct.get(`shared:${s.id}`) : null,
     });
   }
@@ -1698,6 +1719,17 @@ $('layer-mode').addEventListener('click', (e) => {
 $('layer-slider').addEventListener('input', (e) => setLayer(S.layerMode === 'all' ? 'below' : null, +e.target.value));
 
 $('nav').addEventListener('click', (e) => {
+  const hide = e.target.closest('[data-hide]');
+  if (hide) {
+    e.stopPropagation();
+    setHidden(hide.dataset.hide, !S.hidden.has(`${viewServer()}:${hide.dataset.hide}`));
+    return;
+  }
+  if (e.target.closest('[data-show-hidden]')) {
+    S.showHidden = !S.showHidden;
+    renderNav();
+    return;
+  }
   const share = e.target.closest('[data-share]');
   if (share) {
     e.stopPropagation();
@@ -3129,6 +3161,7 @@ try {
   if (localStorage.getItem('litweb.inspector') === '0' || innerWidth <= 900) toggle('inspector', false);
   if (localStorage.getItem('litweb.tab') === 'shaders') SH.tab = 'shaders';
   S.server = localStorage.getItem('litweb.server');
+  S.hidden = new Set(JSON.parse(localStorage.getItem('litweb.hidden') || '[]'));
 } catch {}
 document.querySelectorAll('[data-mod]').forEach((k) => {
   k.textContent = `${MOD} K`;
