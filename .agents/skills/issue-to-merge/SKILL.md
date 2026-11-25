@@ -87,7 +87,7 @@ Stay with the PR until it is ready to merge:
 - The branch is current. Rebase on `main` when GitHub shows it as behind or conflicting, then wait for green again.
 - The PR stays the size of the fix. Put extra cleanup or a second bug in its own PR.
 
-Only act on checks and comments newer than your last push. Don't post "still working on it" comments.
+Judge checks by the latest push only, since older runs are stale. Review threads stay open until someone answers or resolves them, whenever they were posted. Don't post "still working on it" comments.
 
 A PR that stays red or conflicting for 14 days with no reply gets closed.
 
