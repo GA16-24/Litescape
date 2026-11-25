@@ -60,6 +60,20 @@ It needs WebGL 2 with floating-point render targets, which current Chrome, Edge,
 
 It's one jar for both sides. Without the server part, the client reads blocks from the chunks it has loaded and the page tells you what percentage of the area is covered.
 
+### Desktop app (optional)
+
+If you'd rather have the viewer in its own window than a browser tab, install the desktop app:
+
+```sh
+brew install --cask GA16-24/tap/litescape   # macOS and Linux
+```
+
+On Windows, run `Litescape-<version>-win-x64.exe` from the [releases page](https://github.com/GA16-24/homebrew-tap/releases). Linux users without Homebrew can download the `.AppImage` from the same page.
+
+The app shows "Waiting for Minecraft" until the game is running with the mod, then opens the viewer. If you quit the game it goes back to waiting, and it reconnects when you start the game again. Links to other sites open in your browser.
+
+The macOS build isn't notarized yet. The Homebrew cask clears the download quarantine for you. If you install the `.dmg` by hand, macOS will block the first launch until you allow it under System Settings → Privacy & Security.
+
 ## Server settings
 
 `config/litweb-server.properties` is created on first start:
@@ -100,7 +114,11 @@ node web-dev/serve.mjs       # web app on :8194 using the fixtures the game test
 ./gradlew shaderDev -Ppacks=<folder>  # the shader API on :8195 without Minecraft; serve.mjs forwards /api/shaders to it
 node web-dev/expr.test.mjs   # custom-uniform expression tests
 node web-dev/ui-tokens.test.mjs  # style.css colors come from its tokens; font sizes and radii stay on the scale
+cd desktop && npm ci && npm start  # the desktop app, against a running game
+cd desktop && npm run dist         # desktop installers for this OS in desktop/dist/
 ```
+
+To release the desktop app, bump `version` in `desktop/package.json`, merge, and push a matching `desktop-v<version>` tag. The Desktop release workflow builds macOS, Windows and Linux, publishes them as a release on the public [GA16-24/homebrew-tap](https://github.com/GA16-24/homebrew-tap) repo and updates the cask there. It needs a `TAP_TOKEN` secret in the `homebrew-tap` environment: a fine-grained token with Contents read and write on that repo. To sign and notarize the macOS app later, remove `identity` and `hardenedRuntime` from `desktop/package.json` and add the [electron-builder signing secrets](https://www.electron.build/code-signing-mac) to the build job.
 
 The game test writes its API responses and textures to `build/run/clientGameTest/litweb-fixtures/`. The dev server replays them and simulates a build in progress, so you can work on the UI without Minecraft running. `/dev?mode=offline|noworld|empty|full` switches between the page's states.
 
