@@ -4,7 +4,7 @@ name: Desktop release
 # publish it on the public GA16-24/homebrew-tap repo and point the cask at it.
 on:
   push:
-    tags: ['desktop-v*']
+    tags: ["desktop-v*"]
 
 permissions: {}
 
