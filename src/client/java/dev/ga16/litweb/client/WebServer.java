@@ -106,11 +106,18 @@ final class WebServer {
 			try {
 				switch (path) {
 					case "/api/state" -> json(ex, 200, onClient(WebServer::state));
-					case "/api/view" -> json(ex, 200, view(q.getOrDefault("type", ""), q.getOrDefault("id", "")));
+					case "/api/view" -> json(ex, 200, view(q.getOrDefault("type", ""), q.getOrDefault("id", ""), q.getOrDefault("server", "")));
 					case "/api/status" -> json(ex, 200, status(q.getOrDefault("type", ""), q.getOrDefault("id", "")));
 					case "/api/share" -> {
 						if (!post) throw new HttpError(405, "Use POST");
 						json(ex, 200, share(q.getOrDefault("id", "")));
+					}
+					case "/api/access" -> {
+						if (!post) throw new HttpError(405, "Use POST");
+						// {id, access: everyone | players | private, players: {uuid: name}}; the server validates it.
+						JsonObject body = JsonParser.parseString(new String(ex.getRequestBody().readNBytes(64 << 10), StandardCharsets.UTF_8)).getAsJsonObject();
+						await(Bridge.request("access", body.toString(), new byte[0]));
+						json(ex, 200, new JsonObject());
 					}
 					case "/api/unshare" -> {
 						if (!post) throw new HttpError(405, "Use POST");
@@ -145,7 +152,26 @@ final class WebServer {
 		ClientLevel level = mc.level;
 		boolean inWorld = level != null && mc.player != null;
 		o.addProperty("inWorld", inWorld);
+		o.add("servers", Servers.json());
 		if (!inWorld) return o;
+		Servers.Id cur = Servers.current();
+		if (cur != null) {
+			JsonObject server = new JsonObject();
+			server.addProperty("key", cur.key());
+			server.addProperty("name", cur.name());
+			server.addProperty("address", cur.address());
+			o.add("server", server);
+		}
+		// Who can be picked when sharing with specific players.
+		JsonArray online = new JsonArray();
+		for (var info : mc.getConnection().getOnlinePlayers()) {
+			if (info.getProfile().id().equals(mc.player.getUUID())) continue;
+			JsonObject p = new JsonObject();
+			p.addProperty("uuid", info.getProfile().id().toString());
+			p.addProperty("name", info.getProfile().name());
+			online.add(p);
+		}
+		o.add("online", online);
 		String uuid = mc.player.getStringUUID();
 		o.addProperty("player", mc.player.getPlainTextName());
 		o.addProperty("dim", level.dimension().identifier().toString());
@@ -190,7 +216,7 @@ final class WebServer {
 		return UUID.nameUUIDFromBytes((owner + ":" + key).getBytes(StandardCharsets.UTF_8)).toString();
 	}
 
-	private static JsonObject view(String type, String id) throws Exception {
+	private static JsonObject view(String type, String id, String serverKey) throws Exception {
 		Volume v;
 		String source, name;
 		switch (type) {
@@ -228,7 +254,14 @@ final class WebServer {
 			case "shared" -> {
 				source = "shared";
 				name = "";
-				v = sharedVolume(id);
+				Servers.Id cur = onClient(Servers::current);
+				if (serverKey.isEmpty() || cur != null && cur.key().equals(serverKey)) v = sharedVolume(id, cur);
+				else {
+					// A remembered server: show the copy saved when it was last opened there.
+					byte[] blob = Servers.blob(serverKey, id);
+					if (blob == null) throw new HttpError(404, "not-saved");
+					v = Volume.decode(blob);
+				}
 			}
 			default -> throw new HttpError(400, "Unknown view type");
 		}
@@ -310,14 +343,18 @@ final class WebServer {
 		return c.volume;
 	}
 
-	private static Volume sharedVolume(String id) throws Exception {
+	private static Volume sharedVolume(String id, Servers.@Nullable Id server) throws Exception {
 		String updated = "";
 		for (var e : JsonParser.parseString(Bridge.sharedJson).getAsJsonArray()) {
 			JsonObject s = e.getAsJsonObject();
 			if (s.get("id").getAsString().equals(id)) updated = s.get("updated").getAsString();
 		}
 		Cached c = sharedCache;
-		if (c == null || !c.key.equals(id + updated)) sharedCache = c = new Cached(id + updated, Volume.decode(await(Bridge.request("get", id, new byte[0]))));
+		if (c == null || !c.key.equals(id + updated)) {
+			byte[] blob = await(Bridge.request("get", id, new byte[0]));
+			sharedCache = c = new Cached(id + updated, Volume.decode(blob));
+			if (server != null) Servers.saveBlob(server.key(), id, blob);
+		}
 		return c.volume;
 	}
 

@@ -16,6 +16,15 @@
         <span class="brand-name">Litematica Viewer</span>
         <span class="conn" id="conn" role="status"><span class="dot"></span><span class="conn-text">Connecting…</span></span>
       </div>
+      <div class="server-pick" id="server-pick" hidden></div>
+      <div class="server-menu" id="server-menu" hidden>
+        <div class="palette-input">
+          <svg aria-hidden="true" class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="server-search" placeholder="Search servers…" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="true" aria-controls="server-list" aria-autocomplete="list" aria-label="Search servers">
+        </div>
+        <div class="server-list" id="server-list" role="listbox" aria-label="Servers"></div>
+        <div class="server-foot">Servers you join in Minecraft show up here, with what was shared with you.</div>
+      </div>
       <button class="search" id="open-palette" type="button">
         <svg aria-hidden="true" class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <span>Search or run a command</span>
