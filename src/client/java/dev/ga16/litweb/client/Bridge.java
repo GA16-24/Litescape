@@ -39,7 +39,7 @@ final class Bridge {
 		Pending p = new Pending(new CompletableFuture<>(), new ByteArrayOutputStream());
 		pending.put(req, p);
 		Minecraft.getInstance().execute(() -> {
-			if (!serverMod()) p.future.completeExceptionally(new IllegalStateException("The server does not run Litematica Web Viewer"));
+			if (!serverMod()) p.future.completeExceptionally(new IllegalStateException("The server does not run Litescape"));
 			else ClientPlayNetworking.send(new Req(req, op, arg, data));
 		});
 		return p.future.orTimeout(60, TimeUnit.SECONDS).whenComplete((r, e) -> pending.remove(req));
@@ -53,7 +53,7 @@ final class Bridge {
 			int parts = Math.max(1, (blob.length + Net.UP_PART - 1) / Net.UP_PART);
 			Minecraft.getInstance().execute(() -> {
 				if (!serverMod()) {
-					p.future.completeExceptionally(new IllegalStateException("The server does not run Litematica Web Viewer"));
+					p.future.completeExceptionally(new IllegalStateException("The server does not run Litescape"));
 					return;
 				}
 				for (int i = 0; i < parts; i++) {

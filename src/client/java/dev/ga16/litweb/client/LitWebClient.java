@@ -45,7 +45,7 @@ public final class LitWebClient implements ClientModInitializer {
 			if (Bridge.serverMod()) Bridge.refreshList();
 			if (!announced && mc.player != null) {
 				announced = true;
-				mc.player.sendSystemMessage(Component.literal("Litematica Web Viewer: ")
+				mc.player.sendSystemMessage(Component.literal("Litescape: ")
 					.append(Component.literal(WebServer.url()).withStyle(s -> s.withClickEvent(new ClickEvent.RunCommand("litweb"))
 						.withColor(ChatFormatting.AQUA).withUnderlined(true)))
 					.append(Component.literal(" (or /litweb)").withStyle(ChatFormatting.GRAY)));

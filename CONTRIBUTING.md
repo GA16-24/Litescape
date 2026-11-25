@@ -1,6 +1,6 @@
 # Contributing
 
-Litematica Web Viewer is a small project with one maintainer. Reviewing a PR takes more time than writing one, so this guide exists to make your PR quick to review and likely to merge.
+Litescape is a small project with one maintainer. Reviewing a PR takes more time than writing one, so this guide exists to make your PR quick to review and likely to merge.
 
 The short version: fix one real bug, show that the fix works, and use the PR template.
 

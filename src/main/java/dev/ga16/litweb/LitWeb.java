@@ -145,7 +145,7 @@ public final class LitWeb implements ModInitializer {
 				}
 			} else {
 				try (Writer w = Files.newBufferedWriter(cfg)) {
-					config.store(w, "Litematica Web Viewer. region-read / shared-progress / terrain-capture: ops | everyone | none");
+					config.store(w, "Litescape. region-read / shared-progress / terrain-capture: ops | everyone | none");
 				}
 			}
 			dir = server.getWorldPath(LevelResource.ROOT).resolve("litweb");
