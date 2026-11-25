@@ -1,4 +1,18 @@
-# Litescape
+<h1 align="center">Litescape</h1>
+
+<p align="center">Your Litematica selections and schematic placements in 3D, in a browser tab.</p>
+
+<p align="center">
+  <img alt="Minecraft 26.3" src="https://img.shields.io/badge/Minecraft-26.3-555?style=flat-square">
+  <img alt="Fabric Loader 0.20.1+" src="https://img.shields.io/badge/Fabric_Loader-0.20.1%2B-555?style=flat-square">
+  <img alt="Litematica 0.29.1" src="https://img.shields.io/badge/Litematica-0.29.1-555?style=flat-square">
+  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-555?style=flat-square"></a>
+</p>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/viewer-dark.png">
+  <img alt="A cottage placement 84% built. Placed blocks render normally, the unbuilt roof shows as see-through ghost blocks, and the side panel shows build progress and who can see the shared schematic." src="docs/images/viewer-light.png">
+</picture>
 
 A Fabric mod for Minecraft 26.3 that shows your Litematica selection and schematic placements as 3D models in a browser tab. On a server that also runs the mod, players can share a placement so everyone can watch it get built.
 
