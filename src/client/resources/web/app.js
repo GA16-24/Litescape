@@ -92,6 +92,8 @@ const S = {
   accessSel: 0,
   accessOpen: false, // the player field has focus, so its suggestions show
   scrollToAccess: false, // bring the Access panel into view once it renders
+  terrain: 'faded', // captured surroundings: faded | on | off
+  margin: new Map(), // placement id -> surroundings picked before sharing
 };
 
 // ---------------------------------------------------------------- three.js
@@ -354,6 +356,7 @@ function remesh() {
         filter: S.status ? S.filter : 'all',
         ghosts: S.ghosts,
         iso: S.iso,
+        terrain: S.terrain,
         status: S.status,
         iris: shaderWanted(),
         separateAo: !!iris?.separateAo,
@@ -416,19 +419,26 @@ async function open(desc, { force = false } = {}) {
 
 function prepare(data, atlas, refit) {
   data.blocks16 = new Uint16Array(b64(data.blocks).buffer);
-  const mids = new Map();
+  const mids = new Map(),
+    tmids = new Map();
   data.mats = []; // material groups by block id
+  data.tmats = []; // the same for captured surroundings, which aren't part of the build
   data.palette.forEach((e, i) => {
     if (!e || e.air) return;
-    if (!mids.has(e.n)) {
-      mids.set(e.n, data.mats.length);
-      data.mats.push({ n: e.n, name: pretty(e.n), pal: [], icon: null });
+    e.t = i >= (data.terrainFrom ?? Infinity);
+    const [ids, list] = e.t ? [tmids, data.tmats] : [mids, data.mats];
+    if (!ids.has(e.n)) {
+      ids.set(e.n, list.length);
+      list.push({ n: e.n, name: pretty(e.n), pal: [], icon: null });
     }
-    e.mid = mids.get(e.n);
-    data.mats[e.mid].pal.push(i);
+    e.mid = ids.get(e.n);
+    list[e.mid].pal.push(i);
   });
   data.atlas = atlas;
   S.data = data;
+  // Status is laid out per view; after a reload with other surroundings, the next poll must lay it out again.
+  S.statusSig = '';
+  if (S.status && S.status.length !== data.blocks16.length) S.status = null;
   if (S.layerY > data.size[1] - 1 || refit) S.layerY = data.size[1] - 1;
 
   if (atlasTex) atlasTex.dispose();
@@ -448,9 +458,10 @@ function prepare(data, atlas, refit) {
     (e) =>
       e && {
         air: e.air,
+        t: !!e.t,
         opaque: !!e.opaque,
         selfCull: !!e.selfCull,
-        mid: e.mid ?? -1,
+        mid: e.t ? -1 : (e.mid ?? -1),
         f: e.f || null,
         light: e.light || 0,
         q: new Float32Array((e.q || []).flat()),
@@ -482,7 +493,7 @@ function viewSig(desc) {
     return p ? JSON.stringify(p.boxes) : null;
   }
   const s = findShared(desc.id);
-  return s ? `${isLive()}:${s.updated}` : null; // joining its server swaps the saved copy for the live one
+  return s ? `${isLive()}:${s.updated}:${s.captured || 0}` : null; // joining its server swaps the saved copy for the live one
 }
 
 function buildHelpers(data) {
@@ -592,8 +603,9 @@ function fit() {
   const lo = [sx, sy, sz],
     hi = [-1, -1, -1];
   if (S.vis) {
+    const tf = S.data.terrainFrom ?? Infinity; // frame the build, not the land captured around it
     for (let i = 0; i < S.vis.length; i++) {
-      if (!S.vis[i]) continue;
+      if (!S.vis[i] || S.data.blocks16[i] >= tf) continue;
       const p = [i % sx, (i / (sx * sz)) | 0, ((i / sx) | 0) % sz];
       for (let k = 0; k < 3; k++) {
         if (p[k] < lo[k]) lo[k] = p[k];
@@ -644,7 +656,7 @@ async function pollStatus(now) {
       S.statusAt = Date.now();
       S.statusErr = null;
       if (changed) {
-        S.status = b64(r.status);
+        S.status = withSurroundings(b64(r.status));
         countMaterials();
         remesh();
       }
@@ -663,6 +675,18 @@ async function pollStatus(now) {
   statusTimer = setTimeout(pollStatus, 2000);
 }
 
+/** Status comes per schematic block; with surroundings the view is bigger, so place it at the schematic's offset. */
+function withSurroundings(st) {
+  const d = S.data;
+  if (!d.inner) return st;
+  const [dx, dy, dz, ix, iy, iz] = d.inner;
+  const [sx, , sz] = d.size;
+  const out = new Uint8Array(d.blocks16.length);
+  for (let y = 0, i = 0; y < iy; y++)
+    for (let z = 0; z < iz; z++, i += ix) out.set(st.subarray(i, i + ix), ((y + dy) * sz + z + dz) * sx + dx);
+  return out;
+}
+
 function countMaterials() {
   const d = S.data;
   if (!d) return;
@@ -674,7 +698,7 @@ function countMaterials() {
     st = S.status;
   for (let i = 0; i < blocks.length; i++) {
     const e = d.palette[blocks[i]];
-    if (!e || e.air) continue;
+    if (!e || e.air || e.t) continue;
     const m = d.mats[e.mid];
     m.total++;
     if (st && st[i] === 1) m.ok++;
@@ -683,8 +707,9 @@ function countMaterials() {
   d.nonAir = 0;
   for (let i = 0; i < blocks.length; i++) {
     const e = d.palette[blocks[i]];
-    if (e === null) d.unknown++;
-    else if (!e.air) d.nonAir++;
+    if (e === null)
+      d.unknown += blocks[i] < (d.terrainFrom ?? Infinity); // the Surroundings panel reports chunks it couldn't read
+    else if (!e.air && !e.t) d.nonAir++;
   }
 }
 
@@ -1220,7 +1245,7 @@ function renderTop() {
   $('crumbs').innerHTML = crumbs;
   let chips = '';
   if (data && d) {
-    chips += `<span class="chip num">${dims(data.size)}</span>`;
+    chips += `<span class="chip num">${dims(data.inner ? data.inner.slice(3) : data.size)}</span>`;
     if (data.unknown) {
       const pct = Math.max(1, Math.floor(100 * (1 - data.unknown / data.blocks16.length)));
       const why =
@@ -1323,10 +1348,11 @@ function renderInspector() {
     h += `<section class="panel"><div class="panel-head"><h3>Build progress</h3></div><div class="updated">${why}</div></section>`;
   }
 
+  // With surroundings the view is bigger than the build; describe the build.
   const facts = [
-    ['Size', dims(data.size)],
+    ['Size', dims(data.inner ? data.inner.slice(3) : data.size)],
     ['Blocks', fmt.format(data.nonAir)],
-    ['Origin', data.origin.join(', ')],
+    ['Origin', (data.inner ? data.origin.map((v, k) => v + data.inner[k]) : data.origin).join(', ')],
   ];
   if (d.type === 'selection') {
     facts.push(['Source', data.source === 'server' ? 'Server' : 'Your loaded chunks']);
@@ -1348,7 +1374,7 @@ function renderInspector() {
     h += pl.sharedId
       ? `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-share-now="${esc(pl.id)}" ${busy ? 'disabled' : ''}>${ICON.share}Update copy</button><button class="btn" data-unshare="${esc(pl.sharedId)}" data-key-of="${esc(pl.id)}">${ICON.stop}Stop sharing</button></div>
          <p class="updated" style="margin:0 0 12px">Shared. Use Update copy after you move or edit the placement.</p>`
-      : `<div class="btn-row" style="margin:0 0 6px"><button class="btn primary" data-share-now="${esc(pl.id)}" ${!a.serverMod || busy ? 'disabled' : ''}>${ICON.share}${busy ? 'Sharing…' : 'Share to server'}</button></div>
+      : `${a.terrain?.capture ? shareMarginHtml(pl) : ''}<div class="btn-row" style="margin:0 0 6px"><button class="btn primary" data-share-now="${esc(pl.id)}" ${!a.serverMod || busy ? 'disabled' : ''}>${ICON.share}${busy ? 'Sharing…' : 'Share to server'}</button></div>
          <p class="updated" style="margin:0 0 12px">${a.serverMod ? 'Only you can see it at first. Then choose who else can view it, follow the build and see who helped.' : 'The server needs Litematica Web Viewer to share schematics.'}</p>`;
   }
   if ((sh?.manage ?? sh?.mine) && isLive())
@@ -1356,6 +1382,7 @@ function renderInspector() {
     h += `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-unshare="${esc(sh.id)}">${ICON.stop}Stop sharing</button></div>`;
   h += '</section>';
   const shared = sh || (pl?.sharedId && findShared(pl.sharedId));
+  if (shared) h += surroundingsHtml(shared);
   if (shared?.manage && isLive()) h += accessHtml(shared);
   if (shared) h += contributorsHtml(shared, a.player);
 
@@ -1401,6 +1428,112 @@ function renderInspector() {
   if (f && document.activeElement?.id !== 'mat-filter' && S.matFocus) {
     f.focus();
     f.setSelectionRange(f.value.length, f.value.length);
+  }
+}
+
+// ---------------------------------------------------------------- surroundings (terrain captured around a share)
+
+const MARGINS = [0, 8, 16, 32, 64];
+const READ_MAX = 4_194_304; // LitWeb.SERVER_READ_MAX
+
+/** Blocks the server reads to capture m blocks around a box, clamped to the world's floor and ceiling like it does. */
+function captureBlocks(lo, size, m) {
+  const [floor, ceil] = S.api.terrain?.y || [-Infinity, Infinity];
+  const h = Math.min(ceil, lo[1] + size[1] - 1 + m) - Math.max(floor, lo[1] - m) + 1;
+  return (size[0] + 2 * m) * Math.max(0, h) * (size[2] + 2 * m);
+}
+
+/** None / 8 / 16 / 32 blocks, up to the server's limit; sizes over the read cap can't be picked. */
+function marginSeg(id, cur, lo, size) {
+  return `<div class="seg filter-seg" role="radiogroup" aria-label="Surroundings">${MARGINS.filter(
+    (m) => m <= S.api.terrain.maxMargin,
+  )
+    .map((m) => {
+      const n = captureBlocks(lo, size, m);
+      const tip =
+        n > READ_MAX
+          ? `Too large: ${fmt.format(n)} blocks, the limit is ${fmt.format(READ_MAX)}`
+          : m
+            ? `${m} blocks around it, ${fmt.format(n)} blocks in all`
+            : 'Only the schematic';
+      return `<button type="button" role="radio" aria-checked="${cur === m}" aria-disabled="${n > READ_MAX}" data-margin="${m}" data-for="${esc(id)}" data-tip="${tip}">${m || 'None'}</button>`;
+    })
+    .join('')}</div>`;
+}
+
+/** The margin picked for a placement before its first share: 16 blocks if that fits, else the most that does. */
+function pickedMargin(pl) {
+  if (S.margin.has(pl.id)) return S.margin.get(pl.id);
+  const lo = [0, 1, 2].map((k) => Math.min(...pl.boxes.map((b) => Math.min(b[k], b[k + 3]))));
+  const size = boxSize(pl.boxes);
+  return [16, 8, 0].find((m) => m <= S.api.terrain.maxMargin && captureBlocks(lo, size, m) <= READ_MAX) ?? 0;
+}
+
+function shareMarginHtml(pl) {
+  const lo = [0, 1, 2].map((k) => Math.min(...pl.boxes.map((b) => Math.min(b[k], b[k + 3]))));
+  const m = pickedMargin(pl);
+  return `<div class="updated" style="margin:0 0 4px">Include surroundings</div>${marginSeg(pl.id, m, lo, boxSize(pl.boxes))}
+    <p class="updated" style="margin:0 0 12px">${m ? `Also captures the land and builds up to ${m} blocks around it, from the chunks the server has loaded.` : 'Shares only the schematic.'}</p>`;
+}
+
+/** Coverage of the captured surroundings, how they're drawn, and Recapture for whoever manages the share. */
+function surroundingsHtml(sh) {
+  const canCapture = sh.manage && isLive() && S.api.terrain?.capture;
+  if (!sh.margin && !canCapture) return '';
+  let h = `<section class="panel" id="surroundings"><div class="panel-head"><h3>Surroundings</h3>${sh.margin ? `<span class="row-meta">${sh.margin} blocks</span>` : ''}</div>`;
+  if (sh.margin) {
+    const inView = S.desc.type === 'shared' && S.data?.inner;
+    if (inView)
+      h += `<div class="seg filter-seg" role="radiogroup" aria-label="Show surroundings">${[
+        ['faded', 'Faded'],
+        ['on', 'Full color'],
+        ['off', 'Hidden'],
+      ]
+        .map(
+          ([k, l]) =>
+            `<button type="button" role="radio" aria-checked="${S.terrain === k}" data-terrain="${k}">${l}</button>`,
+        )
+        .join('')}</div>`;
+    const missing = sh.chunks - sh.chunksCaptured;
+    h += `<p class="updated" style="margin:0 0 8px">Captured ${ago(sh.captured)}. ${fmt.format(sh.chunksCaptured)} of ${fmt.format(sh.chunks)} chunks.</p>`;
+    if (missing)
+      h += `<p class="updated" style="margin:0 0 8px">${missing === 1 ? "1 chunk wasn't" : `${fmt.format(missing)} chunks weren't`} loaded on the server, so ${missing === 1 ? 'it shows' : 'they show'} empty. Go near ${missing === 1 ? 'it' : 'them'} in game and recapture.</p>`;
+    if (!inView && isLive())
+      h += '<p class="updated" style="margin:0 0 8px">Open it under Shared on this server to see them.</p>';
+  } else
+    h +=
+      '<p class="updated" style="margin:0 0 8px">Only the schematic is shared. Add the land around it so viewers see where it stands.</p>';
+  if (canCapture) {
+    const m = S.margin.get(sh.id) ?? sh.margin;
+    const busy = S.busy.has(`cap:${sh.id}`);
+    const label = busy
+      ? 'Capturing…'
+      : m === sh.margin
+        ? 'Recapture'
+        : m
+          ? `Capture ${m} blocks`
+          : 'Remove surroundings';
+    h += `<div class="updated" style="margin:0 0 4px">Blocks around it</div>${marginSeg(sh.id, m, sh.origin, sh.size)}<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-recapture="${esc(sh.id)}" ${busy || (!m && !sh.margin) ? 'disabled' : ''}>${ICON.retry}${label}</button></div>`;
+  } else if (sh.margin && sh.manage && isLive())
+    // Removing needs no capture permission, and it's the way out when a moved placement can't be recaptured.
+    h += `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-recapture="${esc(sh.id)}" data-remove ${S.busy.has(`cap:${sh.id}`) ? 'disabled' : ''}>${ICON.stop}Remove surroundings</button></div>`;
+  return `${h}</section>`;
+}
+
+async function recapture(id, margin = S.margin.get(id) ?? findShared(id)?.margin ?? 0) {
+  const key = `cap:${id}`;
+  if (S.busy.has(key)) return;
+  S.busy.add(key);
+  renderInspector();
+  try {
+    await api(`api/capture?id=${encodeURIComponent(id)}&margin=${margin}`, { method: 'POST' });
+    S.margin.delete(id);
+    toast(margin ? 'Surroundings captured' : 'Surroundings removed', 'Everyone who can see it gets the new version.');
+  } catch (err) {
+    toast("Couldn't capture surroundings", err.message, { error: true });
+  } finally {
+    S.busy.delete(key);
+    renderInspector();
   }
 }
 
@@ -1608,6 +1741,20 @@ $('inspector').addEventListener('click', (e) => {
   if (mat) return isolate(+mat.dataset.mat);
   const sn = t.closest('[data-share-now]');
   if (sn) return sharePlacement(sn.dataset.shareNow);
+  const mg = t.closest('[data-margin]');
+  if (mg) {
+    if (mg.getAttribute('aria-disabled') === 'true') return;
+    S.margin.set(mg.dataset.for, +mg.dataset.margin);
+    return renderInspector();
+  }
+  const rc = t.closest('[data-recapture]');
+  if (rc) return recapture(rc.dataset.recapture, 'remove' in rc.dataset ? 0 : undefined);
+  const tm = t.closest('[data-terrain]')?.dataset.terrain;
+  if (tm) {
+    S.terrain = tm;
+    renderInspector();
+    return remesh();
+  }
   const us = t.closest('[data-unshare]');
   if (us) return unshare(us.dataset.unshare, us.dataset.keyOf);
   const rm = t.closest('[data-remove-player]')?.dataset.removePlayer;
@@ -1735,7 +1882,15 @@ async function sharePlacement(id) {
   renderNav();
   renderInspector();
   try {
-    await api(`api/share?id=${encodeURIComponent(id)}`, { method: 'POST' });
+    // Update copy keeps the surroundings it had (and recaptures them where the placement now is).
+    const t = S.api.terrain;
+    // Without permission the stored margin still goes along, so the server keeps (not drops) the snapshot.
+    const margin = p?.sharedId
+      ? Math.min(findShared(p.sharedId)?.margin ?? 0, t?.capture ? t.maxMargin : Infinity)
+      : t?.capture && p
+        ? pickedMargin(p)
+        : 0;
+    await api(`api/share?id=${encodeURIComponent(id)}&margin=${margin}`, { method: 'POST' });
     toast(
       p?.sharedId ? 'Shared copy updated' : `Shared “${p?.name ?? 'placement'}”`,
       p?.sharedId ? 'Who can see it stays the same.' : 'Only you can see it so far.',
@@ -1852,8 +2007,9 @@ canvas.addEventListener('pointerdown', (e) => {
 canvas.addEventListener('pointerup', (e) => {
   if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 4 || e.button !== 0) return;
   const hit = voxelAt(e);
-  if (hit) isolate(S.data.palette[S.data.blocks16[hit.i]].mid);
-  else if (S.iso >= 0) isolate(S.iso);
+  const block = hit && S.data.palette[S.data.blocks16[hit.i]];
+  if (block && !block.t) isolate(block.mid);
+  else if (S.iso >= 0) isolate(S.iso); // empty space or the surroundings: show everything again
 });
 canvas.addEventListener('wheel', hideHint, { passive: true });
 
@@ -1924,8 +2080,9 @@ function pick() {
         .filter((x) => !x.startsWith('waterlogged=false'))
         .join('  ')
     : '';
-  card.innerHTML = `<div class="hc-title"><img alt="" src="${matIcon(d.mats[e.mid])}" width="16" height="16" style="image-rendering:pixelated">${esc(pretty(e.n))}</div>
+  card.innerHTML = `<div class="hc-title"><img alt="" src="${matIcon((e.t ? d.tmats : d.mats)[e.mid])}" width="16" height="16" style="image-rendering:pixelated">${esc(pretty(e.n))}</div>
     ${props ? `<div class="hc-sub">${esc(props)}</div>` : ''}
+    ${e.t ? `<div class="hc-sub">Surroundings, captured ${ago(findShared(S.desc.id)?.captured)}</div>` : ''}
     <div class="hc-pos">${d.origin[0] + hit.x}, ${d.origin[1] + hit.y}, ${d.origin[2] + hit.z}</div>
     ${st ? `<div class="hc-status"><span class="sw" style="width:8px;height:8px;border-radius:2px;background:${STATUS[st].color}"></span>${STATUS[st].label}</div>` : ''}`;
   card.hidden = false;
