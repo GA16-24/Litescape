@@ -649,6 +649,8 @@ function fit() {
 // ---------------------------------------------------------------- status (build progress)
 
 let statusTimer = 0;
+// A rebuild mid-press swallows the click; polls skip it and the next one catches up.
+const pressing = () => !!$('inspector').querySelector(':active');
 async function pollStatus(now) {
   clearTimeout(statusTimer);
   const d = S.desc;
@@ -674,14 +676,14 @@ async function pollStatus(now) {
       }
       const total = r.counts.slice(1).reduce((a, b) => a + b, 0);
       S.pct.set(key, total ? r.counts[1] / total : 0);
-      if (!$('inspector').querySelector(':active')) renderInspector(); // a rebuild mid-press swallows the click; the next poll catches up
+      if (!pressing()) renderInspector();
       renderNav();
       renderTop();
     }
   } catch (err) {
     if (err.message !== 'rate-limited') {
       S.statusErr = err.message;
-      renderInspector();
+      if (!pressing()) renderInspector();
     }
   }
   statusTimer = setTimeout(pollStatus, 2000);
