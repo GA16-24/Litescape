@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>Litescape</title>
+  <defs><clipPath id="c"><path d="M16 3 28 9.5v13L16 29 4 22.5v-13z"/></clipPath></defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#171a21"/>
+  <g transform="translate(512 512) scale(17) translate(-16 -16)">
+    <path d="M16 3 28 9.5v13L16 29 4 22.5v-13z" fill="#6e8bff"/>
+    <path d="M16 16 28 9.5M16 16v13M16 16 4 9.5" stroke="#fff" stroke-opacity=".55" stroke-width="1.5" fill="none" clip-path="url(#c)"/>
+  </g>
+</svg>
