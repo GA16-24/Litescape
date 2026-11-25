@@ -22,13 +22,19 @@ function offenders(re, ok) {
   return out;
 }
 
+// CSS named colors except white and black
+const NAMED =
+  'aliceblue|antiquewhite|aqua|aquamarine|azure|beige|bisque|blanchedalmond|blue|blueviolet|brown|burlywood|cadetblue|chartreuse|chocolate|coral|cornflowerblue|cornsilk|crimson|cyan|darkblue|darkcyan|darkgoldenrod|darkgray|darkgreen|darkgrey|darkkhaki|darkmagenta|darkolivegreen|darkorange|darkorchid|darkred|darksalmon|darkseagreen|darkslateblue|darkslategray|darkslategrey|darkturquoise|darkviolet|deeppink|deepskyblue|dimgray|dimgrey|dodgerblue|firebrick|floralwhite|forestgreen|fuchsia|gainsboro|ghostwhite|gold|goldenrod|gray|green|greenyellow|grey|honeydew|hotpink|indianred|indigo|ivory|khaki|lavender|lavenderblush|lawngreen|lemonchiffon|lightblue|lightcoral|lightcyan|lightgoldenrodyellow|lightgray|lightgreen|lightgrey|lightpink|lightsalmon|lightseagreen|lightskyblue|lightslategray|lightslategrey|lightsteelblue|lightyellow|lime|limegreen|linen|magenta|maroon|mediumaquamarine|mediumblue|mediumorchid|mediumpurple|mediumseagreen|mediumslateblue|mediumspringgreen|mediumturquoise|mediumvioletred|midnightblue|mintcream|mistyrose|moccasin|navajowhite|navy|oldlace|olive|olivedrab|orange|orangered|orchid|palegoldenrod|palegreen|paleturquoise|palevioletred|papayawhip|peachpuff|peru|pink|plum|powderblue|purple|rebeccapurple|red|rosybrown|royalblue|saddlebrown|salmon|sandybrown|seagreen|seashell|sienna|silver|skyblue|slateblue|slategray|slategrey|snow|springgreen|steelblue|tan|teal|thistle|tomato|turquoise|violet|wheat|whitesmoke|yellow|yellowgreen';
+
 test('colors come from tokens, apart from plain white and black', () => {
   const neutral = /^(#fff|#ffffff|#000|#000000|rgba?\((0, 0, 0|255, 255, 255)(, [\d.]+)?\))$/i;
-  assert.deepEqual(
-    offenders(/#[0-9a-f]{3,8}\b|rgba?\([^)]*\)/gi, (m) => neutral.test(m[0])),
-    [],
-    'use a var(--token) from the top of style.css',
+  const color = new RegExp(
+    `#[0-9a-f]{3,8}\\b|\\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch)\\([^)]*\\)|:[^;{]*\\b(?:${NAMED})\\b`,
+    'gi',
   );
+  // hsl(var(--h) …) picks a hue per player for avatars, so a var() inside a color function is fine
+  const ok = (m) => neutral.test(m[0]) || (m[0].startsWith('#') ? false : /^\w+\(.*var\(/.test(m[0]));
+  assert.deepEqual(offenders(color, ok), [], 'use a var(--token) from the top of style.css');
 });
 
 test('font sizes are on the scale', () => {
