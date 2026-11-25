@@ -67,7 +67,7 @@ jobs:
           node-version: 24
       - name: Node tests
         if: ${{ !cancelled() }} # report test results even when Biome already failed
-        run: node --test 'web-dev/*.test.mjs'
+        run: node --test 'web-dev/*.test.mjs' 'desktop/*.test.mjs'
 
   secrets:
     name: Secret scan (full history)
