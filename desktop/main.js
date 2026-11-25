@@ -27,6 +27,15 @@ async function findViewer() {
   return null;
 }
 
+// macOS: the traffic lights sit in the viewer's top row, like T3 Code, so that row drags the window.
+// Selectors beat style.css on specificity, since Electron puts this sheet before it in the cascade.
+const MAC_CHROME = `
+  .brand, .topbar { -webkit-app-region: drag; height: 52px; box-sizing: border-box; }
+  .sidebar .brand { padding: 0 14px 0 84px; }
+  .app.no-sidebar .topbar { padding-left: 84px; }
+  button, input, select, a, [role=button], [tabindex] { -webkit-app-region: no-drag; }
+`;
+
 function openOutside(url) {
   if (/^https?:/.test(url)) shell.openExternal(url);
 }
@@ -112,9 +121,11 @@ app.whenReady().then(() => {
     height: 900,
     title: 'Litescape',
     backgroundColor: '#171a21',
+    ...(process.platform === 'darwin' && { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 18, y: 20 } }),
     webPreferences: { preload: path.join(import.meta.dirname, 'preload.cjs') },
   });
   setupInstaller(win);
+  if (process.platform === 'darwin') win.webContents.on('dom-ready', () => win.webContents.insertCSS(MAC_CHROME));
   win.webContents.setWindowOpenHandler(({ url }) => {
     openOutside(url);
     return { action: 'deny' };

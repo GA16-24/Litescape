@@ -32,6 +32,8 @@
     color: var(--fg); cursor: pointer; }
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   button:disabled { opacity: .5; cursor: default; }
+  /* the title bar is hidden on macOS, so this strip drags the window */
+  body::before { content: ''; position: fixed; inset: 0 0 auto; height: 40px; -webkit-app-region: drag; }
   #error { color: var(--warn); margin-top: 8px; }
 </style>
 </head>
