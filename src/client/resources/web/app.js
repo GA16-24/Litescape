@@ -1,5 +1,6 @@
 import { fmt, LANGS, lang, MC_LOCALE, t, translateDom } from './i18n.js';
 import { Iris } from './iris.js';
+import { ACTIVATES, FALLS, FLOATING, FLUID, LAVA } from './order.js';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import * as THREE from './vendor/three.module.min.js';
 
@@ -82,6 +83,8 @@ const S = {
   vis: null,
   layerMode: 'all',
   layerY: 0,
+  step: 0, // Order mode: the stage to place next
+  jump: false, // Order mode opened: go to the first missing block once the order is known
   filter: 'all',
   ghosts: true,
   iso: -1,
@@ -132,6 +135,13 @@ const cursor = new THREE.LineSegments(
 cursor.visible = false;
 cursor.renderOrder = 10;
 scene.add(cursor);
+const nextBox = new THREE.LineSegments(
+  cursor.geometry,
+  new THREE.LineBasicMaterial({ color: 0x6e8bff, transparent: true, opacity: 0.95, depthTest: false }),
+);
+nextBox.visible = false;
+nextBox.renderOrder = 10;
+scene.add(nextBox);
 
 function withHighlight(mat) {
   mat.onBeforeCompile = (sh) => {
@@ -383,15 +393,18 @@ function remesh() {
     meshQueued = false;
     const _d = S.data;
     const [y0, y1] = layerRange();
+    const order = S.layerMode === 'order' ? steps() : null;
     worker.postMessage({
       type: 'mesh',
       seq: ++meshSeq,
       opts: {
         y0,
         y1,
-        filter: S.status ? S.filter : 'all',
+        step: order ? S.step : -1,
+        steps: order ? order.values.length : 0,
+        filter: S.status && !order ? S.filter : 'all',
         ghosts: S.ghosts,
-        iso: S.iso,
+        iso: order ? -1 : S.iso,
         terrain: S.terrain,
         status: S.status,
         iris: shaderWanted(),
@@ -404,9 +417,48 @@ function remesh() {
 
 function layerRange() {
   const top = S.data.size[1] - 1;
-  if (S.layerMode === 'all') return [0, top];
+  if (S.layerMode === 'all' || S.layerMode === 'order') return [0, top];
   if (S.layerMode === 'single') return [S.layerY, S.layerY];
   return [0, S.layerY];
+}
+
+// The build order of a big view takes seconds, so it's worked out off the page's thread.
+const orderWorker = new Worker('order.js', { type: 'module' });
+const orderJobs = new Map(); // job id -> the view it's for
+let orderSeq = 0;
+orderWorker.onmessage = (e) => {
+  const d = orderJobs.get(e.data.id);
+  orderJobs.delete(e.data.id);
+  if (d !== S.data) return;
+  d.build = e.data;
+  worker.postMessage({ type: 'order', rank: e.data.rank }, [e.data.rank.buffer]);
+  S.step = S.jump ? firstToDo() : Math.min(S.step, d.build.values.length);
+  S.jump = false;
+  if (S.layerMode !== 'order') return;
+  renderLayers();
+  remesh();
+};
+
+/** The open view's survival build order, or null while the worker works it out the first time Order mode asks. */
+function steps() {
+  const d = S.data;
+  if (!d.build && !d.building) {
+    d.building = true;
+    const id = ++orderSeq;
+    orderJobs.set(id, d);
+    const [sx, sy, sz] = d.size;
+    const palette = d.palette.map((e) => e && { n: e.n, p: e.p, air: e.air, t: e.t });
+    orderWorker.postMessage({ id, sx, sy, sz, blocks: d.blocks16, palette });
+  }
+  return d.build || null;
+}
+
+/** The first stage with a block that isn't placed correctly yet, or 0 without build progress. */
+function firstToDo() {
+  const { order, starts, values } = steps();
+  if (!S.status) return 0;
+  const k = order.findIndex((i) => S.status[i] >= 2 && S.status[i] <= 4);
+  return k < 0 ? values.length : starts.findIndex((s) => s > k) - 1;
 }
 
 async function open(desc, { force = false } = {}) {
@@ -1904,12 +1956,96 @@ function renderLayers() {
   const top = data.size[1] - 1;
   for (const b of $('layer-mode').children) b.setAttribute('aria-checked', String(b.dataset.mode === S.layerMode));
   const sl = $('layer-slider');
-  sl.max = String(top);
-  sl.value = String(S.layerY);
   const wrap = $('layer-slider-wrap');
-  wrap.setAttribute('aria-disabled', String(S.layerMode === 'all'));
-  $('layer-value').textContent = `y ${data.origin[1] + S.layerY}`; // a coordinate, the same in every language
-  wrap.hidden = top === 0;
+  if (S.layerMode === 'order') {
+    const n = steps()?.values.length ?? 0;
+    sl.max = String(n);
+    sl.value = String(S.step);
+    sl.setAttribute('aria-label', t('Stage'));
+    wrap.setAttribute('aria-disabled', 'false');
+    $('layer-value').textContent = String(Math.min(S.step + 1, n));
+    wrap.hidden = n === 0;
+  } else {
+    sl.max = String(top);
+    sl.value = String(S.layerY);
+    sl.setAttribute('aria-label', t('Layer'));
+    wrap.setAttribute('aria-disabled', String(S.layerMode === 'all'));
+    $('layer-value').textContent = `y ${data.origin[1] + S.layerY}`; // a coordinate, the same in every language
+    wrap.hidden = top === 0;
+  }
+  renderStep();
+}
+
+const WARN = [
+  [ACTIVATES, t("These can fire as soon as they're placed. Check what they face first.")],
+  [FLUID, t("Water goes in once the blocks under and around it are placed, so it doesn't flow over the build.")],
+  [LAVA, t('Lava goes in after the water. Water flowing onto a lava source turns it into obsidian.')],
+  [FLOATING, t('Some have nothing to place against yet. Put temporary blocks next to them.')],
+  [FALLS, t('Some fall without a block under them. Put temporary ones there.')],
+];
+// What a stage holds, by its phase in order.js, then whether its blocks hang on others.
+const STAGE_KIND = [
+  [t('Blocks'), t('Torches, doors and other attached blocks')],
+  [t('Redstone'), t('Redstone')],
+  [t('Water'), t('Water')],
+  [t('Plants that need water'), t('Plants that need water')],
+  [t('Lava'), t('Lava')],
+];
+
+/** Order mode's card: what the next stage holds, where, and what to watch out for. A box frames its blocks. */
+function renderStep() {
+  const card = $('order-card');
+  const d = S.data;
+  card.hidden = S.layerMode !== 'order' || $('layers').hidden;
+  const build = card.hidden ? null : steps();
+  const done = !build || S.step >= build.values.length;
+  if (nextBox.visible !== !done) needsRender = true;
+  nextBox.visible = !done;
+  if (card.hidden) return;
+  if (!build) {
+    card.innerHTML = `<div class="hc-sub">${t('Working out the build order…')}</div>`;
+    return;
+  }
+  if (done) {
+    card.innerHTML = `<div class="hc-title">${ICON.check}${t('Every block is placed')}</div>`;
+    return;
+  }
+  const { order, flags, starts, values } = build;
+  const [sx, sy, sz] = d.size;
+  const lo = [sx, sy, sz],
+    hi = [0, 0, 0],
+    count = new Map();
+  let warn = 0;
+  for (let k = starts[S.step]; k < starts[S.step + 1]; k++) {
+    const i = order[k];
+    const p = [i % sx, (i / (sx * sz)) | 0, ((i / sx) | 0) % sz];
+    for (let a = 0; a < 3; a++) {
+      lo[a] = Math.min(lo[a], p[a]);
+      hi[a] = Math.max(hi[a], p[a] + 1);
+    }
+    const mid = d.palette[d.blocks16[i]].mid;
+    count.set(mid, (count.get(mid) || 0) + 1);
+    warn |= flags[k];
+  }
+  nextBox.position.set((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2);
+  nextBox.scale.set(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
+  needsRender = true;
+  const v = values[S.step];
+  const kind = STAGE_KIND[Math.floor(v / 2 / sy)][v % 2];
+  const mats = [...count].sort((a, b) => b[1] - a[1]);
+  const MAX = 8;
+  card.innerHTML = `<div class="hc-sub">${t('Stage {n} of {total}', { n: S.step + 1, total: values.length })} · y ${d.origin[1] + (Math.floor(v / 2) % sy)}</div>
+    <div class="hc-title">${kind}</div>
+    <div class="hc-items">${mats
+      .slice(0, MAX)
+      .map(
+        ([mid, n]) =>
+          `<div><span class="hc-n num">${fmt.format(n)}×</span><img class="hc-icon" alt="" src="${matIcon(d.mats[mid])}">${esc(d.mats[mid].name)}</div>`,
+      )
+      .join('')}${mats.length > MAX ? `<div class="hc-sub">${t('{n} more', { n: mats.length - MAX })}</div>` : ''}</div>
+    ${WARN.filter(([f]) => warn & f)
+      .map(([, text]) => `<div class="hc-status oc-warn">${ICON.alert}${text}</div>`)
+      .join('')}`;
 }
 
 // ---------------------------------------------------------------- interaction
@@ -1917,8 +2053,20 @@ function renderLayers() {
 function setLayer(mode, y) {
   if (!S.data) return;
   const top = S.data.size[1] - 1;
+  if (mode === 'order' && S.layerMode !== 'order') {
+    if (steps()) S.step = firstToDo();
+    else S.jump = true;
+  }
   if (mode) S.layerMode = mode;
   if (y != null) S.layerY = Math.max(0, Math.min(top, y));
+  renderLayers();
+  remesh();
+}
+
+function setStep(n) {
+  const build = S.data && steps();
+  if (!build) return;
+  S.step = Math.max(0, Math.min(build.values.length, n));
   renderLayers();
   remesh();
 }
@@ -1927,7 +2075,11 @@ $('layer-mode').addEventListener('click', (e) => {
   const m = e.target.closest('[data-mode]')?.dataset.mode;
   if (m) setLayer(m);
 });
-$('layer-slider').addEventListener('input', (e) => setLayer(S.layerMode === 'all' ? 'below' : null, +e.target.value));
+$('layer-slider').addEventListener('input', (e) =>
+  S.layerMode === 'order'
+    ? setStep(+e.target.value)
+    : setLayer(S.layerMode === 'all' ? 'below' : null, +e.target.value),
+);
 
 $('nav').addEventListener('click', (e) => {
   const ans = e.target.closest('[data-answer]');
@@ -2480,7 +2632,7 @@ function renderIris(now) {
     worldTime: SH.settings.time,
     rain: SH.settings.rain,
     dt,
-    ghosts: !!S.status && S.ghosts,
+    ghosts: (!!S.status && S.ghosts) || S.layerMode === 'order',
     hover: S.hover,
     width: W,
     height: H,
@@ -3124,6 +3276,7 @@ const COMMANDS = () => {
     has && { title: t('Layers: show all'), key: 'L', icon: ICON.layers, run: () => setLayer('all') },
     has && { title: t('Layers: up to current layer'), icon: ICON.layers, run: () => setLayer('below') },
     has && { title: t('Layers: single layer'), icon: ICON.layers, run: () => setLayer('single') },
+    has && { title: t('Layers: survival build order'), icon: ICON.layers, run: () => setLayer('order') },
     st && { title: t('Show all blocks'), key: '1', icon: ICON.filter, run: () => setFilter('all') },
     st && { title: t('Show remaining blocks'), key: '2', icon: ICON.filter, run: () => setFilter('remaining') },
     st && { title: t('Show problems only'), key: '3', icon: ICON.filter, run: () => setFilter('problems') },
@@ -3379,6 +3532,7 @@ const KEYS = [
     [
       [t('Next layer mode'), 'L'],
       [t('Layer up or down'), '↑', '↓'],
+      [t('Order: previous or next stage'), '↑', '↓'],
     ],
   ],
   [
@@ -3527,14 +3681,20 @@ document.addEventListener('keydown', (e) => {
     r: () => open(S.desc, { force: true }),
     s: screenshot,
     i: () => toggle('inspector'),
-    l: () => setLayer({ all: 'below', below: 'single', single: 'all' }[S.layerMode]),
+    l: () => setLayer({ all: 'below', below: 'single', single: 'order', order: 'all' }[S.layerMode]),
     g: () => S.status && toggleGhosts(),
     v: () => setShaderEnabled(!SH.settings.enabled),
     1: () => setFilter('all'),
     2: () => setFilter('remaining'),
     3: () => setFilter('problems'),
-    ArrowUp: () => setLayer(S.layerMode === 'all' ? 'below' : null, S.layerMode === 'all' ? top : S.layerY + 1),
-    ArrowDown: () => setLayer(S.layerMode === 'all' ? 'below' : null, S.layerMode === 'all' ? top - 1 : S.layerY - 1),
+    ArrowUp: () =>
+      S.layerMode === 'order'
+        ? setStep(S.step + 1)
+        : setLayer(S.layerMode === 'all' ? 'below' : null, S.layerMode === 'all' ? top : S.layerY + 1),
+    ArrowDown: () =>
+      S.layerMode === 'order'
+        ? setStep(S.step - 1)
+        : setLayer(S.layerMode === 'all' ? 'below' : null, S.layerMode === 'all' ? top - 1 : S.layerY - 1),
     PageUp: () => setLayer(null, S.layerY + 1),
     PageDown: () => setLayer(null, S.layerY - 1),
   }[k.length === 1 ? k.toLowerCase() : k];

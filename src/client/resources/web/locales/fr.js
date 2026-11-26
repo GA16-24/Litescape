@@ -402,6 +402,29 @@ export default {
   Layers: 'Couches',
   'Next layer mode': 'Mode de couche suivant',
   'Layer up or down': "Monter ou descendre d'une couche",
+  Stage: 'Étape',
+  "These can fire as soon as they're placed. Check what they face first.":
+    'Ils peuvent s’activer dès qu’ils sont posés. Vérifiez d’abord vers où ils sont tournés.',
+  'Some have nothing to place against yet. Put temporary blocks next to them.':
+    'Certains n’ont encore rien contre quoi être posés. Mettez des blocs temporaires à côté.',
+  'Some fall without a block under them. Put temporary ones there.':
+    'Certains tombent sans bloc en dessous. Mettez-en des temporaires.',
+  'Torches, doors and other attached blocks': 'Torches, portes et autres blocs accrochés',
+  Redstone: 'Redstone',
+  "Water goes in once the blocks under and around it are placed, so it doesn't flow over the build.":
+    'L’eau vient une fois les blocs en dessous et autour posés, pour ne pas couler sur la construction.',
+  'Lava goes in after the water. Water flowing onto a lava source turns it into obsidian.':
+    'La lave vient après l’eau. De l’eau qui coule sur une source de lave la change en obsidienne.',
+  Water: 'Eau',
+  Lava: 'Lave',
+  'Plants that need water': 'Plantes qui ont besoin d’eau',
+  'Stage {n} of {total}': 'Étape {n} sur {total}',
+  'Order: previous or next stage': 'Ordre : étape précédente ou suivante',
+  'Survival build order, one stage at a time': 'Ordre de construction en survie, une étape à la fois',
+  'Every block is placed': 'Tous les blocs sont posés',
+  'Working out the build order…': 'Calcul de l’ordre de construction…',
+  'Layers: survival build order': 'Couches : ordre de construction en survie',
+  Order: 'Ordre',
   App: 'Application',
   'Search views and commands': 'Rechercher des vues et des commandes',
   'Details panel': 'Panneau de détails',

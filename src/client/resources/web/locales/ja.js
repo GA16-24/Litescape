@@ -397,6 +397,29 @@ export default {
   Layers: 'レイヤー',
   'Next layer mode': '次のレイヤーモード',
   'Layer up or down': 'レイヤーを上下に移動',
+  Stage: '段階',
+  "These can fire as soon as they're placed. Check what they face first.":
+    '置いた瞬間に作動することがあります。先に向きを確認してください。',
+  'Some have nothing to place against yet. Put temporary blocks next to them.':
+    'まだ設置できる面がないブロックがあります。隣に仮ブロックを置いてください。',
+  'Some fall without a block under them. Put temporary ones there.':
+    '下にブロックがないと落ちるものがあります。仮ブロックを置いてください。',
+  'Torches, doors and other attached blocks': '松明、ドアなど他のブロックに付けるブロック',
+  Redstone: 'レッドストーン',
+  "Water goes in once the blocks under and around it are placed, so it doesn't flow over the build.":
+    '水は下と周りのブロックを置いてから入れます。建築の上に流れないようにするためです。',
+  'Lava goes in after the water. Water flowing onto a lava source turns it into obsidian.':
+    'マグマは水の後に置きます。水がマグマの水源に流れると黒曜石になります。',
+  Water: '水',
+  Lava: 'マグマ',
+  'Plants that need water': '水が必要な植物',
+  'Stage {n} of {total}': '段階 {n} / {total}',
+  'Order: previous or next stage': '建築順：前または次の段階',
+  'Survival build order, one stage at a time': 'サバイバルの建築順：1段階ずつ',
+  'Every block is placed': 'すべてのブロックを設置しました',
+  'Working out the build order…': '建築順を計算中…',
+  'Layers: survival build order': 'レイヤー：サバイバルの建築順',
+  Order: '建築順',
   App: 'アプリ',
   'Search views and commands': 'ビューとコマンドを検索',
   'Details panel': '詳細パネル',

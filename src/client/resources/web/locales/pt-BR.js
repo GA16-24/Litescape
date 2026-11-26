@@ -403,6 +403,29 @@ export default {
   Layers: 'Camadas',
   'Next layer mode': 'Próximo modo de camadas',
   'Layer up or down': 'Subir ou descer uma camada',
+  Stage: 'Etapa',
+  "These can fire as soon as they're placed. Check what they face first.":
+    'Podem ativar assim que forem colocados. Confira primeiro para onde apontam.',
+  'Some have nothing to place against yet. Put temporary blocks next to them.':
+    'Alguns ainda não têm onde se apoiar. Coloque blocos temporários ao lado.',
+  'Some fall without a block under them. Put temporary ones there.':
+    'Alguns caem sem um bloco embaixo. Coloque temporários ali.',
+  'Torches, doors and other attached blocks': 'Tochas, portas e outros blocos presos',
+  Redstone: 'Redstone',
+  "Water goes in once the blocks under and around it are placed, so it doesn't flow over the build.":
+    'A água entra depois que os blocos embaixo e em volta estão no lugar, para não escorrer pela construção.',
+  'Lava goes in after the water. Water flowing onto a lava source turns it into obsidian.':
+    'A lava vem depois da água. Água que escorre sobre uma fonte de lava a transforma em obsidiana.',
+  Water: 'Água',
+  Lava: 'Lava',
+  'Plants that need water': 'Plantas que precisam de água',
+  'Stage {n} of {total}': 'Etapa {n} de {total}',
+  'Order: previous or next stage': 'Ordem: etapa anterior ou próxima',
+  'Survival build order, one stage at a time': 'Ordem de construção no sobrevivência, uma etapa por vez',
+  'Every block is placed': 'Todos os blocos foram colocados',
+  'Working out the build order…': 'Calculando a ordem de construção…',
+  'Layers: survival build order': 'Camadas: ordem de construção no sobrevivência',
+  Order: 'Ordem',
   App: 'Aplicativo',
   'Search views and commands': 'Pesquisar visualizações e comandos',
   'Details panel': 'Painel de detalhes',

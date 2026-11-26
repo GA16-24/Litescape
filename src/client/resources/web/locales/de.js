@@ -403,6 +403,29 @@ export default {
   Layers: 'Ebenen',
   'Next layer mode': 'Nächster Ebenenmodus',
   'Layer up or down': 'Eine Ebene hoch oder runter',
+  Stage: 'Abschnitt',
+  "These can fire as soon as they're placed. Check what they face first.":
+    'Diese können auslösen, sobald sie platziert sind. Prüfe zuerst, wohin sie zeigen.',
+  'Some have nothing to place against yet. Put temporary blocks next to them.':
+    'Für manche gibt es noch nichts zum Dranbauen. Setze vorübergehende Blöcke daneben.',
+  'Some fall without a block under them. Put temporary ones there.':
+    'Manche fallen ohne Block darunter. Setze dort vorübergehend welche hin.',
+  'Torches, doors and other attached blocks': 'Fackeln, Türen und andere angebrachte Blöcke',
+  Redstone: 'Redstone',
+  "Water goes in once the blocks under and around it are placed, so it doesn't flow over the build.":
+    'Wasser kommt hinein, sobald die Blöcke darunter und daneben stehen, damit es nicht über den Bau fließt.',
+  'Lava goes in after the water. Water flowing onto a lava source turns it into obsidian.':
+    'Lava kommt nach dem Wasser. Fließt Wasser auf eine Lavaquelle, wird sie zu Obsidian.',
+  Water: 'Wasser',
+  Lava: 'Lava',
+  'Plants that need water': 'Pflanzen, die Wasser brauchen',
+  'Stage {n} of {total}': 'Abschnitt {n} von {total}',
+  'Order: previous or next stage': 'Reihenfolge: vorheriger oder nächster Abschnitt',
+  'Survival build order, one stage at a time': 'Baureihenfolge im Überlebensmodus, Abschnitt für Abschnitt',
+  'Every block is placed': 'Alle Blöcke sind platziert',
+  'Working out the build order…': 'Baureihenfolge wird berechnet…',
+  'Layers: survival build order': 'Ebenen: Baureihenfolge im Überlebensmodus',
+  Order: 'Reihenfolge',
   App: 'App',
   'Search views and commands': 'Ansichten und Befehle suchen',
   'Details panel': 'Detailbereich',

@@ -402,6 +402,29 @@ export default {
   Layers: 'Capas',
   'Next layer mode': 'Siguiente modo de capas',
   'Layer up or down': 'Subir o bajar una capa',
+  Stage: 'Etapa',
+  "These can fire as soon as they're placed. Check what they face first.":
+    'Pueden activarse en cuanto los colocas. Comprueba primero hacia dónde miran.',
+  'Some have nothing to place against yet. Put temporary blocks next to them.':
+    'Algunos aún no tienen nada contra lo que colocarlos. Pon bloques temporales al lado.',
+  'Some fall without a block under them. Put temporary ones there.':
+    'Algunos se caen si no tienen un bloque debajo. Pon bloques temporales ahí.',
+  'Torches, doors and other attached blocks': 'Antorchas, puertas y otros bloques adosados',
+  Redstone: 'Redstone',
+  "Water goes in once the blocks under and around it are placed, so it doesn't flow over the build.":
+    'El agua va cuando ya están los bloques de debajo y de alrededor, para que no se derrame sobre la construcción.',
+  'Lava goes in after the water. Water flowing onto a lava source turns it into obsidian.':
+    'La lava va después del agua. Si el agua fluye sobre una fuente de lava, la convierte en obsidiana.',
+  Water: 'Agua',
+  Lava: 'Lava',
+  'Plants that need water': 'Plantas que necesitan agua',
+  'Stage {n} of {total}': 'Etapa {n} de {total}',
+  'Order: previous or next stage': 'Orden: etapa anterior o siguiente',
+  'Survival build order, one stage at a time': 'Orden de construcción en supervivencia, una etapa cada vez',
+  'Every block is placed': 'Todos los bloques están colocados',
+  'Working out the build order…': 'Calculando el orden de construcción…',
+  'Layers: survival build order': 'Capas: orden de construcción en supervivencia',
+  Order: 'Orden',
   App: 'Aplicación',
   'Search views and commands': 'Buscar vistas y comandos',
   'Details panel': 'Panel de detalles',

@@ -438,6 +438,29 @@ export default {
   Layers: 'Слои',
   'Next layer mode': 'Следующий режим слоёв',
   'Layer up or down': 'Слой вверх или вниз',
+  Stage: 'Этап',
+  "These can fire as soon as they're placed. Check what they face first.":
+    'Могут сработать сразу после установки. Сначала проверьте, куда они смотрят.',
+  'Some have nothing to place against yet. Put temporary blocks next to them.':
+    'Некоторые пока не к чему приставить. Поставьте рядом временные блоки.',
+  'Some fall without a block under them. Put temporary ones there.':
+    'Некоторые упадут без блока снизу. Поставьте туда временные.',
+  'Torches, doors and other attached blocks': 'Факелы, двери и другие прикреплённые блоки',
+  Redstone: 'Редстоун',
+  "Water goes in once the blocks under and around it are placed, so it doesn't flow over the build.":
+    'Воду наливают, когда блоки под ней и вокруг уже стоят, чтобы она не растеклась по постройке.',
+  'Lava goes in after the water. Water flowing onto a lava source turns it into obsidian.':
+    'Лава ставится после воды. Вода, затёкшая на источник лавы, превращает его в обсидиан.',
+  Water: 'Вода',
+  Lava: 'Лава',
+  'Plants that need water': 'Растения, которым нужна вода',
+  'Stage {n} of {total}': 'Этап {n} из {total}',
+  'Order: previous or next stage': 'Порядок: предыдущий или следующий этап',
+  'Survival build order, one stage at a time': 'Порядок постройки в выживании, по этапам',
+  'Every block is placed': 'Все блоки поставлены',
+  'Working out the build order…': 'Вычисляется порядок постройки…',
+  'Layers: survival build order': 'Слои: порядок постройки в выживании',
+  Order: 'Порядок',
   App: 'Приложение',
   'Search views and commands': 'Поиск видов и команд',
   'Details panel': 'Панель сведений',
