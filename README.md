@@ -127,7 +127,7 @@ Opening the Shaders tab asks Modrinth for the popular packs' icons and download 
 ```sh
 ./gradlew build                     # one mod jar per Minecraft version in build/libs/
 ./gradlew :26.3:runClientGameTest   # boots the real client, builds a test house, checks the HTTP API and a small test shader pack end to end
-./gradlew :1.21.6:productionTest    # the same test with the release jar in a production client on 1.21.6, 1.21.7 and 1.21.8, plus a dedicated server boot
+./gradlew productionTest -Ptest_minecraft=1.21.7  # the same test with the release jar in a production client on 1.21.7, plus a dedicated server boot
 node web-dev/serve.mjs              # web app on :8194 using the fixtures the game test recorded
 ./gradlew :26.3:shaderDev -Ppacks=<folder>  # the shader API on :8195 without Minecraft; serve.mjs forwards /api/shaders to it
 node web-dev/expr.test.mjs   # custom-uniform expression tests

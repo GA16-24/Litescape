@@ -71,9 +71,9 @@ You need JDK 25 and Node 24. Gradle downloads JDK 21 for the 1.21.x tests if you
 # Build with all javac lints as errors, like CI
 ./gradlew build compileGametestJava --init-script .github/ci.init.gradle --warning-mode=fail
 
-# Run the end-to-end test with the release jar in a real Minecraft client, and boot a dedicated server with it,
-# on every Minecraft version in versions/ (or one release line, such as :1.21.6:productionTest)
-./gradlew productionTest --init-script .github/ci.init.gradle --warning-mode=fail
+# Run the end-to-end test with the release jar in a real Minecraft client, and boot a dedicated server with it.
+# One Minecraft version per run; CI runs every test.<version> line in versions/*/gradle.properties.
+./gradlew productionTest -Ptest_minecraft=26.3 --init-script .github/ci.init.gradle --warning-mode=fail
 
 # Web app: lint, format, import order (warnings fail), then unit tests
 npx @biomejs/biome@2.6.6 ci --error-on-warnings .

@@ -20,17 +20,22 @@ jobs:
     permissions:
       contents: read
     outputs:
-      versions: ${{ steps.list.outputs.versions }}
+      tests: ${{ steps.list.outputs.tests }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      # One Gradle subproject per Litematica release line, so a new versions/ folder gets CI without editing this file.
+      # One job per test.<Minecraft version> line in versions/*/gradle.properties, so new lines get CI without editing this file.
       - id: list
-        run: echo "versions=$(jq -c -n '[$ARGS.positional[] | ltrimstr("versions/")]' --args versions/*)" >> "$GITHUB_OUTPUT"
+        run: |
+          set -euo pipefail
+          for f in versions/*/gradle.properties; do
+            line=$(basename "$(dirname "$f")")
+            sed -n "s/^test\.\([^=]*\)=.*/$line \1/p" "$f"
+          done | jq -R -s -c 'split("\n")[:-1] | map(split(" ") | {line: .[0], minecraft: .[1]})' | sed 's/^/tests=/' >> "$GITHUB_OUTPUT"
 
   minecraft:
-    name: Minecraft ${{ matrix.version }}
+    name: Minecraft ${{ matrix.minecraft }}
     needs: versions
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -39,9 +44,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ${{ fromJSON(needs.versions.outputs.versions) }}
+        include: ${{ fromJSON(needs.versions.outputs.tests) }}
     env:
-      VERSION: ${{ matrix.version }}
+      LINE: ${{ matrix.line }}
+      MINECRAFT: ${{ matrix.minecraft }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -56,21 +62,21 @@ jobs:
       # Also validates gradle-wrapper.jar checksums against the official Gradle releases.
       - uses: gradle/actions/setup-gradle@v6.4.1
       - name: Build with all javac lints as errors and Gradle deprecations as errors
-        run: ./gradlew ":$VERSION:build" ":$VERSION:compileGametestJava" --init-script .github/ci.init.gradle --warning-mode=fail --stacktrace
+        run: ./gradlew ":$LINE:build" ":$LINE:compileGametestJava" --init-script .github/ci.init.gradle --warning-mode=fail --stacktrace
       - name: Install virtual display and software Vulkan/GL
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb mesa-vulkan-drivers
-      - name: Release jar in a production client and dedicated server, on every Minecraft version it covers
-        run: ./gradlew ":$VERSION:productionTest" --init-script .github/ci.init.gradle --warning-mode=fail --stacktrace
+      - name: Release jar in a production client and dedicated server
+        run: ./gradlew ":$LINE:productionTest" "-Ptest_minecraft=$MINECRAFT" --init-script .github/ci.init.gradle --warning-mode=fail --stacktrace
       - if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: gradle-reports-${{ matrix.version }}
+          name: minecraft-${{ matrix.minecraft }}
           path: |
-            versions/${{ matrix.version }}/build/reports/
-            versions/${{ matrix.version }}/build/production/*/client/logs/
-            versions/${{ matrix.version }}/build/production/*/client/screenshots/
-            versions/${{ matrix.version }}/build/production/*/client/litweb-fixtures/
-            versions/${{ matrix.version }}/build/production/*/server/logs/
+            versions/${{ matrix.line }}/build/reports/
+            versions/${{ matrix.line }}/build/production/${{ matrix.minecraft }}/client/logs/
+            versions/${{ matrix.line }}/build/production/${{ matrix.minecraft }}/client/screenshots/
+            versions/${{ matrix.line }}/build/production/${{ matrix.minecraft }}/client/litweb-fixtures/
+            versions/${{ matrix.line }}/build/production/${{ matrix.minecraft }}/server/logs/
           if-no-files-found: ignore
           retention-days: 7
 

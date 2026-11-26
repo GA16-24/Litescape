@@ -23,6 +23,14 @@ repositories {
 		forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' } }
 		filter { includeGroup 'maven.modrinth' }
 	}
+	// LWJGL publishes every platform's natives here; Mojang's mirror has only the ones Minecraft uses.
+	exclusiveContent {
+		forRepository { mavenCentral() }
+		filter {
+			includeModule 'org.lwjgl', 'lwjgl-shaderc'
+			includeModule 'org.lwjgl', 'lwjgl-spvc'
+		}
+	}
 }
 
 loom {
@@ -57,6 +65,17 @@ dependencies {
 	// Optional at runtime: the client reads its public API only when it is installed. All rights reserved, so it is never bundled.
 	add mod('clientCompileOnly'), "maven.modrinth:buildprint:${project.buildprint_version}"
 	add mod('gametestImplementation'), "maven.modrinth:buildprint:${project.buildprint_version}"
+	// The shaders tab translates packs with LWJGL's shaderc and spvc, which Minecraft ships only from 26.2 on.
+	// Before that, the jar carries them, built for this Minecraft's LWJGL and every platform Minecraft runs on.
+	def lwjgl = findProperty('bundled_lwjgl')
+	if (lwjgl) ['lwjgl-shaderc', 'lwjgl-spvc'].each { module ->
+		clientImplementation "org.lwjgl:$module:$lwjgl"
+		include "org.lwjgl:$module:$lwjgl"
+		['linux', 'linux-arm64', 'macos', 'macos-arm64', 'windows', 'windows-arm64'].each { platform ->
+			clientRuntimeOnly "org.lwjgl:$module:$lwjgl:natives-$platform"
+			include "org.lwjgl:$module:$lwjgl:natives-$platform"
+		}
+	}
 }
 
 processResources {
@@ -83,8 +102,9 @@ tasks.register('collectJar', Copy) {
 }
 tasks.named('assemble') { dependsOn 'collectJar' }
 
-// The production test runs the jar above in a real Fabric install, as a player would, on every Minecraft version
-// in this subproject's production_tests.
+// The production test runs the jar above in a real Fabric install, as a player would, on one Minecraft version from
+// this subproject's test.<version> lines: its own minecraft_version, or the one -Ptest_minecraft=<version> names. Loom's production
+// runs support one target version per build, so each tested version is its own Gradle invocation (and CI job).
 def gametestJar = tasks.register('gametestJar', Jar) {
 	from sourceSets.gametest.output
 	archiveClassifier = obfuscated ? 'gametest-dev' : 'gametest'
@@ -96,39 +116,53 @@ def testMod = obfuscated ? tasks.register('remapGametestJar', RemapJarTask) {
 	addNestedDependencies = false
 } : gametestJar
 
+def tests = [:]
+def versionProperties = new Properties()
+file('gradle.properties').withInputStream { versionProperties.load(it) }
+versionProperties.stringPropertyNames().findAll { it.startsWith('test.') }.each { key ->
+	def (fabricApiVersion, buildprint) = versionProperties[key].split(/\s+/)
+	tests[key.substring('test.'.length())] = [fabricApi: fabricApiVersion, buildprint: buildprint]
+}
+def mc = findProperty('test_minecraft') ?: project.minecraft_version
 def productionTests = tasks.register('productionTest') {
 	group = 'verification'
-	description = 'Runs the end-to-end test in a production client and boots a production dedicated server, on every tested Minecraft version.'
+	description = "Runs the end-to-end test in a production client and boots a production dedicated server on Minecraft $mc."
 }
-project.production_tests.split(',')*.trim().each { row ->
-	def (mc, fabricApiVersion, buildprint) = row.split(/\s+/)
-	def fabricApiJar = configurations.detachedConfiguration(dependencies.create("net.fabricmc.fabric-api:fabric-api:$fabricApiVersion"))
+// A version another subproject covers: nothing to run here.
+if (tests[mc]) {
+	def fabricApiJar = configurations.detachedConfiguration(dependencies.create("net.fabricmc.fabric-api:fabric-api:${tests[mc].fabricApi}"))
 	def clientMods = configurations.detachedConfiguration(
 		// Fabric API's release jar leaves out its test modules.
-		fabricApi.module('fabric-client-gametest-api-v1', fabricApiVersion),
+		fabricApi.module('fabric-client-gametest-api-v1', tests[mc].fabricApi),
 		dependencies.create("maven.modrinth:litematica:${project.litematica_version}"),
 		dependencies.create("maven.modrinth:malilib:${project.malilib_version}"),
-		dependencies.create("maven.modrinth:buildprint:$buildprint"))
+		dependencies.create("maven.modrinth:buildprint:${tests[mc].buildprint}"))
 	[fabricApiJar, clientMods]*.transitive = false
 	// The Java players run: 1.21.x launchers ship Java 21, 26.x needs 25.
 	def java = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(mc.startsWith('1.') ? 21 : 25) }
 	def runs = layout.buildDirectory.dir("production/$mc")
 
-	def client = tasks.register("productionClientTest_$mc", ClientProductionRunTask) {
+	def client = tasks.register('productionClientTest', ClientProductionRunTask) {
 		minecraftVersion = mc
 		mods.from modJar, testMod, fabricApiJar, clientMods
 		javaLauncher = java
 		def dir = runs.map { it.dir('client') }
 		runDir = dir
 		jvmArgs.add '-Dfabric.client.gametest'
-		// A separate home keeps the test away from the developer's ~/.litescape.
+		// A separate home and temp folder keep the test away from the developer's ~/.litescape, and make LWJGL
+		// extract the natives this jar bundles instead of reusing ones another Minecraft version left behind.
 		jvmArgs.add dir.map { "-Duser.home=${it.dir('home').asFile}".toString() }
+		jvmArgs.add dir.map { "-Djava.io.tmpdir=${it.dir('tmp').asFile}".toString() }
 		timeout = Duration.ofMinutes(20)
 		def passed = dir.map { it.file('litweb-fixtures/passed') }
-		doFirst { passed.get().asFile.delete() }
+		// A fresh game folder every run, as in CI: Litematica would otherwise restore an earlier run's placements.
+		doFirst {
+			dir.get().asFile.deleteDir()
+			dir.get().dir('tmp').asFile.mkdirs()
+		}
 		doLast { if (!passed.get().asFile.exists()) throw new GradleException("The end-to-end test did not finish on Minecraft $mc") }
 	}
-	def server = tasks.register("productionServerTest_$mc", ServerProductionRunTask) {
+	def server = tasks.register('productionServerTest', ServerProductionRunTask) {
 		minecraftVersion = mc
 		loaderVersion = project.loader_version
 		installerVersion = project.installer_version

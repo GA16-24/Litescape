@@ -69,7 +69,13 @@ public class EndToEndTest implements FabricClientGameTest {
 			Files.createDirectories(old.resolve("old"));
 			Files.writeString(old.resolve("old").resolve("kept.bin"), "");
 			try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
+				//? if >=26.2 {
 				sp.getConnection().waitForChunksRender();
+				//?} elif >=26.1 {
+				/*sp.getClientLevel().waitForChunksRender();
+				*///?} else {
+				/*sp.getClientWorld().waitForChunksRender();
+				*///?}
 				// Grass under the lamp and the observer would turn to dirt at a random moment and change the placement counts.
 				sp.getServer().runCommand("gamerule random_tick_speed 0");
 				buildCottage(sp.getServer());
@@ -155,7 +161,12 @@ public class EndToEndTest implements FabricClientGameTest {
 					}
 					return "missing";
 				});
-				check(loaded.equals("31, -63, 1 4"), "loaded at the shared origin with the chest, furnace, hopper and comparator: " + loaded);
+				//? if >=26.2 {
+				String entities = "4";
+				//?} else {
+				/*String entities = "6"; // before 26.2, each half of the bed has a block entity too
+				*///?}
+				check(loaded.equals("31, -63, 1 " + entities), "loaded at the shared origin with the chest, furnace, hopper and comparator: " + loaded);
 				call(ctx, "POST", "/api/unload?id=" + shared);
 				check(ctx.computeOnClient(unused -> DataManager.getSchematicPlacementManager().getAllSchematicsPlacements().size()) == 1, "unload removes it from Litematica");
 				check(st3.contains("\"margin\":8") && st3.contains("\"chunksCaptured\""), "shared list carries the capture");
