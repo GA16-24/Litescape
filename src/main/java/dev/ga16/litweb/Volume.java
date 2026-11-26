@@ -40,7 +40,8 @@ public final class Volume {
 	/** On a redstone component, these decide what it does. Power, lit and extended don't: the circuit sets those. */
 	private static final Set<Property<?>> REDSTONE = Set.of(BlockStateProperties.FACING, BlockStateProperties.HORIZONTAL_FACING,
 		BlockStateProperties.FACING_HOPPER, BlockStateProperties.DELAY, BlockStateProperties.MODE_COMPARATOR, BlockStateProperties.ATTACH_FACE,
-		BlockStateProperties.INVERTED, BlockStateProperties.ORIENTATION, BlockStateProperties.RAIL_SHAPE_STRAIGHT);
+		BlockStateProperties.INVERTED, BlockStateProperties.ORIENTATION, BlockStateProperties.RAIL_SHAPE_STRAIGHT,
+		BlockStateProperties.NORTH_REDSTONE, BlockStateProperties.EAST_REDSTONE, BlockStateProperties.SOUTH_REDSTONE, BlockStateProperties.WEST_REDSTONE);
 
 	public final int x0, y0, z0, sx, sy, sz;
 	public final List<@Nullable BlockState> palette = new ArrayList<>();
