@@ -92,6 +92,8 @@ const S = {
   jump: false, // Order mode opened: go to the first missing block once the order is known
   filter: 'all',
   ghosts: true,
+  spawn: false, // mark blocks mobs can spawn on
+  spawnCount: 0, // of them, how many the last mesh found in the whole view
   iso: -1,
   hl: -1,
   matQuery: '',
@@ -147,6 +149,19 @@ const nextBox = new THREE.LineSegments(
 nextBox.visible = false;
 nextBox.renderOrder = 10;
 scene.add(nextBox);
+// Blocks mobs can spawn on: a magenta square on top of each, apart from the build status colors.
+const spawnMarks = new THREE.Mesh(
+  new THREE.BufferGeometry(),
+  new THREE.MeshBasicMaterial({
+    color: 0xff2bd6,
+    transparent: true,
+    opacity: 0.6,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  }),
+);
+spawnMarks.renderOrder = 5;
+root.add(spawnMarks);
 
 function withHighlight(mat) {
   mat.onBeforeCompile = (sh) => {
@@ -365,6 +380,14 @@ worker.onmessage = (e) => {
     m.geometry.dispose();
   });
   meshes.length = 0;
+  spawnMarks.geometry.dispose();
+  spawnMarks.geometry = new THREE.BufferGeometry();
+  if (e.data.spawn) spawnMarks.geometry.setAttribute('position', new THREE.BufferAttribute(e.data.spawn, 3));
+  spawnMarks.visible = !!e.data.spawn;
+  if (S.spawn && S.spawnCount !== e.data.spawnTotal) {
+    S.spawnCount = e.data.spawnTotal;
+    renderInspector();
+  }
   SH.meshReady = e.data.iris;
   if (e.data.iris) iris.setMesh(e.data.groups);
   else
@@ -410,6 +433,7 @@ function remesh() {
         filter: S.status && !order ? S.filter : 'all',
         ghosts: S.ghosts,
         iso: order ? -1 : S.iso,
+        spawn: S.spawn,
         terrain: S.terrain,
         status: S.status,
         iris: shaderWanted(),
@@ -558,6 +582,8 @@ function prepare(data, atlas, refit) {
         mid: e.t ? -1 : (e.mid ?? -1),
         f: e.f || null,
         light: e.light || 0,
+        spawnOn: !!e.spawnOn,
+        spawnIn: e.air || !!e.spawnIn,
         q: new Float32Array((e.q || []).flat()),
       },
   );
@@ -1580,6 +1606,7 @@ function renderInspector() {
   const shared = sh || (pl?.sharedId && findShared(pl.sharedId));
   if (shared) h += notesHtml(shared);
   if (shared) h += surroundingsHtml(shared);
+  h += spawnHtml(shared);
   if (shared?.manage && isLive()) h += accessHtml(shared);
   if (shared) h += contributorsHtml(shared, a.player);
 
@@ -1825,6 +1852,26 @@ function surroundingsHtml(sh) {
     // Removing needs no capture permission, and it's the way out when a moved placement can't be recaptured.
     h += `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-recapture="${esc(sh.id)}" data-remove ${S.busy.has(`cap:${sh.id}`) ? 'disabled' : ''}>${ICON.stop}${t('Remove surroundings')}</button></div>`;
   return `${h}</section>`;
+}
+
+/** The switch for spawnable-block marks, how many there are, and how far the view reaches. */
+function spawnHtml(sh) {
+  const label = t('Mark blocks mobs can spawn on');
+  let h = `<section class="panel" id="spawning"><div class="panel-head"><h3>${t('Mob spawning')}</h3>${S.spawn ? `<span class="row-meta num">${fmt.format(S.spawnCount)}</span>` : ''}</div>
+    <div class="sh-field"><span>${label}</span><button type="button" class="switch" role="switch" id="spawn-marks" aria-checked="${S.spawn}" aria-label="${label}"></button></div>`;
+  if (S.spawn) {
+    h += `<p class="updated" style="margin:0 0 8px">${t('{n} blocks where a zombie could spawn at night: room to stand and no light from torches or lamps. Light them, cover them or dig them out.', { n: fmt.format(S.spawnCount) })}</p>`;
+    h += `<p class="updated" style="margin:0 0 8px">${sh?.margin ? t('Checks the {m} blocks of surroundings captured around it. A farm needs everything within 128 blocks of where you stand spawnproofed.', { m: sh.margin }) : t('Checks only the blocks in this view. Share it with surroundings to check the land around it.')}</p>`;
+    if (shaderOn())
+      h += `<p class="updated" style="margin:0 0 8px">${t("The marks don't show while a shader pack is on.")}</p>`;
+  }
+  return `${h}</section>`;
+}
+
+function toggleSpawn() {
+  S.spawn = !S.spawn;
+  renderInspector();
+  remesh();
 }
 
 async function recapture(id, margin = S.margin.get(id) ?? findShared(id)?.margin ?? 0) {
@@ -2202,6 +2249,7 @@ $('inspector').addEventListener('click', (e) => {
   if (addp) return addPlayer(+addp.dataset.addPlayer);
   if (t.closest('#copy-mats')) return copyMaterials();
   if (t.closest('#ghosts')) return toggleGhosts();
+  if (t.closest('#spawn-marks')) return toggleSpawn();
 });
 $('inspector').addEventListener('mousedown', (e) => {
   if (e.target.closest('[data-add-player]')) e.preventDefault(); // keep focus in the field so the list stays open

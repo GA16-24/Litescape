@@ -502,4 +502,13 @@ export default {
     'まだ起動できません：レッドストーンとコンテナのブロック {n} 個のうち {bad} 個が未設置か間違っています。',
   'Ready to activate: all {n} redstone and container blocks are right.':
     '起動できます：レッドストーンとコンテナのブロック {n} 個はすべて正しく設置されています。',
+  'Mob spawning': 'モブのスポーン',
+  'Mark blocks mobs can spawn on': 'モブがスポーンできるブロックを表示',
+  '{n} blocks where a zombie could spawn at night: room to stand and no light from torches or lamps. Light them, cover them or dig them out.':
+    '夜にゾンビがスポーンできるブロックが{n}個あります。立てる空間があり、松明やランプの光が届いていません。明かりを置くか、覆うか、掘り取ってください。',
+  'Checks the {m} blocks of surroundings captured around it. A farm needs everything within 128 blocks of where you stand spawnproofed.':
+    '周りで取り込んだ{m}ブロック分の周辺を調べます。トラップタワーでは、待機場所から128ブロック以内をすべて湧き潰しする必要があります。',
+  'Checks only the blocks in this view. Share it with surroundings to check the land around it.':
+    'このビューのブロックだけを調べます。周辺を含めて共有すると、周りの地形も調べられます。',
+  "The marks don't show while a shader pack is on.": 'シェーダーパックがオンの間はマークが表示されません。',
 };

@@ -546,4 +546,13 @@ export default {
     'Пока нельзя включать: {bad} из {n} блоков редстоуна и хранилищ не поставлены или стоят неправильно.',
   'Ready to activate: all {n} redstone and container blocks are right.':
     'Можно включать: все {n} блоков редстоуна и хранилищ стоят правильно.',
+  'Mob spawning': 'Спавн мобов',
+  'Mark blocks mobs can spawn on': 'Отмечать блоки, на которых могут спавниться мобы',
+  '{n} blocks where a zombie could spawn at night: room to stand and no light from torches or lamps. Light them, cover them or dig them out.':
+    'Блоков, на которых ночью может заспавниться зомби: {n}. Там есть место, чтобы встать, и нет света от факелов или ламп. Осветите их, накройте или выкопайте.',
+  'Checks the {m} blocks of surroundings captured around it. A farm needs everything within 128 blocks of where you stand spawnproofed.':
+    'Проверяет захваченные окрестности на {m} блоков вокруг. Для фермы всё в радиусе 128 блоков от места, где вы стоите, должно быть защищено от спавна.',
+  'Checks only the blocks in this view. Share it with surroundings to check the land around it.':
+    'Проверяет только блоки в этом виде. Поделитесь им с окрестностями, чтобы проверить местность вокруг.',
+  "The marks don't show while a shader pack is on.": 'Отметки не видны, пока включён шейдерпак.',
 };

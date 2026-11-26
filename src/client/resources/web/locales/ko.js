@@ -499,4 +499,13 @@ export default {
     '아직 가동할 수 없음: 레드스톤·보관함 블록 {n}개 중 {bad}개가 없거나 잘못됐습니다.',
   'Ready to activate: all {n} redstone and container blocks are right.':
     '가동 준비 완료: 레드스톤·보관함 블록 {n}개가 모두 올바릅니다.',
+  'Mob spawning': '몹 스폰',
+  'Mark blocks mobs can spawn on': '몹이 스폰될 수 있는 블록 표시',
+  '{n} blocks where a zombie could spawn at night: room to stand and no light from torches or lamps. Light them, cover them or dig them out.':
+    '밤에 좀비가 스폰될 수 있는 블록 {n}개: 설 공간이 있고 횃불이나 램프 빛이 닿지 않습니다. 밝히거나 덮거나 파내세요.',
+  'Checks the {m} blocks of surroundings captured around it. A farm needs everything within 128 blocks of where you stand spawnproofed.':
+    '주변에서 캡처한 {m}블록 범위를 확인합니다. 농장은 대기 위치에서 128블록 안을 모두 스폰 방지해야 합니다.',
+  'Checks only the blocks in this view. Share it with surroundings to check the land around it.':
+    '이 보기의 블록만 확인합니다. 주변을 포함해 공유하면 주위 지형도 확인할 수 있습니다.',
+  "The marks don't show while a shader pack is on.": '셰이더 팩이 켜져 있는 동안에는 표시가 보이지 않습니다.',
 };

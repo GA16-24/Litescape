@@ -488,4 +488,13 @@ export default {
   'Not ready to activate: {bad} of {n} redstone and container blocks are missing or wrong.':
     '還不能啟動：{n} 個紅石和容器方塊中有 {bad} 個缺少或錯誤。',
   'Ready to activate: all {n} redstone and container blocks are right.': '可以啟動：全部 {n} 個紅石和容器方塊都正確。',
+  'Mob spawning': '生物生成',
+  'Mark blocks mobs can spawn on': '標出生物能生成的方塊',
+  '{n} blocks where a zombie could spawn at night: room to stand and no light from torches or lamps. Light them, cover them or dig them out.':
+    '夜裡有 {n} 個方塊上可能生成殭屍：有站立的空間，也沒有火把或燈的光照。點亮、覆蓋或挖掉它們。',
+  'Checks the {m} blocks of surroundings captured around it. A farm needs everything within 128 blocks of where you stand spawnproofed.':
+    '檢查周圍已擷取的 {m} 格周圍環境。刷怪塔要求掛機點 128 格內全部防刷。',
+  'Checks only the blocks in this view. Share it with surroundings to check the land around it.':
+    '只檢查此視圖中的方塊。連同周圍環境一起分享，即可檢查周圍的地形。',
+  "The marks don't show while a shader pack is on.": '開啟光影包時不顯示這些標記。',
 };
