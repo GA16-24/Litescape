@@ -8,7 +8,6 @@ import com.sun.net.httpserver.HttpServer;
 import dev.ga16.litweb.LitWeb;
 import dev.ga16.litweb.Volume;
 import dev.ga16.litweb.client.shaders.ShaderApi;
-import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -199,7 +198,7 @@ final class WebServer {
 			o.add("terrain", t);
 		}
 
-		Lit.Selection sel = Lit.selection();
+		Schematics.Selection sel = Schematics.selection();
 		if (sel != null) {
 			JsonObject s = new JsonObject();
 			s.addProperty("name", sel.name());
@@ -215,14 +214,14 @@ final class WebServer {
 			sharedById.put(s.get("id").getAsString(), s);
 		}
 		JsonArray placements = new JsonArray();
-		for (SchematicPlacement p : Lit.placements()) {
+		for (Schematics.Placement p : Schematics.placements()) {
 			JsonObject j = new JsonObject();
-			String key = p.getHashId().toString();
+			String key = p.id();
 			j.addProperty("id", key);
-			j.addProperty("name", p.getName());
-			j.addProperty("enabled", p.isEnabled());
-			j.addProperty("author", Lit.author(p));
-			j.add("boxes", boxes(Lit.boxes(p)));
+			j.addProperty("name", p.name());
+			j.addProperty("enabled", p.enabled());
+			j.addProperty("author", p.author());
+			j.add("boxes", boxes(p.boxes()));
 			String sharedId = sharedId(uuid, key);
 			if (sharedById.containsKey(sharedId)) j.addProperty("sharedId", sharedId);
 			placements.add(j);
@@ -242,7 +241,7 @@ final class WebServer {
 		String source, name;
 		switch (type) {
 			case "selection" -> {
-				Lit.Selection sel = onClient(Lit::selection);
+				Schematics.Selection sel = onClient(Schematics::selection);
 				if (sel == null) throw new HttpError(404, "No area selection");
 				if (sel.boxes().isEmpty()) throw new HttpError(404, "The selection has no complete boxes yet");
 				name = sel.name();
@@ -265,8 +264,8 @@ final class WebServer {
 			case "placement" -> {
 				source = "placement";
 				Object[] r = onClient(() -> {
-					SchematicPlacement p = Lit.placement(id);
-					return p == null ? null : new Object[] {p.getName(), placementVolume(p)};
+					Schematics.Placement p = Schematics.placement(id);
+					return p == null ? null : new Object[] {p.name(), placementVolume(p)};
 				});
 				if (r == null) throw new HttpError(404, "That placement no longer exists");
 				name = (String) r[0];
@@ -317,7 +316,7 @@ final class WebServer {
 		switch (type) {
 			case "placement" -> {
 				st = onClient(() -> {
-					SchematicPlacement p = Lit.placement(id);
+					Schematics.Placement p = Schematics.placement(id);
 					if (p == null) return null;
 					ClientLevel level = mc.level;
 					return placementVolume(p).diff(pos -> level.hasChunk(pos.getX() >> 4, pos.getZ() >> 4) ? level.getBlockState(pos) : null, counts);
@@ -341,8 +340,8 @@ final class WebServer {
 
 	private static JsonObject share(String key, int margin) throws Exception {
 		Object[] r = onClient(() -> {
-			SchematicPlacement p = Lit.placement(key);
-			return p == null ? null : new Object[] {p.getName(), placementVolume(p), Lit.author(p)};
+			Schematics.Placement p = Schematics.placement(key);
+			return p == null ? null : new Object[] {p.name(), placementVolume(p), p.author()};
 		});
 		if (r == null) throw new HttpError(404, "That placement no longer exists");
 		byte[] id = await(Bridge.upload(key, (String) r[0], (String) r[2], margin, ((Volume) r[1]).encode()));
@@ -363,10 +362,10 @@ final class WebServer {
 	}
 
 	/** Client thread. Rebuilding a big placement is slow, so keep the last one until it moves or changes. */
-	private static Volume placementVolume(SchematicPlacement p) {
-		String key = p.getHashId() + boxes(Lit.boxes(p)).toString() + p.getRotation() + p.getMirror() + p.getSchematic().hashCode();
+	private static Volume placementVolume(Schematics.Placement p) {
+		String key = p.id() + p.version();
 		Cached c = placementCache;
-		if (c == null || !c.key.equals(key)) placementCache = c = new Cached(key, Lit.volume(p));
+		if (c == null || !c.key.equals(key)) placementCache = c = new Cached(key, p.volume().get());
 		return c.volume;
 	}
 

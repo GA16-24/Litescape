@@ -33,8 +33,8 @@ export default {
     'Die Platzierung wurde entfernt oder wird nicht mehr geteilt. Wähle eine andere in der Seitenleiste.',
   'Browse views': 'Ansichten durchsuchen',
   'Select an area in Minecraft': 'Wähle in Minecraft einen Bereich aus',
-  'Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll.':
-    'Halte das Werkzeug von Litematica (standardmäßig ein Stock) und wechsle mit <span class="kbd">Strg</span> + Mausrad in den Modus <b>Area Selection</b>.',
+  'Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll. With BuildPrint, use its area selection instead.':
+    'Halte das Werkzeug von Litematica (standardmäßig ein Stock) und wechsle mit <span class="kbd">Strg</span> + Mausrad in den Modus <b>Area Selection</b>. Mit BuildPrint nutzt du stattdessen dessen Bereichsauswahl.',
   'Left-click one corner, right-click the opposite corner.':
     'Linksklick auf eine Ecke, Rechtsklick auf die gegenüberliegende Ecke.',
   'The area appears here in 3D and updates while you adjust it.':
@@ -71,11 +71,11 @@ export default {
   '{owner} and {n} others': { one: '{owner} und {n} weiterer', other: '{owner} und {n} weitere' },
   Selection: 'Auswahl',
   '{n} boxes': '{n} Boxen',
-  "Nothing selected. Use Litematica's area selection in game.":
-    'Nichts ausgewählt. Nutze im Spiel die Bereichsauswahl von Litematica.',
+  "Nothing selected. Use Litematica's or BuildPrint's area selection in game.":
+    'Nichts ausgewählt. Nutze im Spiel die Bereichsauswahl von Litematica oder BuildPrint.',
   'Your placements': 'Deine Platzierungen',
-  'No schematics placed. Load one in Litematica to track its build here.':
-    'Keine Schematics platziert. Lade eine in Litematica, um ihren Bau hier zu verfolgen.',
+  'No schematics placed. Load one in Litematica or BuildPrint to track its build here.':
+    'Keine Schematics platziert. Lade eine in Litematica oder BuildPrint, um ihren Bau hier zu verfolgen.',
   'The server needs Litescape to share': 'Zum Teilen braucht der Server Litescape',
   'Shared. Open it to choose who can see it': 'Geteilt. Öffne sie, um festzulegen, wer sie sehen kann',
   'Share to the server. Only you see it until you choose who else can':

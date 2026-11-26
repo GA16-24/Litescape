@@ -33,8 +33,8 @@ export default {
     '배치가 삭제되었거나 더 이상 공유되지 않아요. 사이드바에서 다른 항목을 고르세요.',
   'Browse views': '보기 둘러보기',
   'Select an area in Minecraft': 'Minecraft에서 영역을 선택하세요',
-  'Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll.':
-    'Litematica 도구 아이템(기본값은 막대기)을 들고 <span class="kbd">Ctrl</span> + 스크롤로 <b>Area Selection</b> 모드로 바꾸세요.',
+  'Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll. With BuildPrint, use its area selection instead.':
+    'Litematica 도구 아이템(기본값은 막대기)을 들고 <span class="kbd">Ctrl</span> + 스크롤로 <b>Area Selection</b> 모드로 바꾸세요. BuildPrint를 쓴다면 BuildPrint의 영역 선택을 사용하세요.',
   'Left-click one corner, right-click the opposite corner.': '한쪽 모서리를 좌클릭하고, 반대쪽 모서리를 우클릭하세요.',
   'The area appears here in 3D and updates while you adjust it.':
     '영역이 여기에 3D로 표시되고, 조정하는 동안 계속 업데이트돼요.',
@@ -68,11 +68,11 @@ export default {
   '{owner} and {n} others': { other: '{owner} 외 {n}명' },
   Selection: '선택 영역',
   '{n} boxes': '박스 {n}개',
-  "Nothing selected. Use Litematica's area selection in game.":
-    '선택된 영역이 없어요. 게임에서 Litematica의 영역 선택을 사용하세요.',
+  "Nothing selected. Use Litematica's or BuildPrint's area selection in game.":
+    '선택된 영역이 없어요. 게임에서 Litematica나 BuildPrint의 영역 선택을 사용하세요.',
   'Your placements': '내 배치',
-  'No schematics placed. Load one in Litematica to track its build here.':
-    '배치된 설계도가 없어요. Litematica에서 설계도를 불러오면 여기서 건설 진행을 확인할 수 있어요.',
+  'No schematics placed. Load one in Litematica or BuildPrint to track its build here.':
+    '배치된 설계도가 없어요. Litematica나 BuildPrint에서 설계도를 불러오면 여기서 건설 진행을 확인할 수 있어요.',
   'The server needs Litescape to share': '공유하려면 서버에 Litescape가 필요해요',
   'Shared. Open it to choose who can see it': '공유됨. 열어서 볼 수 있는 사람을 고르세요',
   'Share to the server. Only you see it until you choose who else can':

@@ -23,27 +23,26 @@ import org.jspecify.annotations.Nullable;
 
 /** Everything that touches Litematica. Call on the client thread. */
 final class Lit {
-	record Selection(String name, List<int[]> boxes) {}
-
-	static @Nullable Selection selection() {
+	static Schematics.@Nullable Selection selection() {
 		AreaSelection sel = DataManager.getSelectionManager().getCurrentSelection();
 		if (sel == null) return null;
 		List<int[]> boxes = boxes(sel.getAllSubRegionBoxes());
 		// Litematica's untouched simple-mode selection is one block at 0,0,0; treat it as "nothing selected".
 		if (boxes.size() == 1 && Arrays.equals(boxes.get(0), new int[6])) return null;
-		return new Selection(sel.getName(), boxes);
+		return new Schematics.Selection(sel.getName(), boxes);
 	}
 
-	static List<SchematicPlacement> placements() {
-		return DataManager.getSchematicPlacementManager().getAllSchematicsPlacements();
+	static List<Schematics.Placement> placements() {
+		List<Schematics.Placement> out = new ArrayList<>();
+		for (SchematicPlacement p : DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()) {
+			List<int[]> boxes = boxes(p);
+			String version = boxes.stream().map(Arrays::toString).toList() + "" + p.getRotation() + p.getMirror() + p.getSchematic().hashCode();
+			out.add(new Schematics.Placement(p.getHashId().toString(), p.getName(), p.isEnabled(), author(p), boxes, version, () -> volume(p)));
+		}
+		return out;
 	}
 
-	static @Nullable SchematicPlacement placement(String hashId) {
-		for (SchematicPlacement p : placements()) if (p.getHashId().toString().equals(hashId)) return p;
-		return null;
-	}
-
-	static List<int[]> boxes(SchematicPlacement p) {
+	private static List<int[]> boxes(SchematicPlacement p) {
 		return boxes(p.getSubRegionBoxes(SubRegionPlacement.RequiredEnabled.PLACEMENT_ENABLED).values());
 	}
 
@@ -57,7 +56,7 @@ final class Lit {
 	}
 
 	/** The placement's blocks in world coordinates; mirrors SchematicPlacingUtils.placeBlocksWithinChunk. */
-	static Volume volume(SchematicPlacement sp) {
+	private static Volume volume(SchematicPlacement sp) {
 		Volume v = Volume.ofBoxes(boxes(sp));
 		LitematicaSchematic schematic = sp.getSchematic();
 		BlockPos origin = sp.getOrigin();
@@ -99,7 +98,7 @@ final class Lit {
 	private Lit() {}
 
 	/** The author saved in the schematic file, or "" when it has none. */
-	static String author(SchematicPlacement p) {
+	private static String author(SchematicPlacement p) {
 		String a = p.getSchematic().getMetadata().getAuthor();
 		return a == null || a.isBlank() || a.equals("?") ? "" : a.strip();
 	}

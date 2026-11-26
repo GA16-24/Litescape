@@ -14,7 +14,7 @@
   <img alt="A cottage placement about 80% built. Placed blocks render normally, the unbuilt roof shows as see-through ghost blocks, and the side panel shows build progress and who can see the shared schematic." src="docs/images/viewer-light.png">
 </picture>
 
-A Fabric mod for Minecraft 26.3 that shows your Litematica selection and schematic placements as 3D models in a browser tab. On a server that also runs the mod, players can share a placement so everyone can watch it get built.
+A Fabric mod for Minecraft 26.3 that shows your Litematica selection and schematic placements as 3D models in a browser tab. It reads [BuildPrint](https://modrinth.com/mod/buildprint) builds the same way. On a server that also runs the mod, players can share a placement so everyone can watch it get built.
 
 ## What it does
 
@@ -25,6 +25,7 @@ A Fabric mod for Minecraft 26.3 that shows your Litematica selection and schemat
 - The Access panel sets who can see a shared schematic: everyone on the server, only the players you pick, or only you. A new share starts as only you. Players can be picked while they're online or once they've helped build it. Operators can always see and manage every shared schematic. The server enforces this: a player without access doesn't get the schematic in their list and can't download it or its progress. Update copy keeps the access you set.
 - The server switcher at the top of the sidebar lists every server you've joined with the mod. The one you're on is live. The others show what was shared with you on your last visit, and any schematic you opened there can still be viewed in 3D. Progress, placements and access changes need you to be on that server. Joining a server switches the page to it.
 - A shared schematic lists its contributors: who placed blocks that match it, how many and when they were last active. Blocks count when a player places them by hand after the schematic was shared; buckets, pistons and commands like `/fill` don't count, and re-placing the same block counts once. Each player shows with their Minecraft face, cropped from their skin. The skin comes from Mojang the same way the game loads skins for player heads; players without one get their default skin. Everyone who can see the shared schematic can see this list. The schematic's author from the Litematica file is shown too.
+- BuildPrint works in place of Litematica, or next to it. Its loaded builds in your dimension show under your placements and can be opened, compared and shared like Litematica placements. Its selection shows when Litematica has none. A shared BuildPrint build stays linked to its shared copy by name, so renaming the build and sharing it again makes a new copy.
 - The viewer also has layer slicing (all, up to a layer, single layer), hover to identify a block, click to isolate a material, a filter for remaining blocks or problems, screenshots, and a <kbd>⌘K</kbd> command palette. Light and dark themes follow your system.
 - The viewer comes in English, German, Spanish, French, Japanese, Korean, Brazilian Portuguese, Russian and Chinese (Simplified and Traditional). It picks your browser's language; to choose another, type the language's name in the command palette. Shader pack settings use the pack's own translation when it has one, and the mod's chat messages follow Minecraft's language setting.
 
@@ -82,7 +83,7 @@ The mod also works on its own, with the viewer in a browser tab. Put the jar in 
 
 | Where             | Needs                                                                                                                                                                                                                                                                            |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Client            | Fabric Loader 0.20.1+, Fabric API, Litematica 0.29.1 (and MaLiLib), this mod                                                                                                                                                                                                     |
+| Client            | Fabric Loader 0.20.1+, Fabric API, Litematica 0.29.1 (and MaLiLib) or BuildPrint 0.1.46, this mod                                                                                                                                                                                |
 | Server (optional) | On a Fabric server:<br>1. Download the jar from [Modrinth](https://modrinth.com/mod/litescape).<br>2. Put it and [Fabric API](https://modrinth.com/mod/fabric-api) in `mods/`.<br>3. Restart the server.<br>It doesn't need Litematica. See [Server settings](#server-settings). |
 
 It's one jar for both sides. Servers always install it by hand. Without the server part, the client reads blocks from the chunks it has loaded and the page tells you what percentage of the area is covered.
