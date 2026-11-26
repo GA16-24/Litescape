@@ -112,3 +112,27 @@ test('places a door after the block under it', () => {
   });
   assert.deepEqual(v.names, ['stone', 'stone', 'redstone_block', 'oak_door']);
 });
+
+test('groups blocks that go down together into stages', () => {
+  // A floor; at y1 a plank, then the torch on the floor (attached blocks come after plain ones at a height);
+  // at y2 two planks, then the lantern hanging under them, which can't go before its ceiling.
+  const v = vol([3, 3, 1], {
+    '0,0,0': ['stone'],
+    '1,0,0': ['stone'],
+    '2,0,0': ['dirt'],
+    '0,1,0': ['torch'],
+    '1,1,0': ['oak_planks'],
+    '1,2,0': ['oak_planks'],
+    '2,2,0': ['oak_planks'],
+    '2,1,0': ['lantern', 'hanging=true'],
+  });
+  const stages = [...v.starts].slice(0, -1).map((s, k) => v.names.slice(s, v.starts[k + 1]));
+  assert.deepEqual(stages, [
+    ['stone', 'stone', 'dirt'],
+    ['oak_planks'],
+    ['torch'],
+    ['oak_planks', 'oak_planks'],
+    ['lantern'],
+  ]);
+  assert.equal(v.rank[v.at(2, 1, 0)], 4);
+});

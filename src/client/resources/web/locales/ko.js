@@ -391,22 +391,26 @@ export default {
   Layers: '레이어',
   'Next layer mode': '다음 레이어 모드',
   'Layer up or down': '레이어 위/아래로 이동',
-  Step: '단계',
-  "Can fire as soon as it's placed. Check what it faces first.":
+  Stage: '단계',
+  "These can fire as soon as they're placed. Check what they face first.":
     '설치하자마자 작동할 수 있습니다. 먼저 방향을 확인하세요.',
+  'Some have nothing to place against yet. Put temporary blocks next to them.':
+    '아직 붙여 놓을 블록이 없는 것이 있습니다. 옆에 임시 블록을 놓으세요.',
+  'Some fall without a block under them. Put temporary ones there.':
+    '아래에 블록이 없으면 떨어지는 것이 있습니다. 임시 블록을 놓으세요.',
+  'Torches, doors and other attached blocks': '횃불, 문 등 다른 블록에 붙이는 블록',
+  Redstone: '레드스톤',
+  'Water and lava': '물과 용암',
+  'Plants that need water': '물이 필요한 식물',
+  'Stage {n} of {total}': '{total}단계 중 {n}단계',
+  'Order: previous or next stage': '순서: 이전 또는 다음 단계',
+  'Survival build order, one stage at a time': '서바이벌 건축 순서: 한 단계씩',
   "Water and lava go last, so they don't flow over the build.":
     '물과 용암은 건축물 위로 흐르지 않도록 마지막에 놓습니다.',
-  'Nothing to place it against yet. Put a temporary block next to it.':
-    '아직 붙여 놓을 블록이 없습니다. 옆에 임시 블록을 놓으세요.',
-  'Falls without a block under it. Put a temporary one there.':
-    '아래에 블록이 없으면 떨어집니다. 임시 블록을 놓으세요.',
   'Every block is placed': '모든 블록을 설치했습니다',
   'Working out the build order…': '건축 순서를 계산하는 중…',
-  'Step {n} of {total}': '{total}단계 중 {n}단계',
   'Layers: survival build order': '레이어: 서바이벌 건축 순서',
-  'Order: previous or next block': '순서: 이전 또는 다음 블록',
   Order: '순서',
-  'Survival build order: one block at a time': '서바이벌 건축 순서: 한 번에 한 블록씩',
   App: '앱',
   'Search views and commands': '보기 및 명령 검색',
   'Details panel': '세부 정보 패널',

@@ -435,21 +435,26 @@ export default {
   Layers: 'Слои',
   'Next layer mode': 'Следующий режим слоёв',
   'Layer up or down': 'Слой вверх или вниз',
-  Step: 'Шаг',
-  "Can fire as soon as it's placed. Check what it faces first.":
-    'Может сработать сразу после установки. Сначала проверьте, куда он смотрит.',
+  Stage: 'Этап',
+  "These can fire as soon as they're placed. Check what they face first.":
+    'Могут сработать сразу после установки. Сначала проверьте, куда они смотрят.',
+  'Some have nothing to place against yet. Put temporary blocks next to them.':
+    'Некоторые пока не к чему приставить. Поставьте рядом временные блоки.',
+  'Some fall without a block under them. Put temporary ones there.':
+    'Некоторые упадут без блока снизу. Поставьте туда временные.',
+  'Torches, doors and other attached blocks': 'Факелы, двери и другие прикреплённые блоки',
+  Redstone: 'Редстоун',
+  'Water and lava': 'Вода и лава',
+  'Plants that need water': 'Растения, которым нужна вода',
+  'Stage {n} of {total}': 'Этап {n} из {total}',
+  'Order: previous or next stage': 'Порядок: предыдущий или следующий этап',
+  'Survival build order, one stage at a time': 'Порядок постройки в выживании, по этапам',
   "Water and lava go last, so they don't flow over the build.":
     'Вода и лава ставятся в конце, чтобы не растеклись по постройке.',
-  'Nothing to place it against yet. Put a temporary block next to it.':
-    'Пока не к чему приставить. Поставьте рядом временный блок.',
-  'Falls without a block under it. Put a temporary one there.': 'Упадёт без блока снизу. Поставьте туда временный.',
   'Every block is placed': 'Все блоки поставлены',
   'Working out the build order…': 'Вычисляется порядок постройки…',
-  'Step {n} of {total}': 'Шаг {n} из {total}',
   'Layers: survival build order': 'Слои: порядок постройки в выживании',
-  'Order: previous or next block': 'Порядок: предыдущий или следующий блок',
   Order: 'Порядок',
-  'Survival build order: one block at a time': 'Порядок постройки в выживании: по одному блоку',
   App: 'Приложение',
   'Search views and commands': 'Поиск видов и команд',
   'Details panel': 'Панель сведений',

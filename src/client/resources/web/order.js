@@ -1,8 +1,9 @@
-// Survival build order: the sequence to place a schematic's blocks in without flying.
+// Survival build order: the sequence to place a schematic's blocks in without flying, in stages.
 // Bottom-up, every block after something it can be placed against, attached blocks after the block
 // they hang on, then parts that can fire when placed, then water and lava sources, then plants that need water.
+// A stage is the blocks of one kind at one height, which can go down in one go.
 
-/** Flags per step, for the card that says what to watch out for. */
+/** Flags per block, for the card that says what to watch out for. */
 export const ACTIVATES = 1; // observers, pistons, redstone: can fire as soon as they're placed
 export const FLUID = 2; // a water or lava source
 export const FLOATING = 4; // nothing to place it against yet: needs a temporary block
@@ -52,8 +53,9 @@ export function rule(e) {
 }
 
 /**
- * Orders the blocks of a volume indexed (y * sz + z) * sx + x.
- * Returns {order: cell indices in build order, rank: step per cell (-1 when not placed by hand), flags: per step}.
+ * Orders the blocks of a volume indexed (y * sz + z) * sx + x, grouped in stages. Returns
+ * {order: cell indices in build order, flags: per entry of order, starts: where each stage begins in order, plus its end,
+ *  values: per stage (phase * sy + y) * 2 + 1 when its blocks hang on others, rank: stage per cell, -1 when not placed by hand}.
  */
 export function buildOrder({ sx, sy, sz, blocks, palette }) {
   const n = sx * sy * sz;
@@ -172,12 +174,61 @@ export function buildOrder({ sx, sy, sz, blocks, palette }) {
       if (j >= 0 && rank[j] < 0 && !placed[j] && !rules[blocks[j]].skip && ready(j)) push(j);
     }
   }
-  return { order, rank, flags };
+
+  // Each block's stage: its own kind and height, but never before the stage of the block it hangs on,
+  // or of the earliest neighbor it can be placed against.
+  const len = order.length;
+  const stage = new Int32Array(n).fill(-1);
+  const value = new Int32Array(len);
+  for (let k = 0; k < len; k++) {
+    const i = order[k];
+    const r = rules[blocks[i]];
+    const x = i % sx,
+      z = ((i / sx) | 0) % sz,
+      y = (i / (sx * sz)) | 0;
+    let v = (r.phase * sy + y) * 2 + (r.host && !r.gravity ? 1 : 0);
+    if (host[i] >= 0) {
+      if (stage[host[i]] >= 0) v = Math.max(v, stage[host[i]] + 1);
+    } else if (y > 0 && !(flags[k] & FLOATING)) {
+      let m = Infinity;
+      for (const d of DIRS) {
+        const j = at(x + d[0], y + d[1], z + d[2]);
+        if (j < 0 || !solidAt(palette[blocks[j]])) continue;
+        if (palette[blocks[j]].t) m = -1;
+        else if (stage[j] >= 0) m = Math.min(m, stage[j]);
+      }
+      if (m !== Infinity) v = Math.max(v, m);
+    }
+    stage[i] = value[k] = v;
+  }
+  // Counting sort by stage, keeping the block order inside each stage.
+  const at0 = new Int32Array(8 * sy + 4);
+  for (const v of value) at0[v + 1]++;
+  for (let v = 1; v < at0.length; v++) at0[v] += at0[v - 1];
+  const sorted = new Int32Array(len);
+  const sflags = new Uint8Array(len);
+  for (let k = 0; k < len; k++) {
+    const p = at0[value[k]]++;
+    sorted[p] = order[k];
+    sflags[p] = flags[k];
+  }
+  const starts = [],
+    values = [];
+  for (let p = 0; p < len; p++) {
+    const v = stage[sorted[p]];
+    if (v !== values[values.length - 1]) {
+      starts.push(p);
+      values.push(v);
+    }
+    rank[sorted[p]] = values.length - 1;
+  }
+  starts.push(len);
+  return { order: sorted, flags: sflags, starts: Int32Array.from(starts), values: Int32Array.from(values), rank };
 }
 
 // Run as a worker (new Worker('order.js', { type: 'module' })), it orders volumes off the page's thread.
 if (typeof WorkerGlobalScope !== 'undefined')
   self.onmessage = (e) => {
     const r = buildOrder(e.data);
-    self.postMessage({ id: e.data.id, ...r }, [r.order.buffer, r.rank.buffer, r.flags.buffer]);
+    self.postMessage({ id: e.data.id, ...r }, [r.order.buffer, r.rank.buffer, r.flags.buffer, r.starts.buffer]);
   };

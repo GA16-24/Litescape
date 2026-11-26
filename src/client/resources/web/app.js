@@ -83,7 +83,7 @@ const S = {
   vis: null,
   layerMode: 'all',
   layerY: 0,
-  step: 0, // Order mode: the step of the next block to place
+  step: 0, // Order mode: the stage to place next
   jump: false, // Order mode opened: go to the first missing block once the order is known
   filter: 'all',
   ghosts: true,
@@ -400,7 +400,7 @@ function remesh() {
         y0,
         y1,
         step: order ? S.step : -1,
-        steps: order ? order.order.length : 0,
+        steps: order ? order.values.length : 0,
         filter: S.status && !order ? S.filter : 'all',
         ghosts: S.ghosts,
         iso: order ? -1 : S.iso,
@@ -431,7 +431,7 @@ orderWorker.onmessage = (e) => {
   if (d !== S.data) return;
   d.build = e.data;
   worker.postMessage({ type: 'order', rank: e.data.rank }, [e.data.rank.buffer]);
-  S.step = S.jump ? firstToDo() : Math.min(S.step, d.build.order.length);
+  S.step = S.jump ? firstToDo() : Math.min(S.step, d.build.values.length);
   S.jump = false;
   if (S.layerMode !== 'order') return;
   renderLayers();
@@ -452,12 +452,12 @@ function steps() {
   return d.build || null;
 }
 
-/** The first step whose block isn't placed correctly yet, or 0 without build progress. */
+/** The first stage with a block that isn't placed correctly yet, or 0 without build progress. */
 function firstToDo() {
-  const { order } = steps();
+  const { order, starts, values } = steps();
   if (!S.status) return 0;
   const k = order.findIndex((i) => S.status[i] >= 2 && S.status[i] <= 4);
-  return k < 0 ? order.length : k;
+  return k < 0 ? values.length : starts.findIndex((s) => s > k) - 1;
 }
 
 async function open(desc, { force = false } = {}) {
@@ -1904,10 +1904,10 @@ function renderLayers() {
   const sl = $('layer-slider');
   const wrap = $('layer-slider-wrap');
   if (S.layerMode === 'order') {
-    const n = steps()?.order.length ?? 0;
+    const n = steps()?.values.length ?? 0;
     sl.max = String(n);
     sl.value = String(S.step);
-    sl.setAttribute('aria-label', t('Step'));
+    sl.setAttribute('aria-label', t('Stage'));
     wrap.setAttribute('aria-disabled', 'false');
     $('layer-value').textContent = String(Math.min(S.step + 1, n));
     wrap.hidden = n === 0;
@@ -1923,42 +1923,71 @@ function renderLayers() {
 }
 
 const WARN = [
-  [ACTIVATES, t("Can fire as soon as it's placed. Check what it faces first.")],
+  [ACTIVATES, t("These can fire as soon as they're placed. Check what they face first.")],
   [FLUID, t("Water and lava go last, so they don't flow over the build.")],
-  [FLOATING, t('Nothing to place it against yet. Put a temporary block next to it.')],
-  [FALLS, t('Falls without a block under it. Put a temporary one there.')],
+  [FLOATING, t('Some have nothing to place against yet. Put temporary blocks next to them.')],
+  [FALLS, t('Some fall without a block under them. Put temporary ones there.')],
+];
+// What a stage holds, by its phase in order.js, then whether its blocks hang on others.
+const STAGE_KIND = [
+  [t('Blocks'), t('Torches, doors and other attached blocks')],
+  [t('Redstone'), t('Redstone')],
+  [t('Water and lava'), t('Water and lava')],
+  [t('Plants that need water'), t('Plants that need water')],
 ];
 
-/** Order mode's card: the next block to place, where it goes and what to watch out for. */
+/** Order mode's card: what the next stage holds, where, and what to watch out for. A box frames its blocks. */
 function renderStep() {
   const card = $('order-card');
   const d = S.data;
   card.hidden = S.layerMode !== 'order' || $('layers').hidden;
   const build = card.hidden ? null : steps();
-  const i = build?.order[S.step];
-  if (nextBox.visible !== (i != null)) needsRender = true;
-  nextBox.visible = i != null;
+  const done = !build || S.step >= build.values.length;
+  if (nextBox.visible !== !done) needsRender = true;
+  nextBox.visible = !done;
   if (card.hidden) return;
   if (!build) {
     card.innerHTML = `<div class="hc-sub">${t('Working out the build order…')}</div>`;
     return;
   }
-  const { order, flags } = build;
-  if (i == null) {
+  if (done) {
     card.innerHTML = `<div class="hc-title">${ICON.check}${t('Every block is placed')}</div>`;
     return;
   }
-  const [sx, , sz] = d.size;
-  const x = i % sx,
-    z = ((i / sx) | 0) % sz,
-    y = (i / (sx * sz)) | 0;
-  nextBox.position.set(x + 0.5, y + 0.5, z + 0.5);
+  const { order, flags, starts, values } = build;
+  const [sx, sy, sz] = d.size;
+  const lo = [sx, sy, sz],
+    hi = [0, 0, 0],
+    count = new Map();
+  let warn = 0;
+  for (let k = starts[S.step]; k < starts[S.step + 1]; k++) {
+    const i = order[k];
+    const p = [i % sx, (i / (sx * sz)) | 0, ((i / sx) | 0) % sz];
+    for (let a = 0; a < 3; a++) {
+      lo[a] = Math.min(lo[a], p[a]);
+      hi[a] = Math.max(hi[a], p[a] + 1);
+    }
+    const mid = d.palette[d.blocks16[i]].mid;
+    count.set(mid, (count.get(mid) || 0) + 1);
+    warn |= flags[k];
+  }
+  nextBox.position.set((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2);
+  nextBox.scale.set(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
   needsRender = true;
-  const e = d.palette[d.blocks16[i]];
-  card.innerHTML = `<div class="hc-sub">${t('Step {n} of {total}', { n: S.step + 1, total: order.length })}</div>
-    <div class="hc-title"><img alt="" src="${matIcon(d.mats[e.mid])}" width="16" height="16" style="image-rendering:pixelated">${esc(pretty(e.n))}</div>
-    <div class="hc-pos">${d.origin[0] + x}, ${d.origin[1] + y}, ${d.origin[2] + z}</div>
-    ${WARN.filter(([f]) => flags[S.step] & f)
+  const v = values[S.step];
+  const kind = STAGE_KIND[Math.floor(v / 2 / sy)][v % 2];
+  const mats = [...count].sort((a, b) => b[1] - a[1]);
+  const MAX = 8;
+  card.innerHTML = `<div class="hc-sub">${t('Stage {n} of {total}', { n: S.step + 1, total: values.length })} · y ${d.origin[1] + (Math.floor(v / 2) % sy)}</div>
+    <div class="hc-title">${kind}</div>
+    <div class="hc-items">${mats
+      .slice(0, MAX)
+      .map(
+        ([mid, n]) =>
+          `<div><span class="hc-n num">${fmt.format(n)}×</span><img class="hc-icon" alt="" src="${matIcon(d.mats[mid])}">${esc(d.mats[mid].name)}</div>`,
+      )
+      .join('')}${mats.length > MAX ? `<div class="hc-sub">${t('{n} more', { n: mats.length - MAX })}</div>` : ''}</div>
+    ${WARN.filter(([f]) => warn & f)
       .map(([, text]) => `<div class="hc-status oc-warn">${ICON.alert}${text}</div>`)
       .join('')}`;
 }
@@ -1981,7 +2010,7 @@ function setLayer(mode, y) {
 function setStep(n) {
   const build = S.data && steps();
   if (!build) return;
-  S.step = Math.max(0, Math.min(build.order.length, n));
+  S.step = Math.max(0, Math.min(build.values.length, n));
   renderLayers();
   remesh();
 }
@@ -3439,7 +3468,7 @@ const KEYS = [
     [
       [t('Next layer mode'), 'L'],
       [t('Layer up or down'), '↑', '↓'],
-      [t('Order: previous or next block'), '↑', '↓'],
+      [t('Order: previous or next stage'), '↑', '↓'],
     ],
   ],
   [

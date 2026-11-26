@@ -400,22 +400,26 @@ export default {
   Layers: 'Ebenen',
   'Next layer mode': 'Nächster Ebenenmodus',
   'Layer up or down': 'Eine Ebene hoch oder runter',
-  Step: 'Schritt',
-  "Can fire as soon as it's placed. Check what it faces first.":
-    'Kann auslösen, sobald er platziert ist. Prüfe zuerst, wohin er zeigt.',
+  Stage: 'Abschnitt',
+  "These can fire as soon as they're placed. Check what they face first.":
+    'Diese können auslösen, sobald sie platziert sind. Prüfe zuerst, wohin sie zeigen.',
+  'Some have nothing to place against yet. Put temporary blocks next to them.':
+    'Für manche gibt es noch nichts zum Dranbauen. Setze vorübergehende Blöcke daneben.',
+  'Some fall without a block under them. Put temporary ones there.':
+    'Manche fallen ohne Block darunter. Setze dort vorübergehend welche hin.',
+  'Torches, doors and other attached blocks': 'Fackeln, Türen und andere angebrachte Blöcke',
+  Redstone: 'Redstone',
+  'Water and lava': 'Wasser und Lava',
+  'Plants that need water': 'Pflanzen, die Wasser brauchen',
+  'Stage {n} of {total}': 'Abschnitt {n} von {total}',
+  'Order: previous or next stage': 'Reihenfolge: vorheriger oder nächster Abschnitt',
+  'Survival build order, one stage at a time': 'Baureihenfolge im Überlebensmodus, Abschnitt für Abschnitt',
   "Water and lava go last, so they don't flow over the build.":
     'Wasser und Lava kommen zuletzt, damit sie nicht über den Bau fließen.',
-  'Nothing to place it against yet. Put a temporary block next to it.':
-    'Noch nichts zum Dranbauen. Setze einen vorübergehenden Block daneben.',
-  'Falls without a block under it. Put a temporary one there.':
-    'Fällt ohne Block darunter. Setze vorübergehend einen dorthin.',
   'Every block is placed': 'Alle Blöcke sind platziert',
   'Working out the build order…': 'Baureihenfolge wird berechnet…',
-  'Step {n} of {total}': 'Schritt {n} von {total}',
   'Layers: survival build order': 'Ebenen: Baureihenfolge im Überlebensmodus',
-  'Order: previous or next block': 'Reihenfolge: vorheriger oder nächster Block',
   Order: 'Reihenfolge',
-  'Survival build order: one block at a time': 'Baureihenfolge im Überlebensmodus: ein Block nach dem anderen',
   App: 'App',
   'Search views and commands': 'Ansichten und Befehle suchen',
   'Details panel': 'Detailbereich',

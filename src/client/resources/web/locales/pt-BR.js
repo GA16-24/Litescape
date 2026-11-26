@@ -400,21 +400,26 @@ export default {
   Layers: 'Camadas',
   'Next layer mode': 'Próximo modo de camadas',
   'Layer up or down': 'Subir ou descer uma camada',
-  Step: 'Passo',
-  "Can fire as soon as it's placed. Check what it faces first.":
-    'Pode ativar assim que for colocado. Confira primeiro para onde ele aponta.',
+  Stage: 'Etapa',
+  "These can fire as soon as they're placed. Check what they face first.":
+    'Podem ativar assim que forem colocados. Confira primeiro para onde apontam.',
+  'Some have nothing to place against yet. Put temporary blocks next to them.':
+    'Alguns ainda não têm onde se apoiar. Coloque blocos temporários ao lado.',
+  'Some fall without a block under them. Put temporary ones there.':
+    'Alguns caem sem um bloco embaixo. Coloque temporários ali.',
+  'Torches, doors and other attached blocks': 'Tochas, portas e outros blocos presos',
+  Redstone: 'Redstone',
+  'Water and lava': 'Água e lava',
+  'Plants that need water': 'Plantas que precisam de água',
+  'Stage {n} of {total}': 'Etapa {n} de {total}',
+  'Order: previous or next stage': 'Ordem: etapa anterior ou próxima',
+  'Survival build order, one stage at a time': 'Ordem de construção no sobrevivência, uma etapa por vez',
   "Water and lava go last, so they don't flow over the build.":
     'Água e lava ficam por último, para não escorrerem pela construção.',
-  'Nothing to place it against yet. Put a temporary block next to it.':
-    'Ainda não há onde apoiá-lo. Coloque um bloco temporário ao lado.',
-  'Falls without a block under it. Put a temporary one there.': 'Cai sem um bloco embaixo. Coloque um temporário ali.',
   'Every block is placed': 'Todos os blocos foram colocados',
   'Working out the build order…': 'Calculando a ordem de construção…',
-  'Step {n} of {total}': 'Passo {n} de {total}',
   'Layers: survival build order': 'Camadas: ordem de construção no sobrevivência',
-  'Order: previous or next block': 'Ordem: bloco anterior ou próximo',
   Order: 'Ordem',
-  'Survival build order: one block at a time': 'Ordem de construção no sobrevivência: um bloco por vez',
   App: 'Aplicativo',
   'Search views and commands': 'Pesquisar visualizações e comandos',
   'Details panel': 'Painel de detalhes',

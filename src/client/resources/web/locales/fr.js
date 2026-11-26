@@ -399,21 +399,26 @@ export default {
   Layers: 'Couches',
   'Next layer mode': 'Mode de couche suivant',
   'Layer up or down': "Monter ou descendre d'une couche",
-  Step: 'Étape',
-  "Can fire as soon as it's placed. Check what it faces first.":
-    'Peut s’activer dès qu’il est posé. Vérifiez d’abord vers où il est tourné.',
+  Stage: 'Étape',
+  "These can fire as soon as they're placed. Check what they face first.":
+    'Ils peuvent s’activer dès qu’ils sont posés. Vérifiez d’abord vers où ils sont tournés.',
+  'Some have nothing to place against yet. Put temporary blocks next to them.':
+    'Certains n’ont encore rien contre quoi être posés. Mettez des blocs temporaires à côté.',
+  'Some fall without a block under them. Put temporary ones there.':
+    'Certains tombent sans bloc en dessous. Mettez-en des temporaires.',
+  'Torches, doors and other attached blocks': 'Torches, portes et autres blocs accrochés',
+  Redstone: 'Redstone',
+  'Water and lava': 'Eau et lave',
+  'Plants that need water': 'Plantes qui ont besoin d’eau',
+  'Stage {n} of {total}': 'Étape {n} sur {total}',
+  'Order: previous or next stage': 'Ordre : étape précédente ou suivante',
+  'Survival build order, one stage at a time': 'Ordre de construction en survie, une étape à la fois',
   "Water and lava go last, so they don't flow over the build.":
     'L’eau et la lave viennent en dernier, pour ne pas couler sur la construction.',
-  'Nothing to place it against yet. Put a temporary block next to it.':
-    'Rien contre quoi le poser pour l’instant. Mettez un bloc temporaire à côté.',
-  'Falls without a block under it. Put a temporary one there.': 'Tombe sans bloc en dessous. Mettez-en un temporaire.',
   'Every block is placed': 'Tous les blocs sont posés',
   'Working out the build order…': 'Calcul de l’ordre de construction…',
-  'Step {n} of {total}': 'Étape {n} sur {total}',
   'Layers: survival build order': 'Couches : ordre de construction en survie',
-  'Order: previous or next block': 'Ordre : bloc précédent ou suivant',
   Order: 'Ordre',
-  'Survival build order: one block at a time': 'Ordre de construction en survie : un bloc à la fois',
   App: 'Application',
   'Search views and commands': 'Rechercher des vues et des commandes',
   'Details panel': 'Panneau de détails',
