@@ -6,6 +6,7 @@ import dev.ga16.litweb.Volume;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
@@ -31,15 +32,22 @@ final class Bp {
 		var level = Minecraft.getInstance().level;
 		if (level == null || !BuildprintPlacements.isAvailable()) return out;
 		String dim = level.dimension().identifier().toString();
+		Map<Integer, String> keys = new LinkedHashMap<>();
+		Map<String, Integer> uses = new HashMap<>();
 		for (int id : BuildprintPlacements.ids()) {
 			if (!dim.equals(BuildprintPlacements.dimension(id))) continue;
-			String name = BuildprintPlacements.name(id);
 			// BuildPrint gives a build a new id after a restart. Name and origin survive that, and no other build can take them over.
-			String key = "buildprint:" + dim + "/" + name + "@" + Arrays.toString(BuildprintPlacements.origin(id));
-			int[] box = BuildprintPlacements.bounds(id);
-			out.add(new Schematics.Placement(key, name, BuildprintPlacements.visible(id), author(id), List.of(box),
-				id + ":" + BuildprintPlacements.version(id), () -> volume(id, box)));
+			String key = "buildprint:" + dim + "/" + BuildprintPlacements.name(id) + "@" + Arrays.toString(BuildprintPlacements.origin(id));
+			keys.put(id, key);
+			uses.merge(key, 1, Integer::sum);
 		}
+		keys.forEach((id, key) -> {
+			// The same build loaded twice in one spot: tell the copies apart by id until only one is left.
+			if (uses.get(key) > 1) key += "#" + id;
+			int[] box = BuildprintPlacements.bounds(id);
+			out.add(new Schematics.Placement(key, BuildprintPlacements.name(id), BuildprintPlacements.visible(id), author(id), List.of(box),
+				id + ":" + BuildprintPlacements.version(id), () -> volume(id, box)));
+		});
 		return out;
 	}
 

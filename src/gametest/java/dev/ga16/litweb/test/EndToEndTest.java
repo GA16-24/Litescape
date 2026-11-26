@@ -235,6 +235,17 @@ public class EndToEndTest implements FabricClientGameTest {
 		// One correct, one missing, one with the wrong state.
 		check(c.get(1).getAsInt() == 1 && c.get(2).getAsInt() == 1 && c.get(4).getAsInt() == 1, "BuildPrint status counts " + c);
 
+		// The same build loaded a second time in the same spot gets its own row.
+		ctx.runOnClient(_ -> check(BuildprintBlueprints.set("litweb-test-2", "Test tower", new int[] {50, -60, 1, 50, -59, 1, 51, -60, 1},
+			new String[] {"minecraft:stone", "minecraft:oak_planks", "minecraft:oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]"}) != null, "second blueprint written"));
+		Set<String> towers = new HashSet<>();
+		for (int i = 0; i < 40 && towers.size() < 2; i++, ctx.waitTicks(5)) {
+			towers.clear();
+			for (JsonElement e : json(call(ctx, "GET", "/api/state")).getAsJsonArray("placements"))
+				if (e.getAsJsonObject().get("name").getAsString().equals("Test tower")) towers.add(e.getAsJsonObject().get("id").getAsString());
+		}
+		check(towers.size() == 2 && towers.stream().allMatch(t -> t.contains("#")), "two same-named builds in one spot have distinct ids " + towers);
+
 		// With Litematica's selection back at its untouched default, BuildPrint's is the one shown.
 		ctx.runOnClient(_ -> {
 			AreaSelection area = DataManager.getSelectionManager().getCurrentSelection();
