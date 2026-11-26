@@ -403,6 +403,7 @@ export default {
   'Falls without a block under it. Put a temporary one there.':
     '下にブロックがないと落ちます。仮ブロックを置いてください。',
   'Every block is placed': 'すべてのブロックを設置しました',
+  'Working out the build order…': '建築順を計算中…',
   'Step {n} of {total}': 'ステップ {n} / {total}',
   'Layers: survival build order': 'レイヤー：サバイバルの建築順',
   'Order: previous or next block': '建築順：前または次のブロック',

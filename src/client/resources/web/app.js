@@ -1,6 +1,6 @@
 import { fmt, LANGS, lang, MC_LOCALE, t, translateDom } from './i18n.js';
 import { Iris } from './iris.js';
-import { ACTIVATES, buildOrder, FALLS, FLOATING, FLUID } from './order.js';
+import { ACTIVATES, FALLS, FLOATING, FLUID } from './order.js';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import * as THREE from './vendor/three.module.min.js';
 
@@ -84,6 +84,7 @@ const S = {
   layerMode: 'all',
   layerY: 0,
   step: 0, // Order mode: the step of the next block to place
+  jump: false, // Order mode opened: go to the first missing block once the order is known
   filter: 'all',
   ghosts: true,
   iso: -1,
@@ -420,16 +421,35 @@ function layerRange() {
   return [0, S.layerY];
 }
 
-/** The open view's survival build order, worked out the first time Order mode needs it. */
+// The build order of a big view takes seconds, so it's worked out off the page's thread.
+const orderWorker = new Worker('order.js', { type: 'module' });
+const orderJobs = new Map(); // job id -> the view it's for
+let orderSeq = 0;
+orderWorker.onmessage = (e) => {
+  const d = orderJobs.get(e.data.id);
+  orderJobs.delete(e.data.id);
+  if (d !== S.data) return;
+  d.build = e.data;
+  worker.postMessage({ type: 'order', rank: e.data.rank }, [e.data.rank.buffer]);
+  S.step = S.jump ? firstToDo() : Math.min(S.step, d.build.order.length);
+  S.jump = false;
+  if (S.layerMode !== 'order') return;
+  renderLayers();
+  remesh();
+};
+
+/** The open view's survival build order, or null while the worker works it out the first time Order mode asks. */
 function steps() {
   const d = S.data;
-  if (!d.build) {
+  if (!d.build && !d.building) {
+    d.building = true;
+    const id = ++orderSeq;
+    orderJobs.set(id, d);
     const [sx, sy, sz] = d.size;
-    d.build = buildOrder({ sx, sy, sz, blocks: d.blocks16, palette: d.palette });
-    worker.postMessage({ type: 'order', rank: d.build.rank });
-    S.step = Math.min(S.step, d.build.order.length);
+    const palette = d.palette.map((e) => e && { n: e.n, p: e.p, air: e.air, t: e.t });
+    orderWorker.postMessage({ id, sx, sy, sz, blocks: d.blocks16, palette });
   }
-  return d.build;
+  return d.build || null;
 }
 
 /** The first step whose block isn't placed correctly yet, or 0 without build progress. */
@@ -1884,7 +1904,7 @@ function renderLayers() {
   const sl = $('layer-slider');
   const wrap = $('layer-slider-wrap');
   if (S.layerMode === 'order') {
-    const n = steps().order.length;
+    const n = steps()?.order.length ?? 0;
     sl.max = String(n);
     sl.value = String(S.step);
     sl.setAttribute('aria-label', t('Step'));
@@ -1914,11 +1934,16 @@ function renderStep() {
   const card = $('order-card');
   const d = S.data;
   card.hidden = S.layerMode !== 'order' || $('layers').hidden;
-  const { order, flags } = card.hidden ? { order: [] } : steps();
-  const i = order[S.step];
+  const build = card.hidden ? null : steps();
+  const i = build?.order[S.step];
   if (nextBox.visible !== (i != null)) needsRender = true;
   nextBox.visible = i != null;
   if (card.hidden) return;
+  if (!build) {
+    card.innerHTML = `<div class="hc-sub">${t('Working out the build order…')}</div>`;
+    return;
+  }
+  const { order, flags } = build;
   if (i == null) {
     card.innerHTML = `<div class="hc-title">${ICON.check}${t('Every block is placed')}</div>`;
     return;
@@ -1943,7 +1968,10 @@ function renderStep() {
 function setLayer(mode, y) {
   if (!S.data) return;
   const top = S.data.size[1] - 1;
-  if (mode === 'order' && S.layerMode !== 'order') S.step = firstToDo();
+  if (mode === 'order' && S.layerMode !== 'order') {
+    if (steps()) S.step = firstToDo();
+    else S.jump = true;
+  }
   if (mode) S.layerMode = mode;
   if (y != null) S.layerY = Math.max(0, Math.min(top, y));
   renderLayers();
@@ -1951,8 +1979,9 @@ function setLayer(mode, y) {
 }
 
 function setStep(n) {
-  if (!S.data) return;
-  S.step = Math.max(0, Math.min(steps().order.length, n));
+  const build = S.data && steps();
+  if (!build) return;
+  S.step = Math.max(0, Math.min(build.order.length, n));
   renderLayers();
   remesh();
 }

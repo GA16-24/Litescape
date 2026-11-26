@@ -409,6 +409,7 @@ export default {
     'Ainda não há onde apoiá-lo. Coloque um bloco temporário ao lado.',
   'Falls without a block under it. Put a temporary one there.': 'Cai sem um bloco embaixo. Coloque um temporário ali.',
   'Every block is placed': 'Todos os blocos foram colocados',
+  'Working out the build order…': 'Calculando a ordem de construção…',
   'Step {n} of {total}': 'Passo {n} de {total}',
   'Layers: survival build order': 'Camadas: ordem de construção no sobrevivência',
   'Order: previous or next block': 'Ordem: bloco anterior ou próximo',

@@ -392,6 +392,7 @@ export default {
     '還沒有可以依附放置的方塊。在旁邊放一個臨時方塊。',
   'Falls without a block under it. Put a temporary one there.': '下方沒有方塊會掉落。在下面放一個臨時方塊。',
   'Every block is placed': '所有方塊都已放置',
+  'Working out the build order…': '正在計算建造順序…',
   'Step {n} of {total}': '第 {n} 步，共 {total} 步',
   'Layers: survival build order': '圖層：生存模式建造順序',
   'Order: previous or next block': '順序：上一個或下一個方塊',

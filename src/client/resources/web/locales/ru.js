@@ -444,6 +444,7 @@ export default {
     'Пока не к чему приставить. Поставьте рядом временный блок.',
   'Falls without a block under it. Put a temporary one there.': 'Упадёт без блока снизу. Поставьте туда временный.',
   'Every block is placed': 'Все блоки поставлены',
+  'Working out the build order…': 'Вычисляется порядок постройки…',
   'Step {n} of {total}': 'Шаг {n} из {total}',
   'Layers: survival build order': 'Слои: порядок постройки в выживании',
   'Order: previous or next block': 'Порядок: предыдущий или следующий блок',

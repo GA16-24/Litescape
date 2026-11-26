@@ -393,6 +393,7 @@ export default {
     '还没有可以依附放置的方块。在旁边放一个临时方块。',
   'Falls without a block under it. Put a temporary one there.': '下方没有方块会掉落。在下面放一个临时方块。',
   'Every block is placed': '所有方块都已放置',
+  'Working out the build order…': '正在计算建造顺序…',
   'Step {n} of {total}': '第 {n} 步，共 {total} 步',
   'Layers: survival build order': '图层：生存模式建造顺序',
   'Order: previous or next block': '顺序：上一个或下一个方块',

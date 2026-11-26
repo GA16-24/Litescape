@@ -409,6 +409,7 @@ export default {
   'Falls without a block under it. Put a temporary one there.':
     'Se cae si no tiene un bloque debajo. Pon uno temporal ahí.',
   'Every block is placed': 'Todos los bloques están colocados',
+  'Working out the build order…': 'Calculando el orden de construcción…',
   'Step {n} of {total}': 'Paso {n} de {total}',
   'Layers: survival build order': 'Capas: orden de construcción en supervivencia',
   'Order: previous or next block': 'Orden: bloque anterior o siguiente',

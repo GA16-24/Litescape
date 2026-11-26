@@ -174,3 +174,10 @@ export function buildOrder({ sx, sy, sz, blocks, palette }) {
   }
   return { order, rank, flags };
 }
+
+// Run as a worker (new Worker('order.js', { type: 'module' })), it orders volumes off the page's thread.
+if (typeof WorkerGlobalScope !== 'undefined')
+  self.onmessage = (e) => {
+    const r = buildOrder(e.data);
+    self.postMessage({ id: e.data.id, ...r }, [r.order.buffer, r.rank.buffer, r.flags.buffer]);
+  };

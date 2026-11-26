@@ -401,6 +401,7 @@ export default {
   'Falls without a block under it. Put a temporary one there.':
     '아래에 블록이 없으면 떨어집니다. 임시 블록을 놓으세요.',
   'Every block is placed': '모든 블록을 설치했습니다',
+  'Working out the build order…': '건축 순서를 계산하는 중…',
   'Step {n} of {total}': '{total}단계 중 {n}단계',
   'Layers: survival build order': '레이어: 서바이벌 건축 순서',
   'Order: previous or next block': '순서: 이전 또는 다음 블록',
