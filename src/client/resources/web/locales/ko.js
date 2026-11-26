@@ -492,4 +492,8 @@ export default {
   'Save notes': '메모 저장',
   'Everyone who can see it reads these.': '볼 수 있는 사람은 모두 이 메모를 읽습니다.',
   "Couldn't save the notes": '메모를 저장하지 못했습니다',
+  'Not ready to activate: {bad} of {n} redstone and container blocks are missing or wrong.':
+    '아직 가동할 수 없음: 레드스톤·보관함 블록 {n}개 중 {bad}개가 없거나 잘못됐습니다.',
+  'Ready to activate: all {n} redstone and container blocks are right.':
+    '가동 준비 완료: 레드스톤·보관함 블록 {n}개가 모두 올바릅니다.',
 };

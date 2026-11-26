@@ -1026,6 +1026,23 @@ button {
   gap: 6px;
 }
 
+.ready {
+  --mark: var(--state);
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+.ready.ok {
+  --mark: var(--ok);
+  color: var(--text);
+}
+.ready .i {
+  color: var(--mark);
+}
+
 .facts {
   display: grid;
   grid-template-columns: auto 1fr;
