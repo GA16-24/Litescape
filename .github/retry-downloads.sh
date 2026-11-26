@@ -8,6 +8,8 @@ for attempt in 1 2 3; do
   status=${PIPESTATUS[0]}
   [ "$status" -eq 0 ] && exit 0
   grep -q -E 'Could not (resolve|GET|HEAD) |terminated the handshake|was not found in any of the following sources|Connection reset' "$log" || exit "$status"
-  echo "::warning::A download failed (attempt $attempt of 3); running the build again"
+  [ "$attempt" -lt 3 ] || break
+  echo "::warning::A download failed (attempt $attempt of 3); running the build again in $((attempt * 30)) seconds"
+  sleep $((attempt * 30))
 done
 exit "$status"

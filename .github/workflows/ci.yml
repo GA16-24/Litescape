@@ -216,8 +216,9 @@ jobs:
         with:
           fail-on-severity: low
           fail-on-scopes: runtime, development, unknown
-          # netty-handler 4.1.118 and 4.2.7 come with Minecraft 1.21.x and 26.1, which the mod compiles and runs
-          # against. Players' games ship them; the mod doesn't bundle Netty or use its TLS, SNI or IP filter code.
-          allow-ghsas: GHSA-3qp7-7mw8-wx86, GHSA-c4c3-7fpv-j4q5, GHSA-c653-97m9-rcg9, GHSA-fccg-mwvh-qqg4, GHSA-x4gw-5cx5-pgmh
+          # Every netty-handler advisory for the Netty versions Minecraft 1.21.1 to 26.3 ship (4.1.97 to 4.2.16). The mod
+          # compiles and runs against them, players' games ship them, and the mod doesn't bundle Netty or use its TLS,
+          # SNI or IP filter code.
+          allow-ghsas: GHSA-3qp7-7mw8-wx86, GHSA-4g8c-wm8x-jfhw, GHSA-57m8-f3v5-hm5m, GHSA-c4c3-7fpv-j4q5, GHSA-c653-97m9-rcg9, GHSA-fccg-mwvh-qqg4, GHSA-x4gw-5cx5-pgmh
           # Wait for the Gradle snapshot only when dependency-submission actually ran.
           retry-on-snapshot-warnings: ${{ needs.dependency-submission.result == 'success' }}
