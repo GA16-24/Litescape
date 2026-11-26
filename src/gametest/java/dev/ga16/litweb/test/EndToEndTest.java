@@ -107,7 +107,7 @@ public class EndToEndTest implements FabricClientGameTest {
 				collectTextures(vp);
 				// The copy is 30 blocks east of the cottage, so its hopper is at 38 -60 13.
 				String hopper = String.valueOf(vp.getAsJsonObject("contents").get("38,-60,13"));
-				check(hopper.equals("[[0,18,\"Redstone Dust\"],[1,1,\"Stick\"]]"), "hopper contents in the placement view: " + vp.get("contents"));
+				check(hopper.equals("[[0,18,\"Redstone Dust\",\"minecraft:item/redstone\"],[1,1,\"Stick\",\"minecraft:item/stick\"]]"), "hopper contents in the placement view: " + vp.get("contents"));
 				JsonObject st = json(save("status-placement.json", call(ctx, "GET", "/api/status?type=placement&id=" + placement)));
 				JsonArray c = st.getAsJsonArray("counts");
 				check(c.get(1).getAsInt() > 0 && c.get(2).getAsInt() > 0 && c.get(3).getAsInt() == 1 && c.get(4).getAsInt() >= 1, "placement status counts " + c);
@@ -348,6 +348,13 @@ public class EndToEndTest implements FabricClientGameTest {
 
 	private void collectTextures(JsonObject view) {
 		for (JsonElement t : view.getAsJsonArray("tex")) textures.add(t.getAsJsonObject().get("id").getAsString());
+		// Item icons in container contents, served by /tex/ like block textures.
+		if (view.has("contents")) for (var c : view.getAsJsonObject("contents").entrySet()) {
+			for (JsonElement item : c.getValue().getAsJsonArray()) {
+				String icon = item.getAsJsonArray().get(3).getAsString();
+				if (!icon.isEmpty()) textures.add(icon);
+			}
+		}
 	}
 
 	private String save(String name, String body) throws IOException {

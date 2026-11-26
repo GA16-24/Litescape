@@ -2227,13 +2227,22 @@ function pick() {
   card.style.left = `${Math.min(r.width - inset - w - 8, x + 16)}px`;
   card.style.top = `${y + 16 + h > r.height ? y - h - 12 : y + 16}px`;
 }
-/** What a container in the schematic holds: [[slot, count, name], ...]. */
+/** The /tex/ URL of an item's icon sprite ("minecraft:item/redstone"), or '' when it has none. */
+function itemIcon(sprite) {
+  const m = /^([a-z0-9_.-]+):([a-z0-9_./-]+)$/.exec(sprite || '');
+  return m ? `tex/${m[1]}/${m[2]}` : '';
+}
+
+/** What a container in the schematic holds: [[slot, count, name, icon sprite], ...]. */
 function itemsHtml(items) {
   if (!items?.length) return '';
   const MAX = 9;
   return `<div class="hc-items">${items
     .slice(0, MAX)
-    .map(([, n, name]) => `<div><span class="hc-n num">${n}×</span>${esc(name)}</div>`)
+    .map(([, n, name, sprite]) => {
+      const icon = itemIcon(sprite);
+      return `<div><span class="hc-n num">${n}×</span>${icon ? `<i class="hc-icon" style="background-image:url(${icon})"></i>` : ''}${esc(name)}</div>`;
+    })
     .join(
       '',
     )}${items.length > MAX ? `<div class="hc-sub">${t('{n} more', { n: items.length - MAX })}</div>` : ''}</div>`;

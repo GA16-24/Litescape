@@ -740,6 +740,20 @@ button {
   display: grid;
   gap: 2px;
 }
+.hover-card .hc-items > div {
+  display: flex;
+  align-items: center;
+}
+.hover-card .hc-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  /* Animated textures are a vertical strip of frames; show the first. */
+  background-size: 16px auto;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
 .hover-card .hc-n {
   display: inline-block;
   min-width: 3ch;

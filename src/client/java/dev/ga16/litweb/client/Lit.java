@@ -25,6 +25,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Vec3i;
@@ -33,6 +35,8 @@ import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
@@ -161,7 +165,7 @@ final class Lit {
 		return v;
 	}
 
-	/** Container contents by world position "x,y,z": [[slot, count, item name], ...] in slot order. */
+	/** Container contents by world position "x,y,z": [[slot, count, item name, icon sprite], ...] in slot order. */
 	private static JsonObject contents(SchematicPlacement sp, HolderLookup.Provider registries) {
 		JsonObject out = new JsonObject();
 		var ops = registries.createSerializationContext(NbtOps.INSTANCE);
@@ -179,6 +183,7 @@ final class Lit {
 					item.add(tag.getByteOr("Slot", (byte) 0));
 					item.add(stack.getCount());
 					item.add(stack.getHoverName().getString());
+					item.add(icon(stack));
 					items.add(item);
 				}
 				if (items.isEmpty()) continue;
@@ -187,6 +192,18 @@ final class Lit {
 			}
 		}
 		return out;
+	}
+
+	/**
+	 * The sprite the item's GUI model draws, such as "minecraft:item/redstone", for /tex/; "" when it has none.
+	 * shortcut: block items get their particle texture and tinted items (potions, dyed armor) lose the tint; render real GUI icons if that bothers anyone.
+	 */
+	private static String icon(ItemStack stack) {
+		Minecraft mc = Minecraft.getInstance();
+		ItemStackRenderState state = new ItemStackRenderState();
+		mc.getItemModelResolver().updateForTopItem(state, stack, ItemDisplayContext.GUI, mc.level, null, 0);
+		var material = state.pickParticleMaterial(RandomSource.create(0));
+		return material == null ? "" : material.sprite().contents().name().toString();
 	}
 
 	// ---- shared placements: the placement with its schematic (block entities included), as compressed NBT ----
