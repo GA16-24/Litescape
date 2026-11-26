@@ -31,13 +31,11 @@ final class Bp {
 		var level = Minecraft.getInstance().level;
 		if (level == null || !BuildprintPlacements.isAvailable()) return out;
 		String dim = level.dimension().identifier().toString();
-		Map<String, Integer> seen = new HashMap<>();
 		for (int id : BuildprintPlacements.ids()) {
 			if (!dim.equals(BuildprintPlacements.dimension(id))) continue;
 			String name = BuildprintPlacements.name(id);
-			int n = seen.merge(name, 1, Integer::sum);
-			// BuildPrint gives a build a new id after a restart; the name keeps its shared copy linked to it.
-			String key = "buildprint:" + dim + "/" + name + (n > 1 ? "#" + n : "");
+			// BuildPrint gives a build a new id after a restart. Name and origin survive that, and no other build can take them over.
+			String key = "buildprint:" + dim + "/" + name + "@" + Arrays.toString(BuildprintPlacements.origin(id));
 			int[] box = BuildprintPlacements.bounds(id);
 			out.add(new Schematics.Placement(key, name, BuildprintPlacements.visible(id), author(id), List.of(box),
 				id + ":" + BuildprintPlacements.version(id), () -> volume(id, box)));
