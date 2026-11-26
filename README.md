@@ -107,7 +107,7 @@ Server reads only touch chunks that are already loaded. They never load or gener
 
 The web server binds to `127.0.0.1` only. It rejects requests whose `Host` or `Origin` isn't the local page, so other websites can't read your world or share on your behalf.
 
-The server switcher keeps each server's shared list and the schematics you opened in `config/litweb-servers/`. A copy is deleted once it's unshared or you lose access and you next visit that server. Surroundings aren't kept in these copies, so they only show while you're on that server. Taking away someone's access doesn't remove a copy they already downloaded.
+The server switcher keeps each server's shared list and the schematics you opened in `~/.litescape/<your player UUID>/`, so every instance you play with the same Minecraft account shares them and other accounts on this computer don't see them. Older versions kept them in each instance's `config/litweb-servers/`; the first launch after updating moves that folder over. A copy is deleted once it's unshared or you lose access and you next visit that server. Surroundings aren't kept in these copies, so they only show while you're on that server. Taking away someone's access doesn't remove a copy they already downloaded.
 
 Opening the Shaders tab asks Modrinth for the popular packs' icons and download counts. Getting a pack downloads it from Modrinth. Nothing else leaves your computer, and these requests carry no account or world details. Shader settings are saved in `config/litweb-shaders.json`.
 

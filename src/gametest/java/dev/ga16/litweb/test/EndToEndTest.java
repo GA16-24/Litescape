@@ -54,6 +54,14 @@ public class EndToEndTest implements FabricClientGameTest {
 			Files.createDirectories(out);
 			// The singleplayer host isn't an operator, and surroundings default to operators only; allow them like an admin would.
 			Files.writeString(FabricLoader.getInstance().getConfigDir().resolve("litweb-server.properties"), "terrain-capture=everyone\n");
+			// A folder from before servers were kept per account, which the first load should move to this account's folder.
+			Path account = Path.of(System.getProperty("user.home"), ".litescape", ctx.computeOnClient(mc -> mc.getUser().getProfileId()).toString());
+			if (Files.exists(account)) try (var files = Files.walk(account)) {
+				for (Path f : files.sorted(java.util.Comparator.reverseOrder()).toList()) Files.delete(f);
+			}
+			Path old = FabricLoader.getInstance().getConfigDir().resolve("litweb-servers");
+			Files.createDirectories(old.resolve("old"));
+			Files.writeString(old.resolve("old").resolve("kept.bin"), "");
 			try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
 				sp.getConnection().waitForChunksRender();
 				buildCottage(sp.getServer());
@@ -149,7 +157,8 @@ public class EndToEndTest implements FabricClientGameTest {
 				// The world is remembered with its shared list and the copy downloaded above, for viewing after leaving.
 				JsonObject here = json(call(ctx, "GET", "/api/state")).getAsJsonArray("servers").get(0).getAsJsonObject();
 				check(here.getAsJsonArray("shared").toString().contains(shared), "remembered server lists the shared schematic");
-				try (var files = Files.walk(FabricLoader.getInstance().getConfigDir().resolve("litweb-servers"))) {
+				check(Files.exists(account.resolve("old").resolve("kept.bin")) && !Files.exists(old), "old per-instance folder moved to the account");
+				try (var files = Files.walk(account)) {
 					check(files.anyMatch(f -> f.getFileName().toString().equals(shared + ".bin")), "downloaded copy saved for later");
 				}
 				String notSaved = "";

@@ -39,9 +39,16 @@ final class Servers {
 	}
 
 	private static final Gson GSON = new Gson();
-	private static final Path DIR = FabricLoader.getInstance().getConfigDir().resolve("litweb-servers");
+	/** One folder per Minecraft account, shared by every instance it plays in; the saved lists are what that player may see. */
+	private static final Path DIR =
+		Path.of(System.getProperty("user.home"), ".litescape", Minecraft.getInstance().getUser().getProfileId().toString());
 	private static final Path FILE = DIR.resolve("servers.json");
-	private static final Map<String, Entry> known = load();
+	private static final Map<String, Entry> known;
+
+	static {
+		migrate();
+		known = load();
+	}
 
 	/** The server or world the client is in, or null in the menus. Client thread. */
 	static @Nullable Id current() {
@@ -59,6 +66,7 @@ final class Servers {
 	static synchronized void remember(String sharedJson) {
 		Id id = current();
 		if (id == null) return;
+		known.putAll(load()); // another instance on the same account may have saved servers since
 		Entry e = known.computeIfAbsent(id.key(), k -> new Entry());
 		e.name = id.name();
 		e.address = id.address();
@@ -68,7 +76,7 @@ final class Servers {
 		for (var s : JsonParser.parseString(sharedJson).getAsJsonArray()) ids.add(s.getAsJsonObject().get("id").getAsString());
 		try {
 			Files.createDirectories(DIR);
-			Path tmp = DIR.resolve("servers.json.tmp");
+			Path tmp = Files.createTempFile(DIR, "servers", ".tmp");
 			Files.writeString(tmp, GSON.toJson(known));
 			Files.move(tmp, FILE, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
 			// Drop saved copies of schematics that were unshared or are no longer visible to this player.
@@ -115,6 +123,19 @@ final class Servers {
 
 	private static Path blobDir(String key) {
 		return DIR.resolve(UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8)).toString());
+	}
+
+	/** Moves the folder older versions kept in this instance's config to this account, unless the account already has one. */
+	private static void migrate() {
+		Path old = FabricLoader.getInstance().getConfigDir().resolve("litweb-servers");
+		if (!Files.isDirectory(old) || Files.exists(DIR)) return;
+		try {
+			Files.createDirectories(DIR.getParent());
+			Files.move(old, DIR);
+		} catch (IOException e) {
+			// shortcut: a move across drives fails and leaves the old folder in place; copy instead if anyone reports it.
+			LitWeb.LOG.warn("Could not move {} to {}", old, DIR, e);
+		}
 	}
 
 	private static Map<String, Entry> load() {
