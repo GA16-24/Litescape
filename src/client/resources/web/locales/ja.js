@@ -3,6 +3,7 @@ export default {
   'Still missing': '未設置',
   'Wrong block': 'ブロック違い',
   'Wrong orientation or state': '向きや状態が違う',
+  'Wrong redstone setting': 'レッドストーンの設定が違う',
   'Not loaded on the server': 'サーバーで未読み込み',
   'Loading textures…': 'テクスチャを読み込み中…',
   'Building mesh…': 'メッシュを構築中…',

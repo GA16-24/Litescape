@@ -3,6 +3,7 @@ export default {
   'Still missing': '아직 없음',
   'Wrong block': '잘못된 블록',
   'Wrong orientation or state': '방향 또는 상태가 다름',
+  'Wrong redstone setting': '레드스톤 설정이 다름',
   'Not loaded on the server': '서버에 로드되지 않음',
   'Loading textures…': '텍스처 불러오는 중…',
   'Building mesh…': '모델 만드는 중…',

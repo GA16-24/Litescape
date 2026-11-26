@@ -3,6 +3,7 @@ export default {
   'Still missing': 'Todavía falta',
   'Wrong block': 'Bloque incorrecto',
   'Wrong orientation or state': 'Orientación o estado incorrecto',
+  'Wrong redstone setting': 'Ajuste de redstone incorrecto',
   'Not loaded on the server': 'No cargado en el servidor',
   'Loading textures…': 'Cargando texturas…',
   'Building mesh…': 'Generando la malla…',

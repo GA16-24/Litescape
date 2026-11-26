@@ -9,14 +9,23 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.level.block.BaseRailBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CrafterBlock;
+import net.minecraft.world.level.block.DispenserBlock;
+import net.minecraft.world.level.block.HopperBlock;
+import net.minecraft.world.level.block.piston.PistonBaseBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.Property;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -26,7 +35,12 @@ import org.jspecify.annotations.Nullable;
 public final class Volume {
 	public static final int MAX_VOLUME = 16_777_216;
 	/** Per-voxel build status codes, shared with the web app. */
-	public static final byte NONE = 0, OK = 1, MISSING = 2, WRONG_BLOCK = 3, WRONG_STATE = 4, UNKNOWN = 5;
+	public static final byte NONE = 0, OK = 1, MISSING = 2, WRONG_BLOCK = 3, WRONG_STATE = 4, UNKNOWN = 5, WRONG_REDSTONE = 6;
+	public static final int STATUSES = 7;
+	/** On a redstone component, these decide what it does. Power, lit and extended don't: the circuit sets those. */
+	private static final Set<Property<?>> REDSTONE = Set.of(BlockStateProperties.FACING, BlockStateProperties.HORIZONTAL_FACING,
+		BlockStateProperties.FACING_HOPPER, BlockStateProperties.DELAY, BlockStateProperties.MODE_COMPARATOR, BlockStateProperties.ATTACH_FACE,
+		BlockStateProperties.INVERTED, BlockStateProperties.ORIENTATION, BlockStateProperties.RAIL_SHAPE_STRAIGHT);
 
 	public final int x0, y0, z0, sx, sy, sz;
 	public final List<@Nullable BlockState> palette = new ArrayList<>();
@@ -111,11 +125,20 @@ public final class Volume {
 					byte s = have == null ? UNKNOWN
 						: have == want ? OK
 						: have.isAir() || have.canBeReplaced() && !have.is(want.getBlock()) ? MISSING
-						: have.is(want.getBlock()) ? WRONG_STATE : WRONG_BLOCK;
+						: have.is(want.getBlock()) ? redstone(want, have) ? WRONG_REDSTONE : WRONG_STATE : WRONG_BLOCK;
 					out[i] = s;
 					counts[s]++;
 				}
 		return out;
+	}
+
+	/** Whether two states of the same block differ in a way that breaks a redstone machine, like an observer facing the wrong way. */
+	private static boolean redstone(BlockState want, BlockState have) {
+		Block b = want.getBlock();
+		if (!(want.isSignalSource() || b instanceof HopperBlock || b instanceof PistonBaseBlock || b instanceof DispenserBlock
+			|| b instanceof CrafterBlock || b instanceof BaseRailBlock)) return false;
+		for (Property<?> p : REDSTONE) if (want.hasProperty(p) && !want.getValue(p).equals(have.getValue(p))) return true;
+		return false;
 	}
 
 	/**

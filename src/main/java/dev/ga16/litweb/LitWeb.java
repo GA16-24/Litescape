@@ -481,7 +481,7 @@ public final class LitWeb implements ModInitializer {
 	}
 
 	static byte[] status(Volume v, ServerLevel level) {
-		int[] counts = new int[6];
+		int[] counts = new int[Volume.STATUSES];
 		byte[] st = v.diff(loadedOnly(level), counts);
 		return encodeStatus(counts, st);
 	}

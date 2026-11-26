@@ -12,6 +12,7 @@ const STATUS = {
   3: { key: 'wrong', label: t('Wrong block'), color: 'var(--wrong)' },
   4: { key: 'state', label: t('Wrong orientation or state'), color: 'var(--state)' },
   5: { key: 'unknown', label: t('Not loaded on the server'), color: 'var(--unknown)' },
+  6: { key: 'redstone', label: t('Wrong redstone setting'), color: 'var(--redstone)' },
 };
 
 const ICON = {
@@ -1419,13 +1420,13 @@ function renderInspector() {
 
   if (S.counts) {
     const c = S.counts;
-    const total = c[1] + c[2] + c[3] + c[4] + c[5];
+    const total = c[1] + c[2] + c[3] + c[4] + c[5] + c[6];
     const pct = total ? (100 * c[1]) / total : 0;
     const ago = Math.max(0, Math.round((Date.now() - S.statusAt) / 1000));
     h += `<section class="panel"><div class="panel-head"><h3>${t('Build progress')}</h3><span class="row-meta num">${fmt.format(c[1])} / ${fmt.format(total)}</span></div>
       <div class="big-pct"><strong class="num">${pct >= 99.95 && pct < 100 ? '99.9' : pct.toFixed(pct === 100 || pct === 0 ? 0 : 1)}%</strong><span>${t(pct === 100 ? 'Complete' : 'placed')}</span></div>
-      <div class="stack">${[1, 3, 4, 5, 2].map((k) => (c[k] ? `<i style="width:${(100 * c[k]) / total}%;background:${STATUS[k].color}"></i>` : '')).join('')}</div>
-      <div class="legend">${[1, 2, 3, 4, 5]
+      <div class="stack">${[1, 6, 3, 4, 5, 2].map((k) => (c[k] ? `<i style="width:${(100 * c[k]) / total}%;background:${STATUS[k].color}"></i>` : '')).join('')}</div>
+      <div class="legend">${[1, 2, 6, 3, 4, 5]
         .filter((k) => c[k] || k <= 2)
         .map(
           (k) =>

@@ -11,8 +11,8 @@ const DIRS = [
   [1, 0, 0],
 ];
 const SHADE = [0.5, 1, 0.8, 0.8, 0.6, 0.6];
-// Status codes from Volume.java: 1 ok, 2 missing, 3 wrong block, 4 wrong state, 5 not loaded.
-const STATUS_TINT = { 3: [1, 0.33, 0.3], 4: [1, 0.72, 0.25] };
+// Status codes from Volume.java: 1 ok, 2 missing, 3 wrong block, 4 wrong state, 5 not loaded, 6 wrong redstone setting.
+const STATUS_TINT = { 3: [1, 0.33, 0.3], 4: [1, 0.72, 0.25], 6: [0.85, 0.35, 1] };
 
 let V = null;
 
@@ -100,7 +100,7 @@ function build(o) {
     if (st) {
       const s = st[i];
       if (o.filter === 'remaining' && s === 1) continue;
-      if (o.filter === 'problems' && s !== 3 && s !== 4) continue;
+      if (o.filter === 'problems' && s !== 3 && s !== 4 && s !== 6) continue;
       if (s === 2) g = o.ghosts ? 2 : 0;
       if (g === 0) continue;
     }
