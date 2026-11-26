@@ -60,6 +60,7 @@ public class EndToEndTest implements FabricClientGameTest {
 
 	@Override
 	public void runTest(ClientGameTestContext ctx) {
+		Thread watchdog = watchdog();
 		try {
 			Files.createDirectories(out);
 			// Region sizes in a shared placement come from another player; a product that wraps must still count as too large.
@@ -316,7 +317,30 @@ public class EndToEndTest implements FabricClientGameTest {
 			Files.writeString(out.resolve("passed"), "");
 		} catch (IOException e) {
 			throw new RuntimeException(e);
+		} finally {
+			watchdog.interrupt();
 		}
+	}
+
+	/** A test that hangs would sit silent until the build's timeout; this logs where every thread is and fails first. */
+	private static Thread watchdog() {
+		Thread t = new Thread(() -> {
+			try {
+				Thread.sleep(java.time.Duration.ofMinutes(10));
+			} catch (InterruptedException e) {
+				return;
+			}
+			StringBuilder dump = new StringBuilder("The end-to-end test is still running after 10 minutes. Threads:\n");
+			Thread.getAllStackTraces().forEach((thread, stack) -> {
+				dump.append(thread).append('\n');
+				for (StackTraceElement frame : stack) dump.append("\tat ").append(frame).append('\n');
+			});
+			dev.ga16.litweb.LitWeb.LOG.error(dump.toString());
+			Runtime.getRuntime().halt(1);
+		}, "litweb test watchdog");
+		t.setDaemon(true);
+		t.start();
+		return t;
 	}
 
 	/** A BuildPrint build and selection show up like Litematica's: listed, viewable and compared with the world. */

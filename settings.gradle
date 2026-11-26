@@ -1,6 +1,11 @@
 pluginManagement {
 	repositories {
-		maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+		// Only Fabric's own artifacts: a Fabric Maven error would otherwise fail the lookup of plugins it doesn't have.
+		maven {
+			name = 'Fabric'
+			url = 'https://maven.fabricmc.net/'
+			content { includeGroupAndSubgroups 'net.fabricmc' }
+		}
 		mavenCentral()
 		gradlePluginPortal()
 	}
