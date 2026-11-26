@@ -411,8 +411,12 @@ public final class LitWeb implements ModInitializer {
 		}
 		if (margin < 0 || margin > maxMargin()) throw new IOException("Surroundings can reach at most " + maxMargin() + " blocks on this server");
 		if (!allowed(player, "terrain-capture")) throw new IOException("This server doesn't let you capture surroundings");
-		int[] box = {schem.x0 - margin, Math.max(level.getMinY(), schem.y0 - margin), schem.z0 - margin,
-			schem.x0 + schem.sx - 1 + margin, Math.min(level.getMaxY(), schem.y0 + schem.sy - 1 + margin), schem.z0 + schem.sz - 1 + margin};
+		//? if >=1.21.2 {
+		int minY = level.getMinY(), maxY = level.getMaxY();
+		//?} else
+		//int minY = level.getMinBuildHeight(), maxY = level.getMaxBuildHeight() - 1; // the old maximum was exclusive
+		int[] box = {schem.x0 - margin, Math.max(minY, schem.y0 - margin), schem.z0 - margin,
+			schem.x0 + schem.sx - 1 + margin, Math.min(maxY, schem.y0 + schem.sy - 1 + margin), schem.z0 + schem.sz - 1 + margin};
 		long volume = (long) (box[3] - box[0] + 1) * Math.max(0, box[4] - box[1] + 1) * (box[5] - box[2] + 1);
 		if (box[4] < box[1] || volume > SERVER_READ_MAX) {
 			throw new IOException("Surroundings of " + margin + " blocks are too large to capture (" + volume + " > " + SERVER_READ_MAX + " blocks)");

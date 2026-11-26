@@ -90,7 +90,10 @@ final class Models {
 		o.addProperty("p", props.toString());
 		o.addProperty("air", state.isAir());
 		if (state.isAir()) return o;
+		//? if >=1.21.2 {
 		o.addProperty("opaque", state.isSolidRender());
+		//?} else
+		//o.addProperty("opaque", state.isSolidRender(EmptyBlockGetter.INSTANCE, BlockPos.ZERO));
 		o.addProperty("selfCull", state.skipRendering(state, Direction.UP));
 		o.addProperty("light", state.getLightEmission());
 		// Mob spawning, judged for a zombie like the game does: can one stand on this block, and fit inside this cell?

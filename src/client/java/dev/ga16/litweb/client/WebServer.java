@@ -252,7 +252,10 @@ final class WebServer {
 		String terrain = Bridge.terrainJson;
 		if (terrain != null) {
 			JsonObject t = JsonParser.parseString(terrain).getAsJsonObject();
+			//? if >=1.21.2 {
 			t.add("y", ints(level.getMinY(), level.getMaxY())); // surroundings stop at the world's floor and ceiling
+			//?} else
+			//t.add("y", ints(level.getMinBuildHeight(), level.getMaxBuildHeight() - 1)); // surroundings stop at the world's floor and ceiling
 			o.add("terrain", t);
 		}
 
