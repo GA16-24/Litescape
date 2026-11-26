@@ -309,11 +309,13 @@ export async function installDeps(dir, mc) {
     // Newest first, betas included: Fabric API's build for a new Minecraft version is often still marked beta.
     const file = versions[0]?.files.find((f) => f.primary) ?? versions[0]?.files[0];
     if (!file) throw new Error(`Modrinth has no ${slug} for Minecraft ${mc} yet`);
+    if (!file.url.startsWith('https://cdn.modrinth.com/')) throw new Error(`Modrinth sent ${slug} from ${file.url}`);
     const data = Buffer.from(await (await get(file.url)).arrayBuffer());
     if (crypto.createHash('sha512').update(data).digest('hex') !== file.hashes.sha512) {
       throw new Error(`${file.filename} from Modrinth failed its checksum`);
     }
-    const target = path.join(modsDir, `${path.basename(file.filename, '.jar')}.jar`);
+    // The name comes from the network: keep it a plain file name inside mods/.
+    const target = path.join(modsDir, `${file.filename.replace(/\.jar$/, '').replace(/[^\w.+-]/g, '_')}.jar`);
     fs.writeFileSync(`${target}.part`, data);
     fs.renameSync(`${target}.part`, target);
   }
@@ -328,11 +330,15 @@ export async function createInstance(root, mc) {
   const loaders = await (await get(meta)).json();
   const loader = (loaders.find((l) => l.loader.stable) ?? loaders[0])?.loader.version;
   if (!loader) throw new Error(`Fabric doesn't support Minecraft ${mc} yet`);
+  if (!/^[\w.+-]+$/.test(loader)) throw new Error(`Fabric meta sent an odd loader version: ${loader}`);
   const profile = await (await get(`${meta}/${loader}/profile/json`)).json();
-  const versionDir = path.join(root, 'versions', profile.id);
+  // The folder name comes from versions we checked, never from the response, so it can't point outside versions/.
+  const id = `fabric-loader-${loader}-${mc}`;
+  if (profile.id !== id) throw new Error(`Fabric meta sent profile ${profile.id}, expected ${id}`);
+  const versionDir = path.join(root, 'versions', id);
   fs.mkdirSync(versionDir, { recursive: true });
-  fs.writeFileSync(path.join(versionDir, `${profile.id}.json`), JSON.stringify(profile, null, 2));
-  fs.writeFileSync(path.join(versionDir, `${profile.id}.jar`), ''); // Fabric's installer leaves the same empty jar
+  fs.writeFileSync(path.join(versionDir, `${id}.json`), JSON.stringify(profile, null, 2));
+  fs.writeFileSync(path.join(versionDir, `${id}.jar`), ''); // Fabric's installer leaves the same empty jar
 
   const gameDir = path.join(root, 'litescape');
   const now = new Date().toISOString();
@@ -343,7 +349,7 @@ export async function createInstance(root, mc) {
     name: 'Litescape',
     type: 'custom',
     lastUsed: now,
-    lastVersionId: profile.id,
+    lastVersionId: id,
     gameDir,
   };
   fs.writeFileSync(file, JSON.stringify(json, null, 2));

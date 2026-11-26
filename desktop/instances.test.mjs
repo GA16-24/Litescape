@@ -144,16 +144,17 @@ test('creates a Minecraft Launcher instance and downloads the dependencies it la
   const files = {};
   for (const id of ['fabric-api', 'malilib', 'litematica']) {
     jar(path.join(tmp, 'cdn', `${id}.jar`), { id, version: '1.0.0' });
-    files[`https://cdn.example/${id}.jar`] = fs.readFileSync(path.join(tmp, 'cdn', `${id}.jar`));
+    files[`https://cdn.modrinth.com/${id}.jar`] = fs.readFileSync(path.join(tmp, 'cdn', `${id}.jar`));
   }
   const sha512 = (b) => crypto.createHash('sha512').update(b).digest('hex');
   let corrupt = false;
+  let profileId = '../../evil';
   t.mock.method(globalThis, 'fetch', async (url) => {
     const u = new URL(url);
     const json = (body) => new Response(JSON.stringify(body));
     if (u.host === 'meta.fabricmc.net') {
       return u.pathname.endsWith('/profile/json')
-        ? json({ id: 'fabric-loader-0.20.1-26.3', inheritsFrom: '26.3' })
+        ? json({ id: profileId, inheritsFrom: '26.3' })
         : json([
             { loader: { version: '0.21.0-beta', stable: false } },
             { loader: { version: '0.20.1', stable: true } },
@@ -162,7 +163,7 @@ test('creates a Minecraft Launcher instance and downloads the dependencies it la
     if (u.host === 'api.modrinth.com') {
       assert.equal(u.searchParams.get('game_versions'), '["26.3"]');
       const slug = u.pathname.split('/')[3];
-      const fileUrl = `https://cdn.example/${slug}.jar`;
+      const fileUrl = `https://cdn.modrinth.com/${slug}.jar`;
       const hash = corrupt ? 'bad' : sha512(files[fileUrl]);
       return json([
         {
@@ -177,6 +178,8 @@ test('creates a Minecraft Launcher instance and downloads the dependencies it la
   const mc = path.join(tmp, 'minecraft');
   await assert.rejects(createInstance(mc, '26.3'), /Minecraft Launcher not found/);
   write(path.join(mc, 'launcher_profiles.json'), { profiles: { other: { name: 'Mine', lastVersionId: '26.3' } } });
+  await assert.rejects(createInstance(mc, '26.3'), /expected fabric-loader-0.20.1-26.3/);
+  profileId = 'fabric-loader-0.20.1-26.3';
   const dir = await createInstance(mc, '26.3');
   assert.equal(dir, path.join(mc, 'litescape'));
   const profiles = JSON.parse(fs.readFileSync(path.join(mc, 'launcher_profiles.json'), 'utf8')).profiles;
