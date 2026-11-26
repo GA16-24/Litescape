@@ -187,6 +187,13 @@ public final class LitWeb implements ModInitializer {
 		};
 	}
 
+	private static ServerLevel serverLevel(ServerPlayer player) {
+		//? if >=1.21.6 {
+		return player.level();
+		//?} else
+		//return player.serverLevel();
+	}
+
 	private static boolean isOp(ServerPlayer player) {
 		//? if >=1.21.11 {
 		return player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
@@ -234,7 +241,7 @@ public final class LitWeb implements ModInitializer {
 				int[] u = Volume.union(boxes);
 				long volume = (long) (u[3] - u[0] + 1) * (u[4] - u[1] + 1) * (u[5] - u[2] + 1);
 				if (volume > SERVER_READ_MAX) throw new IOException("Area is too large for a server read (" + volume + " > " + SERVER_READ_MAX + " blocks)");
-				ServerLevel level = player.level();
+				ServerLevel level = serverLevel(player);
 				Volume v = Volume.ofBoxes(boxes);
 				v.fill(boxes, loadedOnly(level));
 				send(player, req.req(), "", v.encode());
@@ -369,7 +376,7 @@ public final class LitWeb implements ModInitializer {
 			s.captured = old.captured;
 			s.chunks = old.chunks;
 			s.chunksCaptured = old.chunksCaptured;
-		} else capture(player, s, v, player.level(), margin);
+		} else capture(player, s, v, serverLevel(player), margin);
 		Files.write(dir.resolve(id + ".bin"), data);
 		Path placement = dir.resolve(id + ".litematic");
 		if (placementLen > 0) Files.write(placement, Arrays.copyOfRange(all, data.length, all.length));

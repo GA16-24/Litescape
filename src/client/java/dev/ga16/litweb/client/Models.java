@@ -24,7 +24,11 @@ import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.BlockModelPart;
 import net.minecraft.client.renderer.block.model.BlockStateModel;
-import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+*///?}
+//? if >=1.21.6 <26.1 {
+/*import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+*///?} elif <1.21.6 {
+/*import net.minecraft.client.renderer.RenderType;
 *///?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -233,7 +237,7 @@ final class Models {
 	private int tint(BlockTintSource src, BlockState state) {
 		return (level == null ? src.color(state) : src.colorInWorld(state, level, tintPos)) & 0xFFFFFF;
 	}
-	//?} else {
+	//?} elif >=1.21.6 {
 	/*/^* The web app's layers, 26.1's: 0 solid, 1 cutout, 2 translucent. By name, since older versions have more of them. ^/
 	private static int layer(ChunkSectionLayer layer) {
 		return switch (layer.name()) {
@@ -241,6 +245,11 @@ final class Models {
 			case "TRANSLUCENT", "TRIPWIRE" -> 2;
 			default -> 1;
 		};
+	}
+	*///?} else {
+	/*/^* The web app's layers, 26.1's: 0 solid, 1 cutout, 2 translucent. ^/
+	private static int layer(RenderType layer) {
+		return layer == RenderType.translucent() || layer == RenderType.tripwire() ? 2 : layer == RenderType.solid() ? 0 : 1;
 	}
 	*///?}
 
