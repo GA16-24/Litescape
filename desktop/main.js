@@ -104,7 +104,8 @@ function setupInstaller(win) {
         console.warn(`Couldn't update the mod in ${i.dir}:`, e.message); // usually the game has the jar open
       }
     }
-    known = new Map(instances.map((i) => [i.dir, i]));
+    // Profiles can share a folder. Reversed so the first row wins, and scan sorts the installable ones first.
+    known = new Map(instances.toReversed().map((i) => [i.dir, i]));
     return { mod: mod && { version: mod.version }, instances };
   };
   // Only folders from the last scan, so the page can't write mods anywhere else.
@@ -121,6 +122,7 @@ function setupInstaller(win) {
   handle('instances', list);
   handle('install', async (dir) => {
     const i = checked(dir);
+    if (i.blocker) throw new Error(i.blocker);
     await installAll(i.dir, i.mc ?? mc);
     return list();
   });
