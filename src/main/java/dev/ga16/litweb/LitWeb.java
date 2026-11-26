@@ -76,6 +76,8 @@ public final class LitWeb implements ModInitializer {
 		/** When the surroundings were captured, and how many of their chunks the server had loaded then. */
 		public long captured;
 		public int chunks, chunksCaptured;
+		/** Whether <id>.litematic holds the Litematica placement with its schematic, chest and hopper contents included. */
+		public boolean placement;
 	}
 
 	public static final class Contributor {
@@ -225,6 +227,12 @@ public final class LitWeb implements ModInitializer {
 				Shared s = require(player, req.arg());
 				send(player, req.req(), "", Files.readAllBytes(dir.resolve(s.id + ".bin")));
 			}
+			case "placement" -> {
+				Shared s = require(player, req.arg());
+				Path file = dir.resolve(s.id + ".litematic");
+				if (!s.placement || !Files.exists(file)) throw new IOException("This schematic was shared without its Litematica placement. Ask its owner to update the copy.");
+				send(player, req.req(), "", Files.readAllBytes(file));
+			}
 			case "status" -> {
 				if (!allowed(player, "shared-progress")) throw new IOException("no-permission");
 				long now = System.currentTimeMillis();
@@ -263,6 +271,7 @@ public final class LitWeb implements ModInitializer {
 				Files.deleteIfExists(dir.resolve(s.id + ".bin"));
 				Files.deleteIfExists(dir.resolve(s.id + ".credited"));
 				Files.deleteIfExists(dir.resolve(s.id + ".terrain.bin"));
+				Files.deleteIfExists(dir.resolve(s.id + ".litematic"));
 				saveIndexAndBroadcast(server);
 				send(player, req.req(), "", new byte[0]);
 			}
@@ -284,7 +293,11 @@ public final class LitWeb implements ModInitializer {
 		if (part < parts - 1) return; // the client waits for the reply to the last part only
 		uploads.remove(player.getUUID());
 
-		byte[] data = buf.toByteArray();
+		byte[] all = buf.toByteArray();
+		// The last `placement` bytes are the Litematica placement, which only clients read; old clients send none.
+		int placementLen = meta.has("placement") ? meta.get("placement").getAsInt() : 0;
+		if (placementLen < 0 || placementLen >= all.length) throw new IOException("Bad upload");
+		byte[] data = Arrays.copyOf(all, all.length - placementLen);
 		Volume v = Volume.decode(data); // validates before anything touches disk
 		String owner = player.getStringUUID();
 		String id = UUID.nameUUIDFromBytes((owner + ":" + meta.get("key").getAsString()).getBytes(StandardCharsets.UTF_8)).toString();
@@ -322,6 +335,10 @@ public final class LitWeb implements ModInitializer {
 			s.chunksCaptured = old.chunksCaptured;
 		} else capture(player, s, v, player.level(), margin);
 		Files.write(dir.resolve(id + ".bin"), data);
+		Path placement = dir.resolve(id + ".litematic");
+		if (placementLen > 0) Files.write(placement, Arrays.copyOfRange(all, data.length, all.length));
+		else Files.deleteIfExists(placement);
+		s.placement = placementLen > 0;
 		shared.put(id, s);
 		loaded.put(id, v);
 		saveIndexAndBroadcast(server);

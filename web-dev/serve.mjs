@@ -75,9 +75,23 @@ function withContributors(st) {
       '5c2e7a10-0000-4000-8000-000000000b0b': { name: 'bob', placed: 7 + steps * 10, last: Date.now() - 400_000 },
     },
   }));
+  // Someone else's share on this server, so Load in Litematica has something to load.
+  const theirs = {
+    ...shared[0],
+    id: 'a7d0c3a2-3333-4000-8000-00000000beef',
+    name: 'Item Sorter',
+    owner: ALICE,
+    ownerName: 'Alice_Mines',
+    mine: false,
+    manage: false,
+    access: 'everyone',
+  };
   return {
     ...st,
-    shared: shared.map((s) => ({ ...s, manage: true, ...access.get(s.id) })),
+    shared: [...shared.map((s) => ({ ...s, manage: true, ...access.get(s.id) })), theirs].map((s) => ({
+      ...s,
+      inGame: inGame.has(s.id),
+    })),
     placements: st.placements.map((p) => ({ ...p, author: p.author || 'Kestrel_Builds' })),
     ...servers(st),
   };
@@ -85,6 +99,7 @@ function withContributors(st) {
 
 // Access changes made in the page, by shared id (the real server keeps them in index.json).
 const access = new Map();
+const inGame = new Set(); // shared ids loaded in Litematica from the page
 const ALICE = 'b6d1f0f2-0000-4000-8000-00000000a1ce';
 const BOB = '5c2e7a10-0000-4000-8000-000000000b0b';
 
@@ -173,6 +188,11 @@ createServer(async (req, res) => {
         access.set(a.id, { access: a.access, players: a.players });
         return send(200, {});
       }
+      case '/api/load':
+      case '/api/unload':
+        await new Promise((r) => setTimeout(r, 400));
+        inGame[url.pathname === '/api/load' ? 'add' : 'delete'](url.searchParams.get('id'));
+        return send(200, {});
       case '/api/share':
       case '/api/unshare':
       case '/api/capture':

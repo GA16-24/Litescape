@@ -419,4 +419,32 @@ export default {
     '시스템은 컴퓨터의 밝은 모드 또는 어두운 모드를 따릅니다. 선택은 이 브라우저에 저장됩니다.',
   'Settings sections': '설정 섹션',
   'Close settings': '설정 닫기',
+  Position: '위치',
+  'Use whole numbers for X, Y and Z.': 'X, Y, Z에는 정수를 입력하세요.',
+  'Update copy moves the placement here first.': '‘사본 업데이트’를 누르면 먼저 배치를 이곳으로 옮깁니다.',
+  'Sharing moves the placement here first.': '공유하면 먼저 배치를 이곳으로 옮깁니다.',
+  "The placement's origin. Change it to share the schematic somewhere else.":
+    '배치의 원점입니다. 바꾸면 설계도를 다른 위치에 공유합니다.',
+  '{name} needs to update the copy before you can load it in Litematica.':
+    'Litematica에 불러오려면 {name} 님이 사본을 업데이트해야 합니다.',
+  'Load in Litematica': 'Litematica에 불러오기',
+  'Loading…': '불러오는 중…',
+  'Remove from Litematica': 'Litematica에서 제거',
+  'It shows in game as a Litematica placement. Load it again after the owner updates it.':
+    '게임에서 Litematica 배치로 보입니다. 소유자가 업데이트하면 다시 불러오세요.',
+  'Adds it to Litematica at its shared position, with what goes in its chests and hoppers.':
+    '공유된 위치에 Litematica 배치로 추가합니다. 상자와 호퍼에 들어갈 아이템도 포함됩니다.',
+  'Loaded in Litematica': 'Litematica에 불러옴',
+  'Find it in game where it was shared.': '게임에서 공유된 위치에 있습니다.',
+  'Removed from Litematica': 'Litematica에서 제거됨',
+  'Its schematic file stays in your schematics folder.': '설계도 파일은 schematics 폴더에 남아 있습니다.',
+  "Couldn't load it in Litematica": 'Litematica에 불러오지 못했습니다',
+  "Couldn't remove it": '제거하지 못했습니다',
+  '{n} more': '{n}개 더',
+  'This schematic was shared without its Litematica placement. Ask its owner to update the copy.':
+    '이 설계도는 Litematica 배치 없이 공유되었습니다. 소유자에게 사본 업데이트를 요청하세요.',
+  'The placement is locked in Litematica. Unlock it to move it.':
+    '이 배치는 Litematica에서 잠겨 있습니다. 옮기려면 잠금을 해제하세요.',
+  "Couldn't save the schematic": '설계도를 저장하지 못했습니다',
+  "Couldn't read the shared placement": '공유된 배치를 읽지 못했습니다',
 };

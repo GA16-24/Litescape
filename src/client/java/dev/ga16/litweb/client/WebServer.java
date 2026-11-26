@@ -47,10 +47,13 @@ final class WebServer {
 	/** null until the server has answered a region read; reset on disconnect. */
 	static volatile @Nullable Boolean regionRead;
 
-	/** terrainFrom: first palette index of the surroundings (-1 = none); inner: the schematic's box inside volume. */
-	private record Cached(String key, Volume volume, int terrainFrom, int @Nullable [] inner) {
+	/**
+	 * terrainFrom: first palette index of the surroundings (-1 = none); inner: the schematic's box inside volume;
+	 * contents: what its chests and hoppers hold, when the share came with its Litematica placement.
+	 */
+	private record Cached(String key, Volume volume, int terrainFrom, int @Nullable [] inner, @Nullable JsonObject contents) {
 		Cached(String key, Volume volume) {
-			this(key, volume, -1, null);
+			this(key, volume, -1, null, null);
 		}
 	}
 	/** Iris shader packs for the web renderer; uses the same shaderpacks folder as Iris. */
@@ -115,7 +118,32 @@ final class WebServer {
 					case "/api/status" -> json(ex, 200, status(q.getOrDefault("type", ""), q.getOrDefault("id", "")));
 					case "/api/share" -> {
 						if (!post) throw new HttpError(405, "Use POST");
-						json(ex, 200, share(q.getOrDefault("id", ""), margin(q)));
+						json(ex, 200, share(q.getOrDefault("id", ""), margin(q), q.get("at")));
+					}
+					case "/api/load" -> {
+						// Adds someone's shared schematic to this player's Litematica, at its shared position.
+						if (!post) throw new HttpError(405, "Use POST");
+						if (!Schematics.LITEMATICA) throw new HttpError(409, "Loading a shared schematic needs Litematica");
+						String id = q.getOrDefault("id", "");
+						byte[] blob = await(Bridge.request("placement", id, new byte[0]));
+						onClient(() -> {
+							try {
+								Lit.loadShared(id, blob);
+							} catch (IOException e) {
+								throw new IllegalStateException(e.getMessage(), e);
+							}
+							return null;
+						});
+						json(ex, 200, new JsonObject());
+					}
+					case "/api/unload" -> {
+						if (!post) throw new HttpError(405, "Use POST");
+						String id = q.getOrDefault("id", "");
+						if (Schematics.LITEMATICA) onClient(() -> {
+							Lit.unloadShared(id);
+							return null;
+						});
+						json(ex, 200, new JsonObject());
 					}
 					case "/api/capture" -> {
 						if (!post) throw new HttpError(405, "Use POST");
@@ -189,6 +217,7 @@ final class WebServer {
 		o.addProperty("player", mc.player.getPlainTextName());
 		o.addProperty("dim", level.dimension().identifier().toString());
 		o.addProperty("serverMod", Bridge.serverMod());
+		o.addProperty("litematica", Schematics.LITEMATICA); // shared schematics load into Litematica
 		o.addProperty("regionRead", regionRead == null ? "unknown" : regionRead ? "yes" : "no");
 		o.addProperty("singleplayer", mc.hasSingleplayerServer());
 		String terrain = Bridge.terrainJson;
@@ -207,20 +236,27 @@ final class WebServer {
 		}
 
 		JsonArray shared = JsonParser.parseString(Bridge.sharedJson).getAsJsonArray();
+		java.util.Set<String> inGame = new java.util.HashSet<>();
+		List<Schematics.Placement> placementList = Schematics.placements();
+		for (Schematics.Placement p : placementList) if (p.shared() != null) inGame.add(p.shared());
 		Map<String, JsonObject> sharedById = new HashMap<>();
 		for (var e : shared) {
 			JsonObject s = e.getAsJsonObject();
 			s.addProperty("mine", s.get("owner").getAsString().equals(uuid));
+			s.addProperty("inGame", inGame.contains(s.get("id").getAsString()));
 			sharedById.put(s.get("id").getAsString(), s);
 		}
 		JsonArray placements = new JsonArray();
-		for (Schematics.Placement p : Schematics.placements()) {
+		for (Schematics.Placement p : placementList) {
+			// Listed under the shared schematic it came from; once that's gone (unshared, access removed) it's just a placement.
+			if (sharedById.containsKey(p.shared())) continue;
 			JsonObject j = new JsonObject();
 			String key = p.id();
 			j.addProperty("id", key);
 			j.addProperty("name", p.name());
 			j.addProperty("enabled", p.enabled());
 			j.addProperty("author", p.author());
+			if (p.origin() != null) j.add("origin", ints(p.origin()));
 			j.add("boxes", boxes(p.boxes()));
 			String sharedId = sharedId(uuid, key);
 			if (sharedById.containsKey(sharedId)) j.addProperty("sharedId", sharedId);
@@ -238,6 +274,7 @@ final class WebServer {
 	private static JsonObject view(String type, String id, String serverKey) throws Exception {
 		Volume v;
 		Cached withTerrain = null;
+		JsonObject contents = null;
 		String source, name;
 		switch (type) {
 			case "selection" -> {
@@ -265,11 +302,12 @@ final class WebServer {
 				source = "placement";
 				Object[] r = onClient(() -> {
 					Schematics.Placement p = Schematics.placement(id);
-					return p == null ? null : new Object[] {p.name(), placementVolume(p)};
+					return p == null ? null : new Object[] {p.name(), placementVolume(p), Schematics.LITEMATICA ? Lit.contents(id, mc.level.registryAccess()) : null};
 				});
 				if (r == null) throw new HttpError(404, "That placement no longer exists");
 				name = (String) r[0];
 				v = (Volume) r[1];
+				contents = (JsonObject) r[2];
 			}
 			case "shared" -> {
 				source = "shared";
@@ -278,6 +316,7 @@ final class WebServer {
 				if (serverKey.isEmpty() || cur != null && cur.key().equals(serverKey)) {
 					withTerrain = sharedVolume(id, cur);
 					v = withTerrain.volume();
+					contents = withTerrain.contents();
 				} else {
 					// A remembered server: show the copy saved when it was last opened there.
 					byte[] blob = Servers.blob(serverKey, id);
@@ -298,6 +337,7 @@ final class WebServer {
 			out.addProperty("terrainFrom", withTerrain.terrainFrom());
 			out.add("inner", ints(withTerrain.inner()));
 		}
+		if (contents != null) out.add("contents", contents);
 		ByteBuffer buf = ByteBuffer.allocate(v.blocks.length * 2).order(ByteOrder.LITTLE_ENDIAN);
 		buf.asShortBuffer().put(v.blocks);
 		out.addProperty("blocks", Base64.getEncoder().encodeToString(buf.array()));
@@ -338,13 +378,41 @@ final class WebServer {
 		return out;
 	}
 
-	private static JsonObject share(String key, int margin) throws Exception {
+	/** at: "x,y,z" to move the placement's origin there first, or null to share it where it is. */
+	private static JsonObject share(String key, int margin, @Nullable String at) throws Exception {
+		BlockPos origin = null;
+		if (at != null) {
+			String[] xyz = at.split(",");
+			try {
+				if (xyz.length != 3) throw new NumberFormatException();
+				origin = new BlockPos(Integer.parseInt(xyz[0].strip()), Integer.parseInt(xyz[1].strip()), Integer.parseInt(xyz[2].strip()));
+			} catch (NumberFormatException e) {
+				throw new HttpError(400, "Bad coordinates");
+			}
+		}
+		BlockPos to = origin;
 		Object[] r = onClient(() -> {
 			Schematics.Placement p = Schematics.placement(key);
-			return p == null ? null : new Object[] {p.name(), placementVolume(p), p.author()};
+			if (p == null) return null;
+			if (to != null) {
+				String why = Schematics.LITEMATICA ? Lit.move(key, to) : "Only Litematica placements can be moved here";
+				if (why != null) return new Object[] {why};
+				p = Schematics.placement(key); // its boxes and version changed with the move
+				if (p == null) return null;
+			}
+			try {
+				byte[] placement = Schematics.LITEMATICA ? Lit.placementBlob(key) : null;
+				return new Object[] {p.name(), placementVolume(p), p.author(), placement == null ? new byte[0] : placement};
+			} catch (IOException e) {
+				throw new IllegalStateException(e.getMessage(), e);
+			}
 		});
 		if (r == null) throw new HttpError(404, "That placement no longer exists");
-		byte[] id = await(Bridge.upload(key, (String) r[0], (String) r[2], margin, ((Volume) r[1]).encode()));
+		if (r.length == 1) throw new HttpError(409, (String) r[0]);
+		byte[] vol = ((Volume) r[1]).encode(), placement = (byte[]) r[3];
+		byte[] blob = java.util.Arrays.copyOf(vol, vol.length + placement.length);
+		System.arraycopy(placement, 0, blob, vol.length, placement.length);
+		byte[] id = await(Bridge.upload(key, (String) r[0], (String) r[2], margin, placement.length, blob));
 		JsonObject out = new JsonObject();
 		out.addProperty("id", new String(id, StandardCharsets.UTF_8));
 		return out;
@@ -373,10 +441,12 @@ final class WebServer {
 	private static Cached sharedVolume(String id, Servers.@Nullable Id server) throws Exception {
 		String version = "";
 		int margin = 0;
+		boolean hasPlacement = false;
 		for (var e : JsonParser.parseString(Bridge.sharedJson).getAsJsonArray()) {
 			JsonObject s = e.getAsJsonObject();
 			if (!s.get("id").getAsString().equals(id)) continue;
 			margin = s.has("margin") ? s.get("margin").getAsInt() : 0;
+			hasPlacement = s.has("placement") && s.get("placement").getAsBoolean();
 			version = s.get("updated").getAsString() + ":" + (s.has("captured") ? s.get("captured").getAsString() : "");
 		}
 		Cached c = sharedCache;
@@ -387,7 +457,22 @@ final class WebServer {
 			if (margin > 0) {
 				Volume t = Volume.decode(await(Bridge.request("terrain", id, new byte[0])));
 				Volume all = Volume.around(v, t);
-				if (all != null) c = new Cached(id + version, all, v.palette.size(), new int[] {v.x0 - t.x0, v.y0 - t.y0, v.z0 - t.z0, v.sx, v.sy, v.sz});
+				if (all != null) c = new Cached(id + version, all, v.palette.size(), new int[] {v.x0 - t.x0, v.y0 - t.y0, v.z0 - t.z0, v.sx, v.sy, v.sz}, null);
+			}
+			if (hasPlacement && Schematics.LITEMATICA) {
+				try {
+					byte[] placement = await(Bridge.request("placement", id, new byte[0]));
+					JsonObject contents = onClient(() -> {
+						try {
+							return Lit.sharedContents(placement, mc.level.registryAccess());
+						} catch (IOException e) {
+							throw new IllegalStateException(e.getMessage(), e);
+						}
+					});
+					c = new Cached(c.key, c.volume, c.terrainFrom, c.inner, contents);
+				} catch (Exception e) {
+					LitWeb.LOG.debug("No container contents for shared {}", id, e); // the blocks still show without them
+				}
 			}
 			sharedCache = c;
 			// shortcut: saved copies for other servers keep only the schematic; cache the terrain too if people miss it offline.

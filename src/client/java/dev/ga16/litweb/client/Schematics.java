@@ -11,8 +11,12 @@ import org.jspecify.annotations.Nullable;
 final class Schematics {
 	record Selection(String name, List<int[]> boxes) {}
 
-	/** version changes whenever the placement's blocks would; volume builds them in world coordinates. */
-	record Placement(String id, String name, boolean enabled, String author, List<int[]> boxes, String version, Supplier<Volume> volume) {}
+	/**
+	 * version changes whenever the placement's blocks would; volume builds them in world coordinates. origin is null
+	 * where it can't be moved from the page (BuildPrint); shared is the shared schematic a placement was loaded from.
+	 */
+	record Placement(String id, String name, boolean enabled, String author, List<int[]> boxes, String version, Supplier<Volume> volume,
+		int @Nullable [] origin, @Nullable String shared) {}
 
 	static final boolean LITEMATICA = FabricLoader.getInstance().isModLoaded("litematica");
 	static final boolean BUILDPRINT = FabricLoader.getInstance().isModLoaded("buildprint");

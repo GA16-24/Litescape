@@ -413,4 +413,31 @@ export default {
     '「跟隨系統」會使用電腦的淺色或深色模式。你的選擇會儲存在此瀏覽器中。',
   'Settings sections': '設定區段',
   'Close settings': '關閉設定',
+  Position: '位置',
+  'Use whole numbers for X, Y and Z.': 'X、Y、Z 請填寫整數。',
+  'Update copy moves the placement here first.': '「更新副本」會先把放置移到這裡。',
+  'Sharing moves the placement here first.': '分享時會先把放置移到這裡。',
+  "The placement's origin. Change it to share the schematic somewhere else.":
+    '放置的原點。修改它即可把投影分享到別處。',
+  '{name} needs to update the copy before you can load it in Litematica.':
+    '{name} 需要更新副本，你才能把它載入 Litematica。',
+  'Load in Litematica': '載入 Litematica',
+  'Loading…': '載入中…',
+  'Remove from Litematica': '從 Litematica 移除',
+  'It shows in game as a Litematica placement. Load it again after the owner updates it.':
+    '它會以 Litematica 放置的形式顯示在遊戲中。擁有者更新後請重新載入。',
+  'Adds it to Litematica at its shared position, with what goes in its chests and hoppers.':
+    '在分享的位置加入 Litematica，並包含箱子和漏斗裡應放的物品。',
+  'Loaded in Litematica': '已載入 Litematica',
+  'Find it in game where it was shared.': '在遊戲中分享它的位置即可找到。',
+  'Removed from Litematica': '已從 Litematica 移除',
+  'Its schematic file stays in your schematics folder.': '投影檔案仍保留在你的 schematics 資料夾中。',
+  "Couldn't load it in Litematica": '無法載入 Litematica',
+  "Couldn't remove it": '無法移除',
+  '{n} more': '還有 {n} 個',
+  'This schematic was shared without its Litematica placement. Ask its owner to update the copy.':
+    '這個投影分享時沒有附帶 Litematica 放置。請讓擁有者更新副本。',
+  'The placement is locked in Litematica. Unlock it to move it.': '該放置在 Litematica 中已鎖定。解鎖後才能移動。',
+  "Couldn't save the schematic": '無法儲存投影',
+  "Couldn't read the shared placement": '無法讀取分享的放置',
 };

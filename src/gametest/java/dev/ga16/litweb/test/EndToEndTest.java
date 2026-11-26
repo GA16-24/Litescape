@@ -85,10 +85,11 @@ public class EndToEndTest implements FabricClientGameTest {
 				check(sel.getAsJsonArray("size").toString().equals("[20,14,19]"), "selection size " + sel.get("size"));
 				collectTextures(sel);
 
+				AreaSelection area = ctx.computeOnClient(mc -> DataManager.getSelectionManager().getCurrentSelection());
+				// From the server world, as Litematica does in singleplayer: the client never gets chest and hopper contents.
+				LitematicaSchematic schem = sp.getServer().computeOnServer(server -> LitematicaSchematic.createFromWorld(server.overworld(), area,
+					new LitematicaSchematic.SchematicSaveInfo(false, false), "test", msg -> {}));
 				ctx.runOnClient(mc -> {
-					AreaSelection area = DataManager.getSelectionManager().getCurrentSelection();
-					LitematicaSchematic schem = LitematicaSchematic.createFromWorld(mc.level, area,
-						new LitematicaSchematic.SchematicSaveInfo(false, false), "test", msg -> {});
 					SchematicPlacement p = SchematicPlacement.createFor(schem, new BlockPos(31, -63, 1), "Cottage copy", true, true);
 					DataManager.getSchematicPlacementManager().addSchematicPlacement(p, false);
 				});
@@ -102,7 +103,11 @@ public class EndToEndTest implements FabricClientGameTest {
 
 				state = json(save("state-2.json", call(ctx, "GET", "/api/state")));
 				String placement = state.getAsJsonArray("placements").get(0).getAsJsonObject().get("id").getAsString();
-				collectTextures(json(save("view-placement.json", call(ctx, "GET", "/api/view?type=placement&id=" + placement))));
+				JsonObject vp = json(save("view-placement.json", call(ctx, "GET", "/api/view?type=placement&id=" + placement)));
+				collectTextures(vp);
+				// The copy is 30 blocks east of the cottage, so its hopper is at 38 -60 13.
+				String hopper = String.valueOf(vp.getAsJsonObject("contents").get("38,-60,13"));
+				check(hopper.equals("[[0,18,\"Redstone Dust\"],[1,1,\"Stick\"]]"), "hopper contents in the placement view: " + vp.get("contents"));
 				JsonObject st = json(save("status-placement.json", call(ctx, "GET", "/api/status?type=placement&id=" + placement)));
 				JsonArray c = st.getAsJsonArray("counts");
 				check(c.get(1).getAsInt() > 0 && c.get(2).getAsInt() > 0 && c.get(3).getAsInt() == 1 && c.get(4).getAsInt() >= 1, "placement status counts " + c);
@@ -121,6 +126,25 @@ public class EndToEndTest implements FabricClientGameTest {
 				check(sv.getAsJsonArray("size").toString().equals("[36,23,35]"), "view with surroundings " + sv.get("size"));
 				check(sv.getAsJsonArray("inner").toString().equals("[8,1,8,20,14,19]"), "schematic inside its surroundings " + sv.get("inner"));
 				check(sv.get("terrainFrom").getAsInt() > 1, "surroundings palette follows the schematic's");
+				check(String.valueOf(sv.getAsJsonObject("contents").get("38,-60,13")).contains("Redstone Dust"), "hopper contents travel with the share");
+
+				// Load in Litematica: the shared placement comes back as a placement of its own, from the schematics folder.
+				call(ctx, "POST", "/api/load?id=" + shared);
+				JsonObject inGame = json(call(ctx, "GET", "/api/state"));
+				check(inGame.getAsJsonArray("shared").get(0).getAsJsonObject().get("inGame").getAsBoolean(), "shared schematic marked as loaded");
+				check(inGame.getAsJsonArray("placements").size() == 1, "a loaded share isn't listed again under your placements");
+				String loaded = ctx.computeOnClient(mc -> {
+					for (SchematicPlacement p : DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()) {
+						if (p.getSchematicFile() == null || !p.getSchematicFile().getFileName().toString().equals(shared + ".litematic")) continue;
+						int entities = 0;
+						for (String region : p.getSchematic().getAreas().keySet()) entities += p.getSchematic().getBlockEntityMapForRegion(region).size();
+						return p.getOrigin().toShortString() + " " + entities;
+					}
+					return "missing";
+				});
+				check(loaded.equals("31, -63, 1 3"), "loaded at the shared origin with the chest, furnace and hopper: " + loaded);
+				call(ctx, "POST", "/api/unload?id=" + shared);
+				check(ctx.computeOnClient(mc -> DataManager.getSchematicPlacementManager().getAllSchematicsPlacements().size()) == 1, "unload removes it from Litematica");
 				check(st3.contains("\"margin\":8") && st3.contains("\"chunksCaptured\""), "shared list carries the capture");
 				JsonObject sst = json(save("status-shared.json", call(ctx, "GET", "/api/status?type=shared&id=" + shared)));
 				check(sst.getAsJsonArray("counts").toString().equals(c.toString()), "server status " + sst.get("counts") + " matches client " + c);
@@ -135,6 +159,14 @@ public class EndToEndTest implements FabricClientGameTest {
 				String updated = call(ctx, "GET", "/api/state");
 				check(updated.contains("\"access\":\"players\""), "Update copy keeps access");
 				check(updated.contains("\"margin\":8"), "Update copy keeps the surroundings");
+				// Share at other coordinates: the placement moves there and the shared copy follows, then back for the fixtures.
+				call(ctx, "POST", "/api/share?id=" + placement + "&margin=8&at=32,-63,1");
+				JsonObject moved = json(call(ctx, "GET", "/api/state"));
+				for (int i = 0; i < 40 && !moved.getAsJsonArray("shared").get(0).getAsJsonObject().get("origin").toString().equals("[32,-63,1]"); i++, ctx.waitTicks(5))
+					moved = json(call(ctx, "GET", "/api/state"));
+				check(moved.getAsJsonArray("placements").get(0).getAsJsonObject().get("origin").toString().equals("[32,-63,1]"), "placement moved: " + moved.get("placements"));
+				check(moved.getAsJsonArray("shared").get(0).getAsJsonObject().get("origin").toString().equals("[32,-63,1]"), "shared copy followed the move");
+				call(ctx, "POST", "/api/share?id=" + placement + "&margin=8&at=31,-63,1");
 				call(ctx, "POST", "/api/capture?id=" + shared + "&margin=0");
 				String bare = "";
 				for (int i = 0; i < 40 && !bare.contains("\"margin\":0"); i++, ctx.waitTicks(5)) bare = call(ctx, "GET", "/api/state");
@@ -283,7 +315,8 @@ public class EndToEndTest implements FabricClientGameTest {
 			"fill 9 -59 6 11 -58 6 glass", "fill 9 -59 14 11 -58 14 light_blue_stained_glass",
 			"fill 6 -59 9 6 -58 11 glass", "fill 14 -59 9 14 -58 11 glass",
 			"setblock 10 -60 14 oak_door[facing=south,half=lower]", "setblock 10 -59 14 oak_door[facing=south,half=upper]",
-			"setblock 7 -60 7 chest[facing=south]", "setblock 8 -60 7 crafting_table", "setblock 9 -60 7 furnace[facing=south,lit=true]",
+			"setblock 7 -60 7 chest[facing=south]{Items:[{Slot:0b,id:\"minecraft:bread\",count:12}]}",
+			"setblock 8 -60 13 hopper{Items:[{Slot:0b,id:\"minecraft:redstone\",count:18},{Slot:1b,id:\"minecraft:stick\",count:1}]}", "setblock 8 -60 7 crafting_table", "setblock 9 -60 7 furnace[facing=south,lit=true]",
 			"setblock 10 -58 7 wall_torch[facing=south]", "setblock 12 -60 9 red_bed[part=head,facing=south]",
 			"setblock 12 -60 8 red_bed[part=foot,facing=south]", "setblock 12 -60 12 lantern",
 			"fill 2 -61 7 4 -61 11 water",

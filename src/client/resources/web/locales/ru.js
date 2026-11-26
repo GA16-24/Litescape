@@ -466,4 +466,32 @@ export default {
     '«Как в системе» следует светлому или тёмному режиму компьютера. Выбор сохраняется в этом браузере.',
   'Settings sections': 'Разделы настроек',
   'Close settings': 'Закрыть настройки',
+  Position: 'Позиция',
+  'Use whole numbers for X, Y and Z.': 'Укажите целые числа для X, Y и Z.',
+  'Update copy moves the placement here first.': '«Обновить копию» сначала переместит размещение сюда.',
+  'Sharing moves the placement here first.': 'При публикации размещение сначала переместится сюда.',
+  "The placement's origin. Change it to share the schematic somewhere else.":
+    'Начало координат размещения. Измените его, чтобы опубликовать схематику в другом месте.',
+  '{name} needs to update the copy before you can load it in Litematica.':
+    'Чтобы загрузить её в Litematica, {name} должен обновить копию.',
+  'Load in Litematica': 'Загрузить в Litematica',
+  'Loading…': 'Загрузка…',
+  'Remove from Litematica': 'Убрать из Litematica',
+  'It shows in game as a Litematica placement. Load it again after the owner updates it.':
+    'В игре она видна как размещение Litematica. Загрузите её снова, когда владелец обновит копию.',
+  'Adds it to Litematica at its shared position, with what goes in its chests and hoppers.':
+    'Добавляет её в Litematica в опубликованной позиции вместе с содержимым сундуков и воронок.',
+  'Loaded in Litematica': 'Загружено в Litematica',
+  'Find it in game where it was shared.': 'Она в игре там, где её опубликовали.',
+  'Removed from Litematica': 'Убрано из Litematica',
+  'Its schematic file stays in your schematics folder.': 'Файл схематики остаётся в папке schematics.',
+  "Couldn't load it in Litematica": 'Не удалось загрузить в Litematica',
+  "Couldn't remove it": 'Не удалось убрать',
+  '{n} more': 'Ещё: {n}',
+  'This schematic was shared without its Litematica placement. Ask its owner to update the copy.':
+    'Эту схематику опубликовали без размещения Litematica. Попросите владельца обновить копию.',
+  'The placement is locked in Litematica. Unlock it to move it.':
+    'Размещение заблокировано в Litematica. Разблокируйте его, чтобы переместить.',
+  "Couldn't save the schematic": 'Не удалось сохранить схематику',
+  "Couldn't read the shared placement": 'Не удалось прочитать опубликованное размещение',
 };

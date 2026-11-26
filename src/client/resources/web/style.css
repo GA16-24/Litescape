@@ -735,6 +735,18 @@ button {
   font-size: 11px;
   margin-top: 4px;
 }
+.hover-card .hc-items {
+  margin-top: 6px;
+  display: grid;
+  gap: 2px;
+}
+.hover-card .hc-n {
+  display: inline-block;
+  min-width: 3ch;
+  margin-right: 6px;
+  color: var(--muted);
+  text-align: right;
+}
 .hover-card .hc-status {
   margin-top: 6px;
   display: flex;
@@ -1022,6 +1034,25 @@ button {
   font: inherit;
   outline: none;
   min-width: 0;
+}
+.at-row {
+  display: flex;
+  gap: 6px;
+}
+.at-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.at-field .mat-filter {
+  font-family: var(--mono);
+}
+.at-field .mat-filter[aria-invalid="true"] {
+  border-color: var(--danger);
 }
 .mat-filter::placeholder {
   color: var(--faint);

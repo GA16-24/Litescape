@@ -429,4 +429,33 @@ export default {
     'Sistema sigue el modo claro u oscuro de tu equipo. La elección se guarda en este navegador.',
   'Settings sections': 'Secciones de ajustes',
   'Close settings': 'Cerrar ajustes',
+  Position: 'Posición',
+  'Use whole numbers for X, Y and Z.': 'Usa números enteros para X, Y y Z.',
+  'Update copy moves the placement here first.': '«Actualizar copia» mueve primero la colocación aquí.',
+  'Sharing moves the placement here first.': 'Al compartir, la colocación se mueve primero aquí.',
+  "The placement's origin. Change it to share the schematic somewhere else.":
+    'El origen de la colocación. Cámbialo para compartir la schematic en otro lugar.',
+  '{name} needs to update the copy before you can load it in Litematica.':
+    '{name} tiene que actualizar la copia para que puedas cargarla en Litematica.',
+  'Load in Litematica': 'Cargar en Litematica',
+  'Loading…': 'Cargando…',
+  'Remove from Litematica': 'Quitar de Litematica',
+  'It shows in game as a Litematica placement. Load it again after the owner updates it.':
+    'Aparece en el juego como una colocación de Litematica. Vuelve a cargarla cuando el dueño la actualice.',
+  'Adds it to Litematica at its shared position, with what goes in its chests and hoppers.':
+    'La añade a Litematica en su posición compartida, con lo que va en sus cofres y tolvas.',
+  'Loaded in Litematica': 'Cargada en Litematica',
+  'Find it in game where it was shared.': 'La encontrarás en el juego donde se compartió.',
+  'Removed from Litematica': 'Quitada de Litematica',
+  'Its schematic file stays in your schematics folder.':
+    'El archivo de la schematic se queda en tu carpeta de schematics.',
+  "Couldn't load it in Litematica": 'No se pudo cargar en Litematica',
+  "Couldn't remove it": 'No se pudo quitar',
+  '{n} more': '{n} más',
+  'This schematic was shared without its Litematica placement. Ask its owner to update the copy.':
+    'Esta schematic se compartió sin su colocación de Litematica. Pide a su dueño que actualice la copia.',
+  'The placement is locked in Litematica. Unlock it to move it.':
+    'La colocación está bloqueada en Litematica. Desbloquéala para moverla.',
+  "Couldn't save the schematic": 'No se pudo guardar la schematic',
+  "Couldn't read the shared placement": 'No se pudo leer la colocación compartida',
 };

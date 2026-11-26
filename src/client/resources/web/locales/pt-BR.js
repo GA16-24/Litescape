@@ -430,4 +430,32 @@ export default {
     'Sistema segue o modo claro ou escuro do seu computador. A escolha fica salva neste navegador.',
   'Settings sections': 'Seções das configurações',
   'Close settings': 'Fechar configurações',
+  Position: 'Posição',
+  'Use whole numbers for X, Y and Z.': 'Use números inteiros para X, Y e Z.',
+  'Update copy moves the placement here first.': '“Atualizar cópia” move o posicionamento para cá primeiro.',
+  'Sharing moves the placement here first.': 'Ao compartilhar, o posicionamento é movido para cá primeiro.',
+  "The placement's origin. Change it to share the schematic somewhere else.":
+    'A origem do posicionamento. Mude-a para compartilhar a schematic em outro lugar.',
+  '{name} needs to update the copy before you can load it in Litematica.':
+    '{name} precisa atualizar a cópia antes que você possa carregá-la no Litematica.',
+  'Load in Litematica': 'Carregar no Litematica',
+  'Loading…': 'Carregando…',
+  'Remove from Litematica': 'Remover do Litematica',
+  'It shows in game as a Litematica placement. Load it again after the owner updates it.':
+    'Ela aparece no jogo como um posicionamento do Litematica. Carregue de novo depois que o dono atualizar.',
+  'Adds it to Litematica at its shared position, with what goes in its chests and hoppers.':
+    'Adiciona ao Litematica na posição compartilhada, com o que vai nos baús e funis.',
+  'Loaded in Litematica': 'Carregada no Litematica',
+  'Find it in game where it was shared.': 'Ela está no jogo onde foi compartilhada.',
+  'Removed from Litematica': 'Removida do Litematica',
+  'Its schematic file stays in your schematics folder.': 'O arquivo da schematic continua na sua pasta de schematics.',
+  "Couldn't load it in Litematica": 'Não foi possível carregar no Litematica',
+  "Couldn't remove it": 'Não foi possível remover',
+  '{n} more': 'Mais {n}',
+  'This schematic was shared without its Litematica placement. Ask its owner to update the copy.':
+    'Esta schematic foi compartilhada sem o posicionamento do Litematica. Peça ao dono para atualizar a cópia.',
+  'The placement is locked in Litematica. Unlock it to move it.':
+    'O posicionamento está travado no Litematica. Destrave para movê-lo.',
+  "Couldn't save the schematic": 'Não foi possível salvar a schematic',
+  "Couldn't read the shared placement": 'Não foi possível ler o posicionamento compartilhado',
 };

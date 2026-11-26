@@ -45,7 +45,8 @@ final class Bridge {
 		return p.future.orTimeout(60, TimeUnit.SECONDS).whenComplete((r, e) -> pending.remove(req));
 	}
 
-	static synchronized CompletableFuture<byte[]> upload(String key, String name, String author, int margin, byte[] blob) {
+	/** blob is the encoded Volume followed by placementLen bytes of Litematica placement. */
+	static synchronized CompletableFuture<byte[]> upload(String key, String name, String author, int margin, int placementLen, byte[] blob) {
 		CompletableFuture<byte[]> result = uploadChain.handle((r, e) -> null).thenCompose(ignored -> {
 			int req = nextReq.getAndIncrement();
 			Pending p = new Pending(new CompletableFuture<>(), new ByteArrayOutputStream());
@@ -62,6 +63,7 @@ final class Bridge {
 					meta.addProperty("name", name);
 					meta.addProperty("author", author);
 					meta.addProperty("margin", margin);
+					meta.addProperty("placement", placementLen);
 					meta.addProperty("part", i);
 					meta.addProperty("parts", parts);
 					byte[] chunk = Arrays.copyOfRange(blob, i * Net.UP_PART, Math.min(blob.length, (i + 1) * Net.UP_PART));
