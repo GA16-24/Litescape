@@ -32,6 +32,10 @@
       </button>
       <nav class="nav" id="nav"></nav>
       <div class="sidebar-foot" id="foot"></div>
+      <button class="search foot-btn" id="open-settings" type="button">
+        <svg aria-hidden="true" class="i" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+        <span>Settings</span>
+      </button>
     </aside>
 
     <main class="main">
@@ -102,6 +106,70 @@
       </div>
     </div>
   </div>
+
+  <dialog class="settings" id="settings" aria-labelledby="set-title">
+    <nav class="set-nav" aria-label="Settings sections">
+      <div class="set-nav-head">Preferences</div>
+      <button type="button" data-page="general" aria-current="page">
+        <svg aria-hidden="true" class="i" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>General
+      </button>
+      <button type="button" data-page="appearance">
+        <svg aria-hidden="true" class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>Appearance
+      </button>
+      <button type="button" data-page="keys">
+        <svg aria-hidden="true" class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/></svg>Keyboard shortcuts
+      </button>
+    </nav>
+    <header class="set-head">
+      <h2 class="set-crumbs" id="set-title"><span>Settings</span><span class="sep" aria-hidden="true">/</span><b id="set-page">General</b></h2>
+      <button class="icon-btn" id="close-settings" type="button" aria-label="Close settings">
+        <svg aria-hidden="true" class="i" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7 7 17"/></svg>
+      </button>
+    </header>
+    <div class="set-body" id="set-body">
+      <section data-page="general">
+        <h3>Layout</h3>
+        <div class="set-card">
+          <div class="set-row">
+            <div class="set-text"><span id="set-sidebar-l">Sidebar</span><p>Your views, the server picker and search. <kbd class="kbd" data-mod>B</kbd></p></div>
+            <button class="switch" id="set-sidebar" type="button" role="switch" aria-checked="true" aria-labelledby="set-sidebar-l"></button>
+          </div>
+          <div class="set-row">
+            <div class="set-text"><span id="set-details-l">Details panel</span><p>Materials, build progress, sharing and shaders for the open view. <kbd class="kbd">I</kbd></p></div>
+            <button class="switch" id="set-details" type="button" role="switch" aria-checked="true" aria-labelledby="set-details-l"></button>
+          </div>
+        </div>
+        <h3>Language</h3>
+        <div class="set-card">
+          <div class="set-row">
+            <div class="set-text"><span id="set-lang-l">Language</span><p>Litescape starts in your browser's language. Changing it reloads the page.</p></div>
+            <select class="opt-select" id="set-lang" aria-labelledby="set-lang-l"></select>
+          </div>
+        </div>
+        <h3>Views</h3>
+        <div class="set-card">
+          <div class="set-row">
+            <div class="set-text"><span>Hidden views</span><p id="set-hidden-n"></p></div>
+            <button class="btn" id="set-unhide" type="button">Show all</button>
+          </div>
+          <div class="set-row">
+            <div class="set-text"><span>Shaders</span><p>Shader packs, their settings and the time of day are in the Shaders tab of the details panel.</p></div>
+            <button class="btn" id="set-shaders" type="button">Open Shaders</button>
+          </div>
+        </div>
+      </section>
+      <section data-page="appearance" hidden>
+        <h3 id="scheme-l">Color scheme</h3>
+        <div class="schemes" role="radiogroup" aria-labelledby="scheme-l">
+          <label class="scheme"><input type="radio" name="scheme" value=""><span class="pv-wrap" aria-hidden="true"><span class="pv light"><i class="pv-side"><b></b><b></b><b></b></i><i class="pv-block"></i><i class="pv-card"><b></b><b></b><b></b></i></span><span class="pv dark half"><i class="pv-side"><b></b><b></b><b></b></i><i class="pv-block"></i><i class="pv-card"><b></b><b></b><b></b></i></span></span>System</label>
+          <label class="scheme"><input type="radio" name="scheme" value="light"><span class="pv-wrap" aria-hidden="true"><span class="pv light"><i class="pv-side"><b></b><b></b><b></b></i><i class="pv-block"></i><i class="pv-card"><b></b><b></b><b></b></i></span></span>Light</label>
+          <label class="scheme"><input type="radio" name="scheme" value="dark"><span class="pv-wrap" aria-hidden="true"><span class="pv dark"><i class="pv-side"><b></b><b></b><b></b></i><i class="pv-block"></i><i class="pv-card"><b></b><b></b><b></b></i></span></span>Dark</label>
+        </div>
+        <p class="set-note">System follows your computer's light or dark mode. The choice is saved in this browser.</p>
+      </section>
+      <section data-page="keys" id="set-keys" hidden></section>
+    </div>
+  </dialog>
 
   <div class="toasts" id="toasts" aria-live="polite"></div>
   <div class="tooltip" id="tooltip" role="tooltip" hidden></div>

@@ -70,6 +70,10 @@ const EN = {
   '{n} materials': { one: '{n} material', other: '{n} materials' },
   'Filter {n} materials': { one: 'Filter {n} material', other: 'Filter {n} materials' },
   'Search {n} settings': { one: 'Search {n} setting', other: 'Search {n} settings' },
+  '{n} views are hidden from the sidebar, across your servers.': {
+    one: '{n} view is hidden from the sidebar, across your servers.',
+    other: '{n} views are hidden from the sidebar, across your servers.',
+  },
   '{n} effects unavailable': { one: '{n} effect unavailable', other: '{n} effects unavailable' },
   "{n} chunks weren't loaded on the server, so they show empty. Go near them in game and recapture.": {
     one: "{n} chunk wasn't loaded on the server, so it shows empty. Go near it in game and recapture.",

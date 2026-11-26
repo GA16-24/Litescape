@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
 import {
   bundledMod,
   createInstance,
@@ -42,7 +42,7 @@ const MAC_CHROME = `
   .brand, .topbar { -webkit-app-region: drag; height: 52px; box-sizing: border-box; }
   .sidebar .brand { padding: 0 14px 0 84px; }
   .app.no-sidebar .topbar { padding-left: 84px; }
-  button, input, select, a, [role=button], [tabindex] { -webkit-app-region: no-drag; }
+  button, input, select, a, dialog, [role=button], [tabindex] { -webkit-app-region: no-drag; }
 `;
 
 function openOutside(url) {
@@ -78,8 +78,12 @@ function folders() {
     return [];
   }
 }
+function saveFolders(list) {
+  fs.mkdirSync(path.dirname(FOLDERS()), { recursive: true });
+  fs.writeFileSync(FOLDERS(), JSON.stringify(list));
+}
 
-// The installer API is for the bundled waiting page only, never the viewer page loaded from a local port.
+// The installer API is for the bundled pages (waiting, settings) only, never the viewer page loaded from a local port.
 function handle(channel, fn) {
   ipcMain.handle(channel, (e, ...args) => {
     if (!e.senderFrame?.url.startsWith('file:')) throw new Error('Not allowed from this page');
@@ -136,16 +140,61 @@ function setupInstaller(win) {
     return list();
   });
   handle('add-folder', async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+    // Attach to the window that asked: the waiting page or the settings window.
+    const { canceled, filePaths } = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow() ?? win, {
       title: 'Choose a Minecraft instance folder',
       properties: ['openDirectory'],
     });
-    if (!canceled) {
-      fs.mkdirSync(path.dirname(FOLDERS()), { recursive: true });
-      fs.writeFileSync(FOLDERS(), JSON.stringify([...new Set([...folders(), filePaths[0]])]));
-    }
+    if (!canceled) saveFolders([...new Set([...folders(), filePaths[0]])]);
     return list();
   });
+  handle('folders', folders);
+  handle('remove-folder', (dir) => {
+    saveFolders(folders().filter((f) => f !== dir));
+    return folders();
+  });
+}
+
+let settingsWin = null;
+function openSettings() {
+  if (settingsWin && !settingsWin.isDestroyed()) return settingsWin.focus();
+  settingsWin = new BrowserWindow({
+    parent: win,
+    width: 600,
+    height: 460,
+    title: 'Settings',
+    minimizable: false,
+    fullscreenable: false,
+    autoHideMenuBar: true,
+    webPreferences: { preload: path.join(import.meta.dirname, 'preload.cjs') },
+  });
+  settingsWin.loadFile('settings.html');
+}
+
+function setupMenu() {
+  const settings = { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: openSettings };
+  const first =
+    process.platform === 'darwin'
+      ? {
+          label: app.name,
+          submenu: [
+            { role: 'about' },
+            { type: 'separator' },
+            settings,
+            { type: 'separator' },
+            { role: 'services' },
+            { type: 'separator' },
+            { role: 'hide' },
+            { role: 'hideOthers' },
+            { role: 'unhide' },
+            { type: 'separator' },
+            { role: 'quit' },
+          ],
+        }
+      : { label: 'File', submenu: [settings, { type: 'separator' }, { role: 'quit' }] };
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([first, { role: 'editMenu' }, { role: 'viewMenu' }, { role: 'windowMenu' }]),
+  );
 }
 
 app.whenReady().then(() => {
@@ -159,6 +208,7 @@ app.whenReady().then(() => {
     webPreferences: { preload: path.join(import.meta.dirname, 'preload.cjs') },
   });
   setupInstaller(win);
+  setupMenu();
   if (process.platform === 'darwin') win.webContents.on('dom-ready', () => win.webContents.insertCSS(MAC_CHROME));
   win.webContents.setWindowOpenHandler(({ url }) => {
     openOutside(url);

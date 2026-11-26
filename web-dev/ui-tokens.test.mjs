@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
-const FONT_SIZES = [11, 12, 13, 14, 22, 30];
+const FONT_SIZES = [11, 12, 13, 14, 16, 22, 30]; // 16px for section titles in Settings, as in T3 Code
 const RADII = [2, 4, 6, 8, 12, 16]; // 2px only for thin bars and swatches
 
 const css = readFileSync(new URL('../src/client/resources/web/style.css', import.meta.url), 'utf8')

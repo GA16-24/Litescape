@@ -48,6 +48,8 @@ const ICON = {
   people:
     '<svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="m15.5 11.5 2 2 3.5-4"/></svg>',
   updown: '<svg class="i" viewBox="0 0 24 24"><path d="m8 9.5 4-4 4 4M8 14.5l4 4 4-4"/></svg>',
+  settings:
+    '<svg class="i" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>',
   x: '<svg class="i" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7 7 17"/></svg>',
   fit: '<svg class="i" viewBox="0 0 24 24"><path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"/></svg>',
   camera:
@@ -2934,6 +2936,7 @@ const COMMANDS = () => {
     },
     { title: t('Toggle sidebar'), key: `${MOD} B`, icon: ICON.sidebar, run: () => toggle('sidebar') },
     { title: t('Toggle details panel'), key: 'I', icon: ICON.panel, run: () => toggle('inspector') },
+    { title: t('Settings'), icon: ICON.settings, run: () => openSettings() },
     {
       icon: document.documentElement.dataset.theme === 'light' ? ICON.moon : ICON.sun,
       title: t(
@@ -3096,21 +3099,149 @@ $('palette').addEventListener('mousedown', (e) => {
   if (e.target.id === 'palette') closePalette();
 });
 
-function cycleTheme() {
+function setTheme(theme) {
   const r = document.documentElement;
-  const next = r.dataset.theme === 'light' ? 'dark' : r.dataset.theme === 'dark' ? '' : 'light';
-  if (next) r.dataset.theme = next;
+  if (theme) r.dataset.theme = theme;
   else delete r.dataset.theme;
   try {
-    localStorage.setItem('litweb.theme', next);
+    localStorage.setItem('litweb.theme', theme);
   } catch {}
   applyTheme();
   if (S.data) buildHelpers(S.data);
 }
+function cycleTheme() {
+  const theme = document.documentElement.dataset.theme;
+  setTheme(theme === 'light' ? 'dark' : theme === 'dark' ? '' : 'light');
+}
+// ---------------------------------------------------------------- settings
+
+// Keys stay as they are on the keyboard; labels are translated.
+const KEYS = [
+  [
+    t('View'),
+    [
+      [t('Fit to view'), 'F'],
+      [t('Reload view'), 'R'],
+      [t('Save screenshot'), 'S'],
+      [t('Shaders on or off'), 'V'],
+      [t('Missing-block ghosts'), 'G'],
+    ],
+  ],
+  [
+    t('Layers'),
+    [
+      [t('Next layer mode'), 'L'],
+      [t('Layer up or down'), '↑', '↓'],
+    ],
+  ],
+  [
+    t('Blocks'),
+    [
+      [t('Show all blocks'), '1'],
+      [t('Show remaining blocks'), '2'],
+      [t('Show problems only'), '3'],
+    ],
+  ],
+  [
+    t('App'),
+    [
+      [t('Search views and commands'), MOD, 'K'],
+      [t('Command palette'), '?'],
+      [t('Sidebar'), MOD, 'B'],
+      [t('Details panel'), 'I'],
+    ],
+  ],
+  [
+    t('Mouse'),
+    [
+      [t('Orbit'), t('Drag')],
+      [t('Pan'), t('Right-drag')],
+      [t('Zoom'), t('Scroll')],
+    ],
+  ],
+];
+$('set-keys').innerHTML = KEYS.map(
+  ([group, rows]) =>
+    `<h3>${group}</h3><div class="set-card">${rows
+      .map(
+        ([label, ...keys]) =>
+          `<div class="set-row"><div class="set-text"><span>${label}</span></div><span class="set-keys">${keys.map((k) => `<kbd class="kbd">${k}</kbd>`).join('')}</span></div>`,
+      )
+      .join('')}</div>`,
+).join('');
+
+$('set-lang').innerHTML = Object.entries(LANGS)
+  .map(([code, name]) => `<option value="${code}"${code === lang ? ' selected' : ''}>${name}</option>`)
+  .join('');
+$('set-lang').addEventListener('change', (e) => setLang(e.target.value));
+
+function syncSettings() {
+  const theme = document.documentElement.dataset.theme || '';
+  for (const r of document.querySelectorAll('[name=scheme]')) r.checked = r.value === theme;
+  const app = $('app').classList;
+  $('set-sidebar').setAttribute('aria-checked', String(!app.contains('no-sidebar')));
+  $('set-details').setAttribute('aria-checked', String(!app.contains('no-inspector')));
+  const n = S.hidden.size;
+  $('set-hidden-n').textContent = n
+    ? t('{n} views are hidden from the sidebar, across your servers.', { n })
+    : t('Nothing is hidden. Hide a view from its menu in the sidebar.');
+  $('set-unhide').disabled = !n;
+  $('set-shaders').disabled = $('app').classList.contains('idle'); // no view open, so no details panel
+}
+function settingsPage(page) {
+  for (const b of $('settings').querySelectorAll('.set-nav [data-page]')) {
+    if (b.dataset.page === page) {
+      b.setAttribute('aria-current', 'page');
+      $('set-page').textContent = b.textContent.trim();
+    } else b.removeAttribute('aria-current');
+  }
+  for (const sec of $('set-body').children) sec.hidden = sec.dataset.page !== page;
+  $('set-body').scrollTop = 0;
+}
+// A native <dialog>: showModal() makes the page behind it inert, and Esc closes it.
+function openSettings(page = 'general') {
+  settingsPage(page);
+  syncSettings();
+  $('settings').showModal();
+  $('settings').querySelector('[aria-current="page"]').focus();
+}
+$('open-settings').addEventListener('click', () => openSettings());
+$('close-settings').addEventListener('click', () => $('settings').close());
+$('settings').addEventListener('click', (e) => {
+  if (e.target.id === 'settings') $('settings').close(); // a click on the backdrop
+  const nav = e.target.closest('.set-nav [data-page]');
+  if (nav) settingsPage(nav.dataset.page);
+});
+$('settings').addEventListener('change', (e) => {
+  if (e.target.name === 'scheme') setTheme(e.target.value);
+});
+$('set-sidebar').addEventListener('click', () => {
+  toggle('sidebar');
+  syncSettings();
+});
+$('set-details').addEventListener('click', () => {
+  toggle('inspector');
+  syncSettings();
+});
+$('set-unhide').addEventListener('click', () => {
+  S.hidden.clear();
+  try {
+    localStorage.setItem('litweb.hidden', '[]');
+  } catch {}
+  renderNav();
+  syncSettings();
+  $('settings').querySelector('[aria-current="page"]').focus(); // the button it was on is disabled now
+  toast(t('Hidden views are back'), t('They show in the sidebar again.'));
+});
+$('set-shaders').addEventListener('click', () => {
+  $('settings').close();
+  openShaderTab();
+});
 
 // ---------------------------------------------------------------- keyboard
 
 document.addEventListener('keydown', (e) => {
+  if ($('settings').open) return;
   const mod = isMac ? e.metaKey : e.ctrlKey;
   if (mod && e.key.toLowerCase() === 'k') {
     e.preventDefault();
@@ -3222,7 +3353,7 @@ try {
 } catch {}
 translateDom();
 document.querySelectorAll('[data-mod]').forEach((k) => {
-  k.textContent = `${MOD} K`;
+  k.textContent = `${MOD} ${k.textContent}`;
 });
 $('toggle-sidebar').setAttribute('aria-pressed', String(!$('app').classList.contains('no-sidebar')));
 $('toggle-inspector').setAttribute('aria-pressed', String(!$('app').classList.contains('no-inspector')));
