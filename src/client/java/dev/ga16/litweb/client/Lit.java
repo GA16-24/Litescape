@@ -202,8 +202,13 @@ final class Lit {
 		Minecraft mc = Minecraft.getInstance();
 		ItemStackRenderState state = new ItemStackRenderState();
 		mc.getItemModelResolver().updateForTopItem(state, stack, ItemDisplayContext.GUI, mc.level, null, 0);
+		//? if >=26.1 {
 		var material = state.pickParticleMaterial(RandomSource.create(0));
 		return material == null ? "" : material.sprite().contents().name().toString();
+		//?} else {
+		/*var sprite = state.pickParticleIcon(RandomSource.create(0));
+		return sprite == null ? "" : sprite.contents().name().toString();
+		*///?}
 	}
 
 	// ---- shared placements: the placement with its schematic (block entities included), as compressed NBT ----

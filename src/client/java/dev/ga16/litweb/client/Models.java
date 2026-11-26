@@ -8,14 +8,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.color.block.BlockTintSource;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.model.geom.builders.UVPair;
+//? if >=26.1 {
+import net.minecraft.client.color.block.BlockTintSource;
 import net.minecraft.client.renderer.block.FluidModel;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.model.geom.builders.UVPair;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
+//?} else {
+/*import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandler;
+import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandlerRegistry;
+import net.minecraft.client.renderer.ItemBlockRenderTypes;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.BlockModelPart;
+import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+*///?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -86,10 +96,15 @@ final class Models {
 			&& state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).isEmpty());
 
 		JsonArray quads = new JsonArray();
+		//? if >=26.1 {
 		BlockStateModel model = mc.getModelManager().getBlockStateModelSet().get(state);
 		List<BlockStateModelPart> parts = new ArrayList<>();
+		//?} else {
+		/*BlockStateModel model = mc.getBlockRenderer().getBlockModel(state);
+		List<BlockModelPart> parts = new ArrayList<>();
+		*///?}
 		model.collectParts(RandomSource.create(42L), parts);
-		for (BlockStateModelPart part : parts) {
+		for (var part : parts) {
 			for (Direction d : Direction.values()) for (BakedQuad q : part.getQuads(d)) quads.add(quad(state, q, d));
 			for (BakedQuad q : part.getQuads(null)) quads.add(quad(state, q, null));
 		}
@@ -98,13 +113,22 @@ final class Models {
 		o.add("q", quads);
 
 		if (!fluid.isEmpty()) {
-			FluidModel fm = mc.getModelManager().getFluidStateModelSet().get(fluid);
 			JsonObject f = new JsonObject();
 			f.addProperty("k", BuiltInRegistries.FLUID.getKey(fluid.getType()).getPath().replace("flowing_", ""));
+			//? if >=26.1 {
+			FluidModel fm = mc.getModelManager().getFluidStateModelSet().get(fluid);
 			f.addProperty("t", texture(fm.stillMaterial().sprite()));
 			f.addProperty("c", fm.tintSource() == null ? -1 : tint(fm.tintSource(), state));
-			f.addProperty("h", fluid.getOwnHeight());
 			f.addProperty("l", fm.layer().ordinal());
+			//?} else {
+			/*FluidRenderHandler handler = FluidRenderHandlerRegistry.INSTANCE.get(fluid.getType());
+			BlockPos at = level == null ? null : tintPos;
+			f.addProperty("t", texture(handler.getFluidSprites(level, at, fluid)[0]));
+			int color = handler.getFluidColor(level, at, fluid);
+			f.addProperty("c", color == -1 ? -1 : color & 0xFFFFFF);
+			f.addProperty("l", layer(ItemBlockRenderTypes.getRenderLayer(fluid)));
+			*///?}
+			f.addProperty("h", fluid.getOwnHeight());
 			o.add("f", f);
 		}
 		return o;
@@ -120,7 +144,10 @@ final class Models {
 		VoxelShape shape = state.getShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
 		if (shape.isEmpty()) return;
 		AABB b = shape.bounds();
+		//? if >=26.1 {
 		int t = texture(model.particleMaterial().sprite());
+		//?} else
+		//int t = texture(model.particleIcon());
 		float x0 = (float) b.minX, y0 = (float) b.minY, z0 = (float) b.minZ, x1 = (float) b.maxX, y1 = (float) b.maxY, z1 = (float) b.maxZ;
 		float[][] faces = {
 			{x0, y0, z1, x0, y0, z0, x1, y0, z0, x1, y0, z1}, // down
@@ -145,6 +172,7 @@ final class Models {
 
 	/** [texture, cullFace, tint, layer, shadeDir, then 4 × (x, y, z, u, v)]. */
 	private JsonArray quad(BlockState state, BakedQuad q, @Nullable Direction cull) {
+		//? if >=26.1 {
 		BakedQuad.MaterialInfo m = q.materialInfo();
 		TextureAtlasSprite s = m.sprite();
 		int tint = -1;
@@ -152,13 +180,25 @@ final class Models {
 			BlockTintSource src = mc.getBlockColors().getTintSource(state, m.tintIndex());
 			if (src != null) tint = tint(src, state);
 		}
+		int layer = m.layer().ordinal();
+		//?} else {
+		/*TextureAtlasSprite s = q.sprite();
+		int tint = -1;
+		if (q.isTinted()) {
+			int color = mc.getBlockColors().getColor(state, level, level == null ? null : tintPos, q.tintIndex());
+			if (color != -1) tint = color & 0xFFFFFF;
+		}
+		int layer = layer(ItemBlockRenderTypes.getChunkRenderType(state));
+		*///?}
 		//? if >=26.3 {
 		Direction shade = m.shadeDirectionOverride() != null ? m.shadeDirectionOverride() : q.direction();
-		//?} else {
+		//?} elif >=26.1 {
 		/*// 26.3's models replaced every "shade": false with "shade_direction_override": "up".
 		Direction shade = m.shade() ? q.direction() : Direction.UP;
+		*///?} else {
+		/*Direction shade = q.shade() ? q.direction() : Direction.UP;
 		*///?}
-		JsonArray a = header(texture(s), cull == null ? -1 : cull.get3DDataValue(), tint, m.layer().ordinal(), shade);
+		JsonArray a = header(texture(s), cull == null ? -1 : cull.get3DDataValue(), tint, layer, shade);
 		float du = s.getU1() - s.getU0(), dv = s.getV1() - s.getV0();
 		for (int v = 0; v < 4; v++) {
 			Vector3fc p = q.position(v);
@@ -181,9 +221,16 @@ final class Models {
 		return a;
 	}
 
+	//? if >=26.1 {
 	private int tint(BlockTintSource src, BlockState state) {
 		return (level == null ? src.color(state) : src.colorInWorld(state, level, tintPos)) & 0xFFFFFF;
 	}
+	//?} else {
+	/*/^* The web app knows 26.1's layers: solid, cutout, translucent. Tripwire later moved into translucent. ^/
+	private static int layer(ChunkSectionLayer layer) {
+		return layer == ChunkSectionLayer.TRIPWIRE ? ChunkSectionLayer.TRANSLUCENT.ordinal() : layer.ordinal();
+	}
+	*///?}
 
 	private int texture(TextureAtlasSprite s) {
 		return textures.computeIfAbsent(s, k -> {

@@ -10,7 +10,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+//? if >=26.1 {
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
+//?} else
+//import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -49,10 +52,14 @@ public final class LitWebClient implements ClientModInitializer {
 			if (Bridge.serverMod()) Bridge.refreshList();
 			if (!announced && mc.player != null) {
 				announced = true;
-				mc.player.sendSystemMessage(Component.literal("Litescape: ")
+				Component message = Component.literal("Litescape: ")
 					.append(Component.literal(WebServer.url()).withStyle(s -> s.withClickEvent(new ClickEvent.RunCommand("litweb"))
 						.withColor(ChatFormatting.AQUA).withUnderlined(true)))
-					.append(Component.translatable("litweb.chat.or_command").withStyle(ChatFormatting.GRAY)));
+					.append(Component.translatable("litweb.chat.or_command").withStyle(ChatFormatting.GRAY));
+				//? if >=26.1 {
+				mc.player.sendSystemMessage(message);
+				//?} else
+				//mc.player.displayClientMessage(message, false);
 			}
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> {
@@ -60,7 +67,10 @@ public final class LitWebClient implements ClientModInitializer {
 			WebServer.regionRead = null;
 		});
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registries) -> dispatcher.register(
+			//? if >=26.1 {
 			ClientCommands.literal("litweb").executes(ctx -> {
+			//?} else
+			//ClientCommandManager.literal("litweb").executes(ctx -> {
 				ctx.getSource().sendFeedback(openViewer() ? Component.translatable("litweb.command.opening_app") : Component.translatable("litweb.command.opened", WebServer.url()));
 				return 1;
 			})));

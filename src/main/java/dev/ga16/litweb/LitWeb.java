@@ -108,8 +108,13 @@ public final class LitWeb implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		//? if >=26.1 {
 		PayloadTypeRegistry.serverboundPlay().register(Req.TYPE, Req.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(Reply.TYPE, Reply.CODEC);
+		//?} else {
+		/*PayloadTypeRegistry.playC2S().register(Req.TYPE, Req.CODEC);
+		PayloadTypeRegistry.playS2C().register(Reply.TYPE, Reply.CODEC);
+		*///?}
 		instance = this;
 		ServerLifecycleEvents.SERVER_STARTED.register(this::load);
 		ServerLifecycleEvents.SERVER_STOPPING.register(s -> flushContributors());
@@ -510,7 +515,10 @@ public final class LitWeb implements ModInitializer {
 		return pos -> {
 			int cx = pos.getX() >> 4, cz = pos.getZ() >> 4;
 			LevelChunk c = last[0];
+			//? if >=26.1 {
 			if (c == null || c.getPos().x() != cx || c.getPos().z() != cz) {
+			//?} else
+			//if (c == null || c.getPos().x != cx || c.getPos().z != cz) {
 				c = level.getChunkSource().getChunkNow(cx, cz);
 				if (c == null) return null;
 				last[0] = c;
