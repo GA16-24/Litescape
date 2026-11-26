@@ -1,6 +1,6 @@
 // Survival build order: the sequence to place a schematic's blocks in without flying.
 // Bottom-up, every block after something it can be placed against, attached blocks after the block
-// they hang on, then parts that can fire when placed, then water and lava sources.
+// they hang on, then parts that can fire when placed, then water and lava sources, then plants that need water.
 
 /** Flags per step, for the card that says what to watch out for. */
 export const ACTIVATES = 1; // observers, pistons, redstone: can fire as soon as they're placed
@@ -15,7 +15,9 @@ const GRAVITY =
 // Their state's `facing` points away from the wall they hang on.
 const ON_WALL = /wall_torch$|^ladder$|_wall_sign$|_wall_banner$|_wall_head$|_wall_skull$|^tripwire_hook$/;
 const ON_FLOOR =
-  /torch$|^redstone_wire$|^repeater$|^comparator$|_pressure_plate$|carpet$|rail$|_sign$|_banner$|sapling$|^(sugar_cane|cactus|bamboo|wheat|carrots|potatoes|beetroots|nether_wart)$/;
+  /torch$|^redstone_wire$|^repeater$|^comparator$|_pressure_plate$|carpet$|rail$|_sign$|_banner$|_door$|sapling$|^(sugar_cane|cactus|bamboo|wheat|carrots|potatoes|beetroots|nether_wart)$/;
+// Can only be placed next to or in water, so they come after it.
+const NEEDS_WATER = /^(sugar_cane|lily_pad|kelp|kelp_plant|seagrass|tall_seagrass)$/;
 // Placed by the game together with another block, or never placed by hand.
 const SKIP = /^(air|cave_air|void_air|light|structure_void|bubble_column|piston_head|moving_piston)$/;
 const FACING = {
@@ -46,7 +48,7 @@ export function rule(e) {
   else if (ON_FLOOR.test(n) && !n.includes('hanging')) host = BELOW;
   const gravity = GRAVITY.test(n);
   if (gravity) host = BELOW;
-  return { phase: ACTIVATE.test(n) ? 1 : 0, host: host || null, gravity };
+  return { phase: NEEDS_WATER.test(n) ? 3 : ACTIVATE.test(n) ? 1 : 0, host: host || null, gravity };
 }
 
 /**

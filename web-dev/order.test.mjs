@@ -84,3 +84,31 @@ test('places a floating block at its height, not after the water', () => {
   assert.deepEqual(v.names, ['stone', 'oak_slab', 'water']);
   assert.deepEqual([...v.flags], [0, FLOATING, FLUID]);
 });
+
+test('places a button and a ladder after the wall they hang on', () => {
+  // Both face east, so their wall is to the west, at x=0. They come first in index order.
+  const v = vol([2, 1, 2], {
+    '1,0,0': ['stone_button', 'face=wall,facing=east'],
+    '1,0,1': ['ladder', 'facing=east'],
+    '0,0,0': ['stone'],
+    '0,0,1': ['stone'],
+  });
+  assert.ok(v.rank[v.at(1, 0, 0)] > v.rank[v.at(0, 0, 0)]);
+  assert.ok(v.rank[v.at(1, 0, 1)] > v.rank[v.at(0, 0, 1)]);
+});
+
+test('places sugar cane after the water next to its dirt', () => {
+  const v = vol([2, 2, 1], { '0,0,0': ['dirt'], '1,0,0': ['water', 'level=0'], '0,1,0': ['sugar_cane', 'age=0'] });
+  assert.deepEqual(v.names, ['dirt', 'water', 'sugar_cane']);
+});
+
+test('places a door after the block under it', () => {
+  // The door touches a wall at its height, but its floor is a redstone block, which comes later.
+  const v = vol([2, 2, 1], {
+    '0,0,0': ['redstone_block'],
+    '0,1,0': ['oak_door', 'half=lower,facing=east'],
+    '1,0,0': ['stone'],
+    '1,1,0': ['stone'],
+  });
+  assert.deepEqual(v.names, ['stone', 'stone', 'redstone_block', 'oak_door']);
+});
