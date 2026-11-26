@@ -86,7 +86,7 @@ For the web dev server, shader dev server and fixtures, see the Development sect
 
 ## Project conventions
 
-- The mod is one jar for client and server, built once per Litematica release line from the folders in `versions/`. `src/` is written for the newest Minecraft version. Code that differs on older versions goes in [Stonecutter](https://stonecutter.kikugie.dev/) comments (`//? if <1.21.5 {`), and `./gradlew build` compiles every version.
+- The mod is one jar for client and server, built once per Litematica release line from the folders in `versions/`. `src/` is written for the newest Minecraft version. Code that differs on older versions goes in [Stonecutter](https://stonecutter.kikugie.dev/) comments (`//? if <1.21.5 {`), and `./gradlew build` compiles every version. A new Minecraft version gets a `versions/<line>/gradle.properties` with a `test.<version>` line for each version it covers, an entry in `settings.gradle`, and a rerun of `node .github/minecraft-advisories.mjs`, which lists the advisories in that Minecraft's own libraries for Dependency review.
 - Code in `src/main` runs on both sides, so it can't touch client classes. Client-only code goes in `src/client`.
 - The web app is plain ES modules with no build step. Don't add a bundler, framework or npm dependency. `vendor/` holds third-party code and is excluded from Biome. Don't edit it.
 - New Gradle dependencies need a reason in the PR. Dependency review fails on any known vulnerability.
