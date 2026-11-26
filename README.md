@@ -85,7 +85,7 @@ Shares live in `<world>/litweb/`. Server reads only touch loaded chunks, so nobo
 
 The web server binds to `127.0.0.1` and rejects any `Host` or `Origin` that isn't the local page, so other websites can't read your world.
 
-The server switcher keeps copies of what you opened in `~/.litescape/<your player UUID>/`. Other accounts on the computer can't see them. A copy is deleted once it's unshared or you lose access. Removing someone's access doesn't un-download what they already have.
+The server switcher keeps copies of what you opened in `~/.litescape/<your player UUID>/`. Other accounts on the computer can't see them. A copy is deleted once it's unshared or you lose access and you next visit that server. Removing someone's access doesn't un-download what they already have.
 
 The Shaders tab asks Modrinth for icons and download counts, and downloads the pack you pick. Nothing else leaves your computer.
 
