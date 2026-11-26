@@ -1,12 +1,13 @@
 // Run with: node --test desktop/instances.test.mjs
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import zlib from 'node:zlib';
-import { bundledMod, install, mcMatches, scan, uninstall } from './instances.js';
+import { bundledMod, createInstance, install, installDeps, mcMatches, scan, uninstall } from './instances.js';
 
 // A minimal deflated zip; the reader ignores CRCs.
 function jar(file, modJson) {
@@ -115,10 +116,11 @@ test('finds instances in each launcher and installs only where the mod can load'
   assert.equal(found['Build world'].installed, '0.1.0');
   assert.equal(found['Build world'].dir, ready);
   assert.equal(found.fabric.blocker, null);
-  assert.equal(found.fabric.litematica, false);
+  assert.deepEqual(found.fabric.missing, ['malilib', 'litematica']);
   assert.equal(found.old.blocker, 'Minecraft 1.21.11. Litescape needs 26.3.');
   assert.equal(found['Forge pack'].blocker, 'Not a Fabric instance');
-  assert.equal(found['Fabulously Optimized'].blocker, 'Needs Fabric API');
+  assert.equal(found['Fabulously Optimized'].blocker, null);
+  assert.deepEqual(found['Fabulously Optimized'].missing, ['fabric-api', 'malilib', 'litematica']);
   assert.equal(found['Fabulously Optimized'].dir, path.join(custom, 'profiles', 'fo'));
 
   install(ready, mod);
@@ -134,5 +136,67 @@ test('finds instances in each launcher and installs only where the mod can load'
   uninstall(vanillaDir);
   assert.deepEqual(fs.readdirSync(path.join(vanillaDir, 'mods')), ['fapi.jar']);
 
+  fs.rmSync(tmp, { recursive: true });
+});
+
+test('creates a Minecraft Launcher instance and downloads the dependencies it lacks', async (t) => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'litescape-'));
+  const files = {};
+  for (const id of ['fabric-api', 'malilib', 'litematica']) {
+    jar(path.join(tmp, 'cdn', `${id}.jar`), { id, version: '1.0.0' });
+    files[`https://cdn.modrinth.com/${id}.jar`] = fs.readFileSync(path.join(tmp, 'cdn', `${id}.jar`));
+  }
+  const sha512 = (b) => crypto.createHash('sha512').update(b).digest('hex');
+  let corrupt = false;
+  let profileId = '../../evil';
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    const u = new URL(url);
+    const json = (body) => new Response(JSON.stringify(body));
+    if (u.host === 'meta.fabricmc.net') {
+      return u.pathname.endsWith('/profile/json')
+        ? json({ id: profileId, inheritsFrom: '26.3' })
+        : json([
+            { loader: { version: '0.21.0-beta', stable: false } },
+            { loader: { version: '0.20.1', stable: true } },
+          ]);
+    }
+    if (u.host === 'api.modrinth.com') {
+      assert.equal(u.searchParams.get('game_versions'), '["26.3"]');
+      const slug = u.pathname.split('/')[3];
+      const fileUrl = `https://cdn.modrinth.com/${slug}.jar`;
+      const hash = corrupt ? 'bad' : sha512(files[fileUrl]);
+      return json([
+        {
+          version_type: 'release',
+          files: [{ primary: true, url: fileUrl, filename: `${slug}.jar`, hashes: { sha512: hash } }],
+        },
+      ]);
+    }
+    return files[url] ? new Response(files[url]) : new Response('', { status: 404 });
+  });
+
+  const mc = path.join(tmp, 'minecraft');
+  await assert.rejects(createInstance(mc, '26.3'), /Minecraft Launcher not found/);
+  write(path.join(mc, 'launcher_profiles.json'), { profiles: { other: { name: 'Mine', lastVersionId: '26.3' } } });
+  await assert.rejects(createInstance(mc, '26.3'), /expected fabric-loader-0.20.1-26.3/);
+  profileId = 'fabric-loader-0.20.1-26.3';
+  const dir = await createInstance(mc, '26.3');
+  assert.equal(dir, path.join(mc, 'litescape'));
+  const profiles = JSON.parse(fs.readFileSync(path.join(mc, 'launcher_profiles.json'), 'utf8')).profiles;
+  assert.equal(profiles.other.name, 'Mine');
+  assert.equal(profiles.litescape.lastVersionId, 'fabric-loader-0.20.1-26.3');
+  assert.ok(fs.existsSync(path.join(mc, 'versions', 'fabric-loader-0.20.1-26.3', 'fabric-loader-0.20.1-26.3.json')));
+
+  corrupt = true;
+  await assert.rejects(installDeps(dir, '26.3'), /failed its checksum/);
+  assert.deepEqual(fs.readdirSync(path.join(dir, 'mods')), []);
+  corrupt = false;
+  jar(path.join(dir, 'mods', 'my-fapi.jar'), { id: 'fabric-api', version: '0.1.0' });
+  await installDeps(dir, '26.3');
+  assert.deepEqual(fs.readdirSync(path.join(dir, 'mods')).sort(), ['litematica.jar', 'malilib.jar', 'my-fapi.jar']);
+
+  const [litescape] = scan({ vanilla: [mc] }, [], null).filter((i) => i.name === 'Litescape');
+  assert.equal(litescape.blocker, null);
+  assert.deepEqual(litescape.missing, []);
   fs.rmSync(tmp, { recursive: true });
 });

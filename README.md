@@ -53,7 +53,7 @@ It needs WebGL 2 with floating-point render targets, which current Chrome, Edge,
 
 ## Install
 
-Install the Litescape app. It finds your Minecraft instances and installs the mod into the ones you pick.
+Install the Litescape app. It finds your Minecraft instances and installs the mod and everything it needs into the ones you pick, or creates a ready-to-play instance for you.
 
 ```sh
 brew install --cask GA16-24/tap/litescape   # macOS and Linux
@@ -63,7 +63,9 @@ On Windows, run `Litescape-<version>-win-x64.exe` from the [releases page](https
 
 When the game isn't running, the app lists the instances it found in the Minecraft Launcher, Prism Launcher, the Modrinth App and CurseForge. Click Install next to one, then start the game from that instance. If you use another launcher, click "Add instance folder…" and choose the instance's folder.
 
-- Install is only offered for instances that run Fabric on Minecraft 26.3 and already have Fabric API, because the game won't start otherwise. Get Fabric API and Litematica 0.29.1 (with MaLiLib) from your launcher or Modrinth; the app links to both. Without Litematica the mod loads but the viewer stays off.
+- Install also downloads Fabric API, MaLiLib and Litematica from Modrinth when the instance doesn't have them, picking the newest Fabric build for that instance's Minecraft version. It's only offered for instances that already run Fabric on Minecraft 26.3.
+- "Create Litescape instance" adds a Litescape profile to the Minecraft Launcher, with its own game folder (`litescape` inside the launcher's folder), Fabric Loader, the three mods above and Litescape. Close the Minecraft Launcher first, or it may overwrite the new profile when it exits. Creating it again updates the same profile.
+- When you update the app, it updates the mod in every instance that has an older copy the next time it lists them.
 - Install removes any other copy of the mod in that instance, so you never end up with two. Remove takes it out again. Close the game in that instance first: Windows won't let the app replace a jar the game has open.
 - Minecraft Launcher profiles that share a game folder share its mods folder too, so installing into one puts the mod in all of them.
 

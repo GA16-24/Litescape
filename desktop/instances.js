@@ -1,4 +1,6 @@
 // Finds Minecraft instances from the common launchers and installs the bundled mod jar into them.
+
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -6,6 +8,9 @@ import { DatabaseSync } from 'node:sqlite';
 import zlib from 'node:zlib';
 
 const MOD_ID = 'litweb';
+// Modrinth slugs, which are also the mod ids. MaLiLib comes before Litematica, which needs it.
+export const DEPS = ['fabric-api', 'malilib', 'litematica'];
+const UA = 'GA16-24/Litescape (github.com/GA16-24/Litescape)';
 
 /** Reads one entry of a zip (a jar) with positioned reads, so big jars aren't loaded whole. */
 export function readZipEntry(file, name) {
@@ -72,11 +77,15 @@ export function bundledMod(dir) {
   return null;
 }
 
+/** The base version of a range like "~26.3", or null for "*" and missing ranges. */
+export function mcBase(range) {
+  return typeof range === 'string' && range !== '*' ? range.replace(/^[~^>=\s]+/, '') : null;
+}
+
 // shortcut: treats "~26.3" or ">=26.3" as "26.3 or 26.3.x"; use a real semver range check if the mod ever spans versions.
 export function mcMatches(version, range) {
-  if (typeof range !== 'string' || range === '*') return true;
-  const want = range.replace(/^[~^>=\s]+/, '');
-  return version === want || version.startsWith(`${want}.`);
+  const want = mcBase(range);
+  return !want || version === want || version.startsWith(`${want}.`);
 }
 
 function readText(file) {
@@ -251,15 +260,13 @@ export function scan(roots, folders, mod) {
         i.fabric === false
           ? 'Not a Fabric instance'
           : i.mc && mod && !mcMatches(i.mc, mod.mc)
-            ? `Minecraft ${i.mc}. Litescape needs ${mod.mc.replace(/^[~^>=\s]+/, '')}.`
-            : !has('fabric-api')
-              ? 'Needs Fabric API'
-              : null;
+            ? `Minecraft ${i.mc}. Litescape needs ${mcBase(mod.mc)}.`
+            : null;
       return {
         ...i,
         blocker,
         installed: all.find((j) => j.ids.includes(MOD_ID))?.version ?? null,
-        litematica: has('litematica'),
+        missing: DEPS.filter((d) => !has(d)),
       };
     })
     .sort((a, b) => (a.blocker ? 1 : 0) - (b.blocker ? 1 : 0) || a.name.localeCompare(b.name));
@@ -283,4 +290,69 @@ export function install(dir, mod) {
 
 export function uninstall(dir) {
   for (const j of jars(dir)) if (j.ids.includes(MOD_ID)) fs.rmSync(j.file);
+}
+
+async function get(url) {
+  const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(60000) });
+  if (!res.ok) throw new Error(`${new URL(url).host} answered ${res.status}`);
+  return res;
+}
+
+/** Downloads the newest Fabric build of each dependency the instance lacks from Modrinth, checking its hash. */
+export async function installDeps(dir, mc) {
+  const modsDir = path.join(dir, 'mods');
+  fs.mkdirSync(modsDir, { recursive: true });
+  const have = jars(dir).flatMap((j) => j.ids);
+  for (const slug of DEPS.filter((d) => !have.includes(d))) {
+    const q = new URLSearchParams({ loaders: '["fabric"]', game_versions: JSON.stringify([mc]) });
+    const versions = await (await get(`https://api.modrinth.com/v2/project/${slug}/version?${q}`)).json();
+    // Newest first, betas included: Fabric API's build for a new Minecraft version is often still marked beta.
+    const file = versions[0]?.files.find((f) => f.primary) ?? versions[0]?.files[0];
+    if (!file) throw new Error(`Modrinth has no ${slug} for Minecraft ${mc} yet`);
+    if (!file.url.startsWith('https://cdn.modrinth.com/')) throw new Error(`Modrinth sent ${slug} from ${file.url}`);
+    const data = Buffer.from(await (await get(file.url)).arrayBuffer());
+    if (crypto.createHash('sha512').update(data).digest('hex') !== file.hashes.sha512) {
+      throw new Error(`${file.filename} from Modrinth failed its checksum`);
+    }
+    // The name comes from the network: keep it a plain file name inside mods/.
+    const target = path.join(modsDir, `${file.filename.replace(/\.jar$/, '').replace(/[^\w.+-]/g, '_')}.jar`);
+    fs.writeFileSync(`${target}.part`, data);
+    fs.renameSync(`${target}.part`, target);
+  }
+}
+
+/** Adds a "Litescape" Fabric profile with its own game folder to the Minecraft Launcher, like Fabric's installer. */
+export async function createInstance(root, mc) {
+  const file = path.join(root, 'launcher_profiles.json');
+  const json = readJson(file);
+  if (!json) throw new Error('Minecraft Launcher not found. Install it and open it once, then try again');
+  const meta = `https://meta.fabricmc.net/v2/versions/loader/${mc}`;
+  const loaders = await (await get(meta)).json();
+  const loader = (loaders.find((l) => l.loader.stable) ?? loaders[0])?.loader.version;
+  if (!loader) throw new Error(`Fabric doesn't support Minecraft ${mc} yet`);
+  if (!/^[\w.+-]+$/.test(loader)) throw new Error(`Fabric meta sent an odd loader version: ${loader}`);
+  const profile = await (await get(`${meta}/${loader}/profile/json`)).json();
+  // The folder name comes from versions we checked, never from the response, so it can't point outside versions/.
+  const id = `fabric-loader-${loader}-${mc}`;
+  if (profile.id !== id) throw new Error(`Fabric meta sent profile ${profile.id}, expected ${id}`);
+  const versionDir = path.join(root, 'versions', id);
+  fs.mkdirSync(versionDir, { recursive: true });
+  fs.writeFileSync(path.join(versionDir, `${id}.json`), JSON.stringify(profile, null, 2));
+  fs.writeFileSync(path.join(versionDir, `${id}.jar`), ''); // Fabric's installer leaves the same empty jar
+
+  const gameDir = path.join(root, 'litescape');
+  const now = new Date().toISOString();
+  json.profiles ??= {};
+  json.profiles.litescape = {
+    created: now,
+    ...json.profiles.litescape,
+    name: 'Litescape',
+    type: 'custom',
+    lastUsed: now,
+    lastVersionId: id,
+    gameDir,
+  };
+  fs.writeFileSync(file, JSON.stringify(json, null, 2));
+  fs.mkdirSync(gameDir, { recursive: true });
+  return gameDir;
 }
