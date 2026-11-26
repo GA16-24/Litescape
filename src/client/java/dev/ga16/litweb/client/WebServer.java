@@ -366,7 +366,7 @@ final class WebServer {
 	}
 
 	private static JsonObject status(String type, String id) throws Exception {
-		int[] counts = new int[6];
+		int[] counts = new int[Volume.STATUSES];
 		byte[] st;
 		switch (type) {
 			case "placement" -> {

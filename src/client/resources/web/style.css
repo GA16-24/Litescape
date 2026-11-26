@@ -21,6 +21,7 @@
   --missing: #8b93a7;
   --wrong: #fb414a;
   --state: #fbbf24;
+  --redstone: #d66bff;
   --unknown: #525252;
   --danger: #fb414a;
   --scene: #000;
@@ -63,6 +64,7 @@
     --missing: #64748b;
     --wrong: #ef4444;
     --state: #d97706;
+    --redstone: #a21caf;
     --unknown: #a1a1aa;
     --danger: #dc2626;
     --scene: #fcfcfc;
@@ -92,6 +94,7 @@
   --missing: #64748b;
   --wrong: #ef4444;
   --state: #d97706;
+  --redstone: #a21caf;
   --unknown: #a1a1aa;
   --danger: #dc2626;
   --scene: #fcfcfc;

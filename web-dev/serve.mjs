@@ -35,7 +35,7 @@ async function status(file) {
       st[i] = 1;
       budget--;
     }
-  const counts = [0, 0, 0, 0, 0, 0];
+  const counts = [0, 0, 0, 0, 0, 0, 0];
   for (const b of st) counts[b]++;
   counts[0] = 0;
   return { counts, status: st.toString('base64') };

@@ -97,12 +97,13 @@ public class EndToEndTest implements FabricClientGameTest {
 					SchematicPlacement p = SchematicPlacement.createFor(schem, new BlockPos(31, -63, 1), "Cottage copy", true, true);
 					DataManager.getSchematicPlacementManager().addSchematicPlacement(p, false);
 				});
-				// Build the bottom of the copy, with one wrong block and one wrong state.
+				// Build the bottom of the copy, with one wrong block, one wrong state and a hopper pointing the wrong way.
 				sp.getServer().runCommand("clone 1 -63 1 20 -58 19 31 -63 1");
 				sp.getServer().runCommand("setblock 36 -60 6 stone");
 				sp.getServer().runCommand("setblock 40 -59 14 air");
 				sp.getServer().runCommand("setblock 40 -60 14 oak_door[facing=north,half=lower]");
 				sp.getServer().runCommand("setblock 40 -59 14 oak_door[facing=north,half=upper]");
+				sp.getServer().runCommand("setblock 38 -60 13 hopper[facing=east]{Items:[{Slot:0b,id:\"minecraft:redstone\",count:18},{Slot:1b,id:\"minecraft:stick\",count:1}]}");
 				ctx.waitTicks(10);
 
 				state = json(save("state-2.json", call(ctx, "GET", "/api/state")));
@@ -114,7 +115,7 @@ public class EndToEndTest implements FabricClientGameTest {
 				check(hopper.equals("[[0,18,\"Redstone Dust\",\"minecraft:item/redstone\"],[1,1,\"Stick\",\"minecraft:item/stick\"]]"), "hopper contents in the placement view: " + vp.get("contents"));
 				JsonObject st = json(save("status-placement.json", call(ctx, "GET", "/api/status?type=placement&id=" + placement)));
 				JsonArray c = st.getAsJsonArray("counts");
-				check(c.get(1).getAsInt() > 0 && c.get(2).getAsInt() > 0 && c.get(3).getAsInt() == 1 && c.get(4).getAsInt() >= 1, "placement status counts " + c);
+				check(c.get(1).getAsInt() > 0 && c.get(2).getAsInt() > 0 && c.get(3).getAsInt() == 1 && c.get(4).getAsInt() >= 1 && c.get(6).getAsInt() == 1, "placement status counts " + c);
 
 				check(state.getAsJsonObject("terrain").get("capture").getAsBoolean(), "the host may capture surroundings: " + state.get("terrain"));
 				// Share with 8 blocks of surroundings: the view is the schematic set into the terrain around it.

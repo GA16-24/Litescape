@@ -3,6 +3,7 @@ export default {
   'Still missing': '仍缺少',
   'Wrong block': '方塊錯誤',
   'Wrong orientation or state': '方向或狀態錯誤',
+  'Wrong redstone setting': '紅石設定錯誤',
   'Not loaded on the server': '伺服器未載入',
   'Loading textures…': '正在載入材質…',
   'Building mesh…': '正在建立網格…',
