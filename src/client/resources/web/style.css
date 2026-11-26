@@ -1349,8 +1349,10 @@ button {
   background: none;
 }
 .pv-block {
-  left: 47%;
-  top: 30%;
+  /* centred in the stage: between the sidebar (24%) and the card (22% + 8px from the right) */
+  left: calc(44% - 4px);
+  top: 50%;
+  translate: 0 -50%;
   width: 14%;
   aspect-ratio: 1;
   /* three shaded faces of a cube, like the app's logo */
