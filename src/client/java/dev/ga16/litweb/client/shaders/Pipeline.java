@@ -278,9 +278,11 @@ public final class Pipeline {
 				if (on == before.containsKey(o.name)) continue;
 				v = String.valueOf(on);
 			} else {
-				v = after.value(o.name);
-				if (v == null || v.strip().equals(before.get(o.name))) continue;
-				v = v.strip();
+				// The macro's text, not its #if value: that turns names like tonemap_lottes into 0.
+				Cpp.Macro m = after.macros.get(o.name);
+				if (m == null || m.params() != null) continue;
+				v = m.body().strip();
+				if (v.equals(before.get(o.name))) continue;
 			}
 			opts.values.put(o.name, v);
 			locked.addProperty(o.name, v);

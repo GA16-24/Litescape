@@ -399,7 +399,15 @@ public class EndToEndTest implements FabricClientGameTest {
 			/* DRAWBUFFERS:0 */ gl_FragData[0] = vec4(c, 1); }
 			""");
 		Files.writeString(pack.resolve("final.vsh"), quad);
-		Files.writeString(pack.resolve("final.fsh"), "#version 120\nuniform sampler2D colortex0; varying vec2 tc;\nvoid main() { gl_FragColor = texture2D(colortex0, tc); }\n");
+		// An option whose value is a function name, like Photon's tonemap and Bliss's TONEMAP.
+		Files.writeString(pack.resolve("final.fsh"), """
+			#version 120
+			#define TONEMAP tonemap_soft // [tonemap_soft tonemap_none]
+			uniform sampler2D colortex0; varying vec2 tc;
+			vec3 tonemap_soft(vec3 c) { return c / (1.0 + c); }
+			vec3 tonemap_none(vec3 c) { return c; }
+			void main() { gl_FragColor = vec4(TONEMAP(texture2D(colortex0, tc).rgb), 1.0); }
+			""");
 
 		check(call(ctx, "GET", "/api/shaders").contains("\"id\":\"litweb-test\""), "test pack is listed");
 		JsonObject on = json(call(ctx, "POST", "/api/shaders/load", "{\"pack\":\"litweb-test\"}"));
@@ -410,6 +418,7 @@ public class EndToEndTest implements FabricClientGameTest {
 		}
 		check(on.toString().contains("\"n\":\"SHADOWS\",\"t\":\"b\"") && on.toString().contains("\"n\":\"STRENGTH\",\"t\":\"v\""), "options found " + on.get("options"));
 		check(on.getAsJsonObject("blocks").has("minecraft:oak_stairs"), "block.properties parsed");
+		check(on.getAsJsonObject("locked").isEmpty(), "options the pack doesn't pin stay unlocked: " + on.get("locked"));
 		JsonObject off = json(call(ctx, "POST", "/api/shaders/load", "{\"pack\":\"litweb-test\",\"options\":{\"SHADOWS\":\"false\",\"STRENGTH\":\"2.0\"}}"));
 		check(!off.getAsJsonObject("programs").has("composite"), "program.composite.enabled follows the option");
 		check(off.getAsJsonObject("programs").getAsJsonObject("gbuffers_terrain").get("fs").getAsString().contains("2.0"), "option value reaches the shader");
