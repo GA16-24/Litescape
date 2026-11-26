@@ -1454,18 +1454,25 @@ function renderInspector() {
     h += `<section class="panel"><div class="panel-head"><h3>${t('Build progress')}</h3></div><div class="updated">${why}</div></section>`;
   }
 
+  const sh = d.type === 'shared' ? findShared(d.id) : null;
+  const pl = d.type === 'placement' ? a.placements?.find((p) => p.id === d.id) : null;
   // With surroundings the view is bigger than the build; describe the build.
+  const origin = data.inner ? data.origin.map((v, k) => v + data.inner[k]) : data.origin;
   const facts = [
     [t('Size'), dims(data.inner ? data.inner.slice(3) : data.size)],
     [t('Blocks'), fmt.format(data.nonAir)],
-    [t('Origin'), (data.inner ? data.origin.map((v, k) => v + data.inner[k]) : data.origin).join(', ')],
+    [t('Origin'), origin.join(', ')],
   ];
+  // For portal linking: Nether X and Z are the Overworld's ÷ 8, Y is the same. Placements and selections are in the player's dimension.
+  const dim = sh ? sh.dim : a.dim;
+  if (dim === 'minecraft:overworld')
+    facts.push([t('In the Nether'), [Math.floor(origin[0] / 8), origin[1], Math.floor(origin[2] / 8)].join(', ')]);
+  else if (dim === 'minecraft:the_nether')
+    facts.push([t('In the Overworld'), [origin[0] * 8, origin[1], origin[2] * 8].join(', ')]);
   if (d.type === 'selection') {
     facts.push([t('Source'), t(data.source === 'server' ? 'Server' : 'Your loaded chunks')]);
     if (data.unknown) facts.push([t('Not loaded'), t('{n} blocks', { n: data.unknown })]);
   }
-  const sh = d.type === 'shared' ? findShared(d.id) : null;
-  const pl = d.type === 'placement' ? a.placements?.find((p) => p.id === d.id) : null;
   const author = sh?.author || pl?.author;
   if (author) facts.push([t('Author'), author]);
   if (sh) {

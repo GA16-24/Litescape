@@ -148,6 +148,8 @@ export default {
   'Shared by': 'Compartilhado por',
   'Visible to': 'Visível para',
   Dimension: 'Dimensão',
+  'In the Nether': 'No Nether',
+  'In the Overworld': 'Na Superfície',
   Overview: 'Visão geral',
   'Update copy': 'Atualizar cópia',
   'Stop sharing': 'Parar de compartilhar',

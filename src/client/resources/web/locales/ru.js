@@ -162,6 +162,8 @@ export default {
   'Shared by': 'Опубликовал',
   'Visible to': 'Кому видно',
   Dimension: 'Измерение',
+  'In the Nether': 'В Незере',
+  'In the Overworld': 'В Верхнем мире',
   Overview: 'Обзор',
   'Update copy': 'Обновить копию',
   'Stop sharing': 'Снять с публикации',

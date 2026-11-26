@@ -147,6 +147,8 @@ export default {
   'Shared by': '共有者',
   'Visible to': '公開範囲',
   Dimension: 'ディメンション',
+  'In the Nether': 'ネザーでは',
+  'In the Overworld': 'オーバーワールドでは',
   Overview: '概要',
   'Update copy': 'コピーを更新',
   'Stop sharing': '共有を停止',
