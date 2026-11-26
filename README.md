@@ -41,7 +41,7 @@ The viewer can render with Iris and OptiFine shader packs. Open the Shaders tab 
 - Each pack's own settings screens, profiles (Low, High, Ultra and so on) and sliders are there, with search. Changes recompile the pack in a second or two, and the old picture stays up until the new one is ready.
 - The Scene controls set the time of day, the weather and the render resolution.
 
-Packs tested so far: Complementary Reimagined and Unbound, BSL, MakeUp Ultra Fast, Sildur's Vibrant, Solas, Super Duper Vanilla and Bliss. Photon runs, but its sky and lighting come out wrong.
+Packs tested so far: Complementary Reimagined and Unbound, BSL, MakeUp Ultra Fast, Sildur's Vibrant, Solas, Super Duper Vanilla and Bliss. Photon runs, but its sky comes out black.
 
 How it works: the mod preprocesses a pack the way Iris does, then compiles each program with glslang and converts it to WebGL's GLSL with SPIRV-Cross. Minecraft already ships both. The page then runs the pass chain in WebGL 2: shadow map, gbuffers, deferred, translucent, composite and final.
 
