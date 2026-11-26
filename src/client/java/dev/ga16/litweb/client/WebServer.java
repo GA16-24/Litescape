@@ -64,7 +64,11 @@ final class WebServer {
 		net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir().resolve("shaderpacks"),
 		net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("litweb-shaders.json"),
 		net.fabricmc.loader.api.FabricLoader.getInstance().getModContainer("minecraft").map(m -> m.getMetadata().getVersion().getFriendlyString()).orElse(""),
+		//? if >=26.3 {
 		dir -> mc.execute(() -> com.mojang.blaze3d.Blaze3D.openPath(dir)));
+		//?} else {
+		/*dir -> mc.execute(() -> net.minecraft.util.Util.getPlatform().openPath(dir)));
+		*///?}
 	private static volatile @Nullable Cached placementCache, sharedCache;
 
 	static void start() {

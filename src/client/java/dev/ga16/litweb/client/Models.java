@@ -143,7 +143,12 @@ final class Models {
 			BlockTintSource src = mc.getBlockColors().getTintSource(state, m.tintIndex());
 			if (src != null) tint = tint(src, state);
 		}
+		//? if >=26.3 {
 		Direction shade = m.shadeDirectionOverride() != null ? m.shadeDirectionOverride() : q.direction();
+		//?} else {
+		/*// 26.3's models replaced every "shade": false with "shade_direction_override": "up".
+		Direction shade = m.shade() ? q.direction() : Direction.UP;
+		*///?}
 		JsonArray a = header(texture(s), cull == null ? -1 : cull.get3DDataValue(), tint, m.layer().ordinal(), shade);
 		float du = s.getU1() - s.getU0(), dv = s.getV1() - s.getV0();
 		for (int v = 0; v < 4; v++) {

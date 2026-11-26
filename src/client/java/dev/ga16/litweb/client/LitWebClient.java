@@ -18,7 +18,11 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.ChatFormatting;
+//? if >=26.3 {
 import com.mojang.blaze3d.Blaze3D;
+//?} else {
+/*import net.minecraft.util.Util;
+*///?}
 
 public final class LitWebClient implements ClientModInitializer {
 	private boolean announced;
@@ -76,11 +80,11 @@ public final class LitWebClient implements ClientModInitializer {
 	private static boolean openViewer() {
 		URI web = URI.create(WebServer.url());
 		if (Files.notExists(APP_MARKER)) {
-			Blaze3D.openUri(web);
+			openUri(web);
 			return false;
 		}
 		long asked = System.currentTimeMillis();
-		Blaze3D.openUri(URI.create("litescape://open"));
+		openUri(URI.create("litescape://open"));
 		// If the app never connects (uninstalled, or the link isn't registered), forget it and use the browser.
 		CompletableFuture.delayedExecutor(10, TimeUnit.SECONDS).execute(() -> {
 			if (appSeen >= asked) return;
@@ -89,8 +93,16 @@ public final class LitWebClient implements ClientModInitializer {
 			} catch (IOException e) {
 				LitWeb.LOG.warn("Could not forget the desktop app", e);
 			}
-			Blaze3D.openUri(web);
+			openUri(web);
 		});
 		return true;
+	}
+
+	private static void openUri(URI uri) {
+		//? if >=26.3 {
+		Blaze3D.openUri(uri);
+		//?} else {
+		/*Util.getPlatform().openUri(uri);
+		*///?}
 	}
 }
