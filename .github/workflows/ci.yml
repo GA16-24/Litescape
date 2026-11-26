@@ -27,7 +27,7 @@ jobs:
           persist-credentials: false
       # One Gradle subproject per Litematica release line, so a new versions/ folder gets CI without editing this file.
       - id: list
-        run: echo "versions=$(ls versions | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
+        run: echo "versions=$(cd versions && jq -c -n '$ARGS.positional' --args *)" >> "$GITHUB_OUTPUT"
 
   minecraft:
     name: Minecraft ${{ matrix.version }}
