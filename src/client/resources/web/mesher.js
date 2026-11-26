@@ -390,7 +390,8 @@ function spawnable() {
   const L = lightOf(all);
   const fits = (i) => i >= n || !!pal[blocks[i]]?.spawnIn; // above the view is open air
   const out = [];
-  for (let i = 0; i < n - layer; i++)
+  // the top layer counts too: L past the end reads undefined, which shifts to 0 (no block light)
+  for (let i = 0; i < n; i++)
     if (pal[blocks[i]]?.spawnOn && fits(i + layer) && fits(i + 2 * layer) && L[i + layer] >> 4 === 0) out.push(i);
   V.spawn = Int32Array.from(out);
   return V.spawn;
