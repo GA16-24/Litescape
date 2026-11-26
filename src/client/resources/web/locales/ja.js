@@ -367,4 +367,13 @@ export default {
   'Shader pack is too large': 'シェーダーパックが大きすぎます',
   'Download is too large': 'ダウンロードが大きすぎます',
   'No surroundings were captured for this schematic': 'この設計図の周辺は取り込まれていません',
+  'Selection has no complete boxes': '選択範囲に完成したボックスがありません',
+  'Schematic is too large to share': '設計図が大きすぎて共有できません',
+  "This server no longer lets you capture surroundings, so they can't follow the move. Remove them in the Surroundings panel first.":
+    'このサーバーでは周辺を取り込めなくなったため、周辺は移動に追従できません。先に周辺パネルで削除してください。',
+  "This server doesn't let you capture surroundings": 'このサーバーでは周辺を取り込めません',
+  'That schematic is no longer shared': 'その設計図はもう共有されていません',
+  'The server does not run Litescape': 'サーバーで Litescape が動いていません',
+  'Unknown shader pack': '不明なシェーダーパック',
+  Disconnected: '切断されました',
 };

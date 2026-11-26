@@ -362,4 +362,13 @@ export default {
   'Shader pack is too large': '셰이더 팩이 너무 커요',
   'Download is too large': '다운로드 파일이 너무 커요',
   'No surroundings were captured for this schematic': '이 설계도에 담긴 주변이 없어요',
+  'Selection has no complete boxes': '선택 영역에 완성된 상자가 없어요',
+  'Schematic is too large to share': '설계도가 너무 커서 공유할 수 없어요',
+  "This server no longer lets you capture surroundings, so they can't follow the move. Remove them in the Surroundings panel first.":
+    '이 서버에서 더 이상 주변을 담을 수 없어서 주변이 이동을 따라갈 수 없어요. 먼저 주변 패널에서 주변을 제거하세요.',
+  "This server doesn't let you capture surroundings": '이 서버에서는 주변을 담을 수 없어요',
+  'That schematic is no longer shared': '그 설계도는 더 이상 공유되지 않아요',
+  'The server does not run Litescape': '서버에 Litescape가 없어요',
+  'Unknown shader pack': '알 수 없는 셰이더 팩',
+  Disconnected: '연결이 끊겼어요',
 };

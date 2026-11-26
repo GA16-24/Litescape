@@ -357,4 +357,13 @@ export default {
   'Shader pack is too large': '光影包太大',
   'Download is too large': '下載的檔案太大',
   'No surroundings were captured for this schematic': '此投影沒有擷取周圍環境',
+  'Selection has no complete boxes': '選取範圍沒有完整的選框',
+  'Schematic is too large to share': '投影太大，無法分享',
+  "This server no longer lets you capture surroundings, so they can't follow the move. Remove them in the Surroundings panel first.":
+    '此伺服器已不再允許你擷取周圍環境，因此無法隨移動更新。請先在周圍環境面板中移除它。',
+  "This server doesn't let you capture surroundings": '此伺服器不允許你擷取周圍環境',
+  'That schematic is no longer shared': '該投影已不再分享',
+  'The server does not run Litescape': '伺服器未執行 Litescape',
+  'Unknown shader pack': '未知的光影包',
+  Disconnected: '已中斷連線',
 };

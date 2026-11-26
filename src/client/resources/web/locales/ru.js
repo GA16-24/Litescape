@@ -406,4 +406,13 @@ export default {
   'Shader pack is too large': 'Шейдерпак слишком большой',
   'Download is too large': 'Файл слишком большой',
   'No surroundings were captured for this schematic': 'Для этой схемы окрестности не захвачены',
+  'Selection has no complete boxes': 'В выделении нет завершённых областей',
+  'Schematic is too large to share': 'Схема слишком большая, чтобы её опубликовать',
+  "This server no longer lets you capture surroundings, so they can't follow the move. Remove them in the Surroundings panel first.":
+    'Этот сервер больше не разрешает вам захватывать окрестности, поэтому они не могут переместиться вместе со схемой. Сначала удалите их на панели «Окрестности».',
+  "This server doesn't let you capture surroundings": 'Этот сервер не разрешает вам захватывать окрестности',
+  'That schematic is no longer shared': 'Эта схема больше не опубликована',
+  'The server does not run Litescape': 'На сервере нет Litescape',
+  'Unknown shader pack': 'Неизвестный шейдерпак',
+  Disconnected: 'Соединение потеряно',
 };

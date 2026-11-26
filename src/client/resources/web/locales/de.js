@@ -372,4 +372,13 @@ export default {
   'Shader pack is too large': 'Das Shaderpack ist zu groß',
   'Download is too large': 'Der Download ist zu groß',
   'No surroundings were captured for this schematic': 'Für diese Schematic wurde keine Umgebung erfasst',
+  'Selection has no complete boxes': 'Die Auswahl hat keine vollständigen Boxen',
+  'Schematic is too large to share': 'Die Schematic ist zu groß zum Teilen',
+  "This server no longer lets you capture surroundings, so they can't follow the move. Remove them in the Surroundings panel first.":
+    'Dieser Server erlaubt dir nicht mehr, die Umgebung zu erfassen, daher kann sie der Verschiebung nicht folgen. Entferne sie zuerst im Bereich Umgebung.',
+  "This server doesn't let you capture surroundings": 'Dieser Server erlaubt dir nicht, die Umgebung zu erfassen',
+  'That schematic is no longer shared': 'Diese Schematic wird nicht mehr geteilt',
+  'The server does not run Litescape': 'Auf dem Server läuft Litescape nicht',
+  'Unknown shader pack': 'Unbekanntes Shaderpack',
+  Disconnected: 'Verbindung getrennt',
 };

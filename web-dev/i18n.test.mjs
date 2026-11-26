@@ -50,6 +50,14 @@ const SERVER = [
   'Shader pack is too large',
   'Download is too large',
   'No surroundings were captured for this schematic',
+  'Selection has no complete boxes',
+  'Schematic is too large to share',
+  "This server no longer lets you capture surroundings, so they can't follow the move. Remove them in the Surroundings panel first.",
+  "This server doesn't let you capture surroundings",
+  'That schematic is no longer shared',
+  'The server does not run Litescape',
+  'Unknown shader pack',
+  'Disconnected',
 ];
 
 const KEYS = new Set([...sourceKeys(read('app.js')), ...htmlKeys(read('index.html')), ...SERVER]);

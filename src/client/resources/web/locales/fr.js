@@ -372,4 +372,13 @@ export default {
   'Shader pack is too large': 'Le pack de shaders est trop volumineux',
   'Download is too large': 'Le téléchargement est trop volumineux',
   'No surroundings were captured for this schematic': 'Les alentours de cette schématique n’ont pas été capturés',
+  'Selection has no complete boxes': 'La sélection n’a aucune boîte complète',
+  'Schematic is too large to share': 'La schématique est trop grande pour être partagée',
+  "This server no longer lets you capture surroundings, so they can't follow the move. Remove them in the Surroundings panel first.":
+    'Ce serveur ne vous permet plus de capturer les alentours, ils ne peuvent donc pas suivre le déplacement. Retirez-les d’abord dans le panneau Alentours.',
+  "This server doesn't let you capture surroundings": 'Ce serveur ne vous permet pas de capturer les alentours',
+  'That schematic is no longer shared': 'Cette schématique n’est plus partagée',
+  'The server does not run Litescape': 'Le serveur n’utilise pas Litescape',
+  'Unknown shader pack': 'Pack de shaders inconnu',
+  Disconnected: 'Déconnecté',
 };
