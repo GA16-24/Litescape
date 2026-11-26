@@ -2,13 +2,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
 import {
-  bundledMod,
+  bundledMods,
   createInstance,
   defaultRoots,
   install,
   installDeps,
-  mcBase,
+  mcBases,
+  modFor,
   scan,
+  shouldUpdate,
   uninstall,
 } from './instances.js';
 
@@ -92,25 +94,27 @@ function handle(channel, fn) {
 }
 
 function setupInstaller(win) {
-  const mod = bundledMod(MOD_DIR);
-  const mc = mod && mcBase(mod.mc);
+  const mods = bundledMods(MOD_DIR);
+  // New instances get the newest Minecraft version the app has a jar for.
+  const newest = mcBases(mods).at(-1);
+  // Every jar carries the same mod version, followed by +<Minecraft line>.
+  const version = mods[0]?.version.split('+')[0];
   let known = new Map();
   const list = () => {
-    const instances = scan(defaultRoots(), folders(), mod);
-    // Keeps installed copies current, so updating the app updates the mod. Never downgrades a newer jar.
+    const instances = scan(defaultRoots(), folders(), mods);
+    // Keeps installed copies current and on the right Minecraft line, so updating the app updates the mod.
     for (const i of instances) {
-      if (!mod || i.blocker || !i.installed || i.installed.localeCompare(mod.version, 'en', { numeric: true }) >= 0)
-        continue;
+      if (i.blocker || !i.mod || !shouldUpdate(i.installed, i.mod.version)) continue;
       try {
-        install(i.dir, mod);
-        i.installed = mod.version;
+        install(i.dir, i.mod);
+        i.installed = i.mod.version;
       } catch (e) {
         console.warn(`Couldn't update the mod in ${i.dir}:`, e.message); // usually the game has the jar open
       }
     }
     // Profiles can share a folder. Reversed so the first row wins, and scan sorts the installable ones first.
     known = new Map(instances.toReversed().map((i) => [i.dir, i]));
-    return { mod: mod && { version: mod.version }, instances };
+    return { mod: version && { version }, instances };
   };
   // Only folders from the last scan, so the page can't write mods anywhere else.
   const checked = (dir) => {
@@ -118,21 +122,22 @@ function setupInstaller(win) {
     return known.get(dir);
   };
   // Dependencies first: Litescape alone stops the game from starting if Fabric API is missing.
-  const installAll = async (dir, version) => {
-    if (!mod) throw new Error('This build has no mod jar');
-    await installDeps(dir, version);
+  const installAll = async (dir, mc) => {
+    const mod = modFor(mods, mc);
+    if (!mod) throw new Error(`This build has no mod jar for Minecraft ${mc}`);
+    await installDeps(dir, mc);
     install(dir, mod);
   };
   handle('instances', list);
   handle('install', async (dir) => {
     const i = checked(dir);
     if (i.blocker) throw new Error(i.blocker);
-    await installAll(i.dir, i.mc ?? mc);
+    await installAll(i.dir, i.mc);
     return list();
   });
   handle('create-instance', async () => {
-    if (!mc) throw new Error('This build has no mod jar');
-    await installAll(await createInstance(defaultRoots().vanilla[0], mc), mc);
+    if (!newest) throw new Error('This build has no mod jar');
+    await installAll(await createInstance(defaultRoots().vanilla[0], newest), newest);
     return list();
   });
   handle('uninstall', (dir) => {

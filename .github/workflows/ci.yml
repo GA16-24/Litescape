@@ -80,6 +80,32 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  stonecutter:
+    name: Version comments switch cleanly
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6.3.0
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v6.4.1
+      # Contributors switch src/ to another Minecraft version to work on it. A comment Stonecutter rewrites on the
+      # way back shows up as a diff in their commit, so every switch has to come back byte for byte.
+      - name: Switch src/ to every Minecraft version and back
+        run: |
+          set -euo pipefail
+          for line in versions/*; do
+            .github/retry-downloads.sh ./gradlew "Set active project to ${line#versions/}" -q
+            .github/retry-downloads.sh ./gradlew "Reset active project" -q
+            git diff --exit-code
+          done
+
   gradle:
     # The required check: passes only when every Minecraft version above passed.
     name: Build, lint (-Werror) and client game test

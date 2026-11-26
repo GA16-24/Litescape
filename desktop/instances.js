@@ -1,4 +1,4 @@
-// Finds Minecraft instances from the common launchers and installs the bundled mod jar into them.
+// Finds Minecraft instances from the common launchers and installs the bundled mod jar for each one's version.
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -64,28 +64,79 @@ function jars(dir) {
   });
 }
 
-/** The mod jar shipped with the app: its path, version and the Minecraft version it needs. */
-export function bundledMod(dir) {
+/** The mod jars shipped with the app, one per Minecraft release line: path, version and the Minecraft range it declares. */
+export function bundledMods(dir) {
   let names = [];
   try {
     names = fs.readdirSync(dir).filter((n) => n.endsWith('.jar') && !n.endsWith('-sources.jar'));
   } catch {}
-  for (const n of names) {
+  return names.flatMap((n) => {
     const info = modInfo(path.join(dir, n));
-    if (info?.id === MOD_ID) return { file: path.join(dir, n), version: info.version, mc: info.depends?.minecraft };
-  }
-  return null;
+    return info?.id === MOD_ID ? [{ file: path.join(dir, n), version: info.version, mc: info.depends?.minecraft }] : [];
+  });
 }
 
-/** The base version of a range like "~26.3", or null for "*" and missing ranges. */
+/** The newest bundled jar that runs on a Minecraft version, or null. A dev build/libs can hold older ones too. */
+export function modFor(mods, mc) {
+  const fits = mc ? mods.filter((m) => mcMatches(mc, m.mc)) : [];
+  return fits.sort((a, b) => compare(b.version.split('+')[0], a.version.split('+')[0]))[0] ?? null;
+}
+
+/** The first version a range names, such as 26.3 for "~26.3" or 1.21.6 for ">=1.21.6 <=1.21.8". */
 export function mcBase(range) {
-  return typeof range === 'string' && range !== '*' ? range.replace(/^[~^>=\s]+/, '') : null;
+  return typeof range === 'string' && range !== '*'
+    ? range
+        .trim()
+        .split(/\s+/)[0]
+        .replace(/^[~^>=<]+/, '')
+    : null;
 }
 
-// shortcut: treats "~26.3" or ">=26.3" as "26.3 or 26.3.x"; use a real semver range check if the mod ever spans versions.
+/** Numeric comparison of dotted versions; NaN for snapshots and other names. */
+function compare(a, b) {
+  const x = a.split('.').map(Number);
+  const y = b.split('.').map(Number);
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    const d = (x[i] ?? 0) - (y[i] ?? 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
+/** Whether a Minecraft version is in a fabric.mod.json range: space-separated >=, <=, >, <, ~ or exact predicates. */
 export function mcMatches(version, range) {
-  const want = mcBase(range);
-  return !want || version === want || version.startsWith(`${want}.`);
+  if (!range || range === '*') return true;
+  return range
+    .trim()
+    .split(/\s+/)
+    .every((p) => {
+      const [, op, v] = p.match(/^(>=|<=|>|<|~)?(.+)$/);
+      const c = compare(version, v);
+      if (op === '>=') return c >= 0;
+      if (op === '<=') return c <= 0;
+      if (op === '>') return c > 0;
+      if (op === '<') return c < 0;
+      if (op === '~') {
+        // Up to the next minor version, as in Fabric Loader: ~26.3 is 26.3 and every 26.3.x.
+        const [major, minor] = v.split('.');
+        return c >= 0 && compare(version, `${major}.${Number(minor) + 1}`) < 0;
+      }
+      return c === 0;
+    });
+}
+
+/** The first Minecraft version of each bundled jar, oldest first. */
+export function mcBases(mods) {
+  return mods
+    .map((m) => mcBase(m.mc))
+    .filter(Boolean)
+    .sort(compare);
+}
+
+/** Whether a jar should replace the installed one: a different build of the same version or newer, never older. */
+export function shouldUpdate(installed, bundled) {
+  if (!installed) return false;
+  return installed !== bundled && compare(installed.split('+')[0], bundled.split('+')[0]) <= 0;
 }
 
 function readText(file) {
@@ -237,7 +288,9 @@ export function defaultRoots(home = os.homedir(), platform = process.platform, e
 const READERS = { vanilla, prism, modrinth, curseforge };
 
 /** Every instance found, each with what blocks the install (if anything) and the mod version it has. */
-export function scan(roots, folders, mod) {
+export function scan(roots, folders, mods) {
+  const bases = mcBases(mods);
+  const span = bases.length > 1 ? `${bases[0]} to ${bases.at(-1)}` : bases[0];
   const found = [];
   for (const [kind, dirs] of Object.entries(roots)) {
     for (const root of dirs) {
@@ -256,14 +309,21 @@ export function scan(roots, folders, mod) {
     .map((i) => {
       const all = jars(i.dir);
       const has = (id) => all.some((j) => j.ids.includes(id));
+      // A folder added by hand may not say its version, but Fabric API's ends in +<Minecraft version>.
+      const mc = i.mc ?? all.find((j) => j.ids.includes('fabric-api'))?.version?.split('+')[1] ?? null;
+      const mod = modFor(mods, mc);
       const blocker =
         i.fabric === false
           ? 'Not a Fabric instance'
-          : i.mc && mod && !mcMatches(i.mc, mod.mc)
-            ? `Minecraft ${i.mc}. Litescape needs ${mcBase(mod.mc)}.`
-            : null;
+          : !mods.length || mod
+            ? null
+            : mc
+              ? `Minecraft ${mc}. Litescape needs ${span}.`
+              : "Can't tell which Minecraft version this folder runs. Install Fabric API in it first.";
       return {
         ...i,
+        mc,
+        mod,
         blocker,
         installed: all.find((j) => j.ids.includes(MOD_ID))?.version ?? null,
         missing: DEPS.filter((d) => !has(d)),

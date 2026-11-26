@@ -3,7 +3,7 @@
 <p align="center">Your Litematica selections and schematic placements in 3D, in a browser tab.</p>
 
 <p align="center">
-  <img alt="Minecraft 26.3" src="https://img.shields.io/badge/Minecraft-26.3-555?style=flat-square">
+  <img alt="Minecraft 1.21.1 to 26.3" src="https://img.shields.io/badge/Minecraft-1.21.1%E2%80%9326.3-555?style=flat-square">
   <img alt="Fabric Loader 0.20.1+" src="https://img.shields.io/badge/Fabric_Loader-0.20.1%2B-555?style=flat-square">
   <img alt="Litematica 0.29.1" src="https://img.shields.io/badge/Litematica-0.29.1-555?style=flat-square">
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-555?style=flat-square"></a>
@@ -14,7 +14,7 @@
   <img alt="A cottage placement about 80% built. Placed blocks render normally, the unbuilt roof shows as see-through ghost blocks, and the side panel shows build progress and who can see the shared schematic." src="docs/images/viewer-light.png">
 </picture>
 
-A Fabric mod for Minecraft 26.3 that shows your Litematica selection and schematic placements as 3D models in a browser tab. It reads [BuildPrint](https://modrinth.com/mod/buildprint) builds the same way. On a server that also runs the mod, players can share a placement so everyone can watch it get built.
+A Fabric mod for Minecraft 1.21.1 to 26.3 that shows your Litematica selection and schematic placements as 3D models in a browser tab. It reads [BuildPrint](https://modrinth.com/mod/buildprint) builds the same way. On a server that also runs the mod, players can share a placement so everyone can watch it get built.
 
 ## What it does
 
@@ -68,7 +68,7 @@ On Windows, run `Litescape-<version>-win-x64.exe` from the [releases page](https
 
 When the game isn't running, the app lists the instances it found in the Minecraft Launcher, Prism Launcher, the Modrinth App and CurseForge. Click Install next to one, then start the game from that instance. If you use another launcher, click "Add instance folder…" and choose the instance's folder.
 
-- Install also downloads Fabric API, MaLiLib and Litematica from Modrinth when the instance doesn't have them, picking the newest Fabric build for that instance's Minecraft version. It's only offered for instances that already run Fabric on Minecraft 26.3.
+- Install also downloads Fabric API, MaLiLib and Litematica from Modrinth when the instance doesn't have them, picking the newest Fabric build for that instance's Minecraft version. It's offered for instances that already run Fabric on Minecraft 1.21.1 to 26.3, and installs the Litescape jar built for that version.
 - "Create Litescape instance" adds a Litescape profile to the Minecraft Launcher, with its own game folder (`litescape` inside the launcher's folder), Fabric Loader, the three mods above and Litescape. Close the Minecraft Launcher first, or it may overwrite the new profile when it exits. Creating it again updates the same profile.
 - When you update the app, it updates the mod in every instance that has an older copy the next time it lists them.
 - Install removes any other copy of the mod in that instance, so you never end up with two. Remove takes it out again. Close the game in that instance first: Windows won't let the app replace a jar the game has open.
@@ -86,10 +86,27 @@ The mod also works on its own, with the viewer in a browser tab. Put the jar in 
 
 | Where             | Needs                                                                                                                                                                                                                                                                            |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Client            | Fabric Loader 0.20.1+, Fabric API, Litematica 0.29.1 (and MaLiLib) or BuildPrint 0.1.46, this mod                                                                                                                                                                                |
+| Client            | Fabric Loader 0.20.1+, Fabric API, Litematica (and MaLiLib) or BuildPrint 0.1.46, this mod                                                                                                                                                                                       |
 | Server (optional) | On a Fabric server:<br>1. Download the jar from [Modrinth](https://modrinth.com/mod/litescape).<br>2. Put it and [Fabric API](https://modrinth.com/mod/fabric-api) in `mods/`.<br>3. Restart the server.<br>It doesn't need Litematica. See [Server settings](#server-settings). |
 
-It's one jar for both sides. Servers always install it by hand. Without the server part, the client reads blocks from the chunks it has loaded and the page tells you what percentage of the area is covered.
+There's one jar for each Litematica release line. Pick the one for your Minecraft version:
+
+| Jar ends in | Minecraft              |
+| ----------- | ---------------------- |
+| `+1.21.1`   | 1.21.1                 |
+| `+1.21.2`   | 1.21.2, 1.21.3         |
+| `+1.21.4`   | 1.21.4                 |
+| `+1.21.5`   | 1.21.5                 |
+| `+1.21.6`   | 1.21.6, 1.21.7, 1.21.8 |
+| `+1.21.9`   | 1.21.9, 1.21.10        |
+| `+1.21.11`  | 1.21.11                |
+| `+26.1`     | 26.1, 26.1.1, 26.1.2   |
+| `+26.2`     | 26.2                   |
+| `+26.3`     | 26.3                   |
+
+The jars before 26.2 are about 20 MB, because they carry the shader compiler (LWJGL's shaderc and SPIRV-Cross) that newer Minecraft ships itself.
+
+Each jar works on both sides. Servers always install it by hand. Without the server part, the client reads blocks from the chunks it has loaded and the page tells you what percentage of the area is covered.
 
 ## Server settings
 

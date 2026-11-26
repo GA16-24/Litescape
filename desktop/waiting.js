@@ -15,7 +15,7 @@ function note(text, warn) {
   return el('p', { className: warn ? 'note warn' : 'note' }, text);
 }
 
-function row(i, mod) {
+function row(i) {
   const meta = [i.launcher, i.mc && `Minecraft ${i.mc}`].filter(Boolean).join(' · ');
   const info = el('div', {}, el('div', { className: 'name' }, i.name), el('div', { className: 'meta' }, meta));
   const actions = [];
@@ -28,11 +28,11 @@ function row(i, mod) {
       info.append(
         note(`Missing ${missing}. Install downloads ${i.missing.length > 1 ? 'them' : 'it'} from Modrinth.`, true),
       );
-    if (mod && (i.installed !== mod.version || missing)) {
+    if (i.mod && (i.installed !== i.mod.version || missing)) {
       const label = !i.installed
         ? 'Install'
-        : i.installed !== mod.version
-          ? `Install ${mod.version}`
+        : i.installed !== i.mod.version
+          ? `Install ${i.mod.version}`
           : 'Add missing mods';
       actions.push(el('button', { className: 'primary', type: 'button', onclick: () => act('install', i.dir) }, label));
     }
@@ -48,7 +48,7 @@ function render({ mod, instances }) {
     : instances.length === 0
       ? "No Minecraft instances found. Create one, or if you use another launcher, add the instance's folder."
       : `Litescape ${mod.version} works with ${ready} of the ${instances.length} instances found.`;
-  list.replaceChildren(...instances.map((i) => row(i, mod)));
+  list.replaceChildren(...instances.map((i) => row(i)));
 }
 
 async function act(action, arg) {
