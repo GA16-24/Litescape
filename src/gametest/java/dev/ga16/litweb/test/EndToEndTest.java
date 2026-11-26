@@ -97,13 +97,14 @@ public class EndToEndTest implements FabricClientGameTest {
 					SchematicPlacement p = SchematicPlacement.createFor(schem, new BlockPos(31, -63, 1), "Cottage copy", true, true);
 					DataManager.getSchematicPlacementManager().addSchematicPlacement(p, false);
 				});
-				// Build the bottom of the copy, with one wrong block, one wrong state and a hopper pointing the wrong way.
+				// Build the bottom of the copy, with one wrong block, one wrong state, a hopper pointing the wrong way and a repeater on the wrong delay.
 				sp.getServer().runCommand("clone 1 -63 1 20 -58 19 31 -63 1");
 				sp.getServer().runCommand("setblock 36 -60 6 stone");
 				sp.getServer().runCommand("setblock 40 -59 14 air");
 				sp.getServer().runCommand("setblock 40 -60 14 oak_door[facing=north,half=lower]");
 				sp.getServer().runCommand("setblock 40 -59 14 oak_door[facing=north,half=upper]");
 				sp.getServer().runCommand("setblock 38 -60 13 hopper[facing=east]{Items:[{Slot:0b,id:\"minecraft:redstone\",count:18},{Slot:1b,id:\"minecraft:stick\",count:1}]}");
+				sp.getServer().runCommand("setblock 34 -60 17 repeater[facing=west,delay=3]"); // a repeater on the wrong delay
 				ctx.waitTicks(10);
 
 				state = json(save("state-2.json", call(ctx, "GET", "/api/state")));
@@ -115,7 +116,7 @@ public class EndToEndTest implements FabricClientGameTest {
 				check(hopper.equals("[[0,18,\"Redstone Dust\",\"minecraft:item/redstone\"],[1,1,\"Stick\",\"minecraft:item/stick\"]]"), "hopper contents in the placement view: " + vp.get("contents"));
 				JsonObject st = json(save("status-placement.json", call(ctx, "GET", "/api/status?type=placement&id=" + placement)));
 				JsonArray c = st.getAsJsonArray("counts");
-				check(c.get(1).getAsInt() > 0 && c.get(2).getAsInt() > 0 && c.get(3).getAsInt() == 1 && c.get(4).getAsInt() >= 1 && c.get(6).getAsInt() == 1, "placement status counts " + c);
+				check(c.get(1).getAsInt() > 0 && c.get(2).getAsInt() > 0 && c.get(3).getAsInt() == 1 && c.get(4).getAsInt() >= 1 && c.get(6).getAsInt() == 2, "placement status counts " + c);
 
 				check(state.getAsJsonObject("terrain").get("capture").getAsBoolean(), "the host may capture surroundings: " + state.get("terrain"));
 				// Share with 8 blocks of surroundings: the view is the schematic set into the terrain around it.
@@ -147,7 +148,7 @@ public class EndToEndTest implements FabricClientGameTest {
 					}
 					return "missing";
 				});
-				check(loaded.equals("31, -63, 1 3"), "loaded at the shared origin with the chest, furnace and hopper: " + loaded);
+				check(loaded.equals("31, -63, 1 4"), "loaded at the shared origin with the chest, furnace, hopper and comparator: " + loaded);
 				call(ctx, "POST", "/api/unload?id=" + shared);
 				check(ctx.computeOnClient(_ -> DataManager.getSchematicPlacementManager().getAllSchematicsPlacements().size()) == 1, "unload removes it from Litematica");
 				check(st3.contains("\"margin\":8") && st3.contains("\"chunksCaptured\""), "shared list carries the capture");
@@ -355,6 +356,11 @@ public class EndToEndTest implements FabricClientGameTest {
 			"setblock 17 -54 3 oak_leaves[persistent=true]",
 			"setblock 8 -60 16 poppy", "setblock 12 -60 16 dandelion", "setblock 9 -60 17 short_grass",
 			"fill 10 -61 15 10 -61 18 dirt_path", "setblock 14 -60 17 oak_fence", "setblock 14 -59 17 lantern",
+			// A little redstone in the front yard, so the viewer shows when the build is ready to switch on.
+			"setblock 1 -60 17 lever[face=floor,facing=east]", "fill 2 -60 17 3 -60 17 redstone_wire",
+			"setblock 4 -60 17 repeater[facing=west]", "setblock 5 -60 17 redstone_lamp",
+			"setblock 1 -60 14 observer[facing=west]", "fill 2 -60 14 3 -60 14 redstone_wire",
+			"setblock 4 -60 14 comparator[facing=west]", "setblock 5 -60 14 sticky_piston[facing=up]",
 		};
 		for (String c : cmds) s.runCommand(c);
 		for (int i = 0; i < 5; i++) {
