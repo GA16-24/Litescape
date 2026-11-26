@@ -70,6 +70,8 @@ public class EndToEndTest implements FabricClientGameTest {
 			Files.writeString(old.resolve("old").resolve("kept.bin"), "");
 			try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
 				sp.getConnection().waitForChunksRender();
+				// Grass under the lamp and the observer would turn to dirt at a random moment and change the placement counts.
+				sp.getServer().runCommand("gamerule random_tick_speed 0");
 				buildCottage(sp.getServer());
 				ctx.waitTicks(20);
 
@@ -92,11 +94,11 @@ public class EndToEndTest implements FabricClientGameTest {
 				check(spawn(sel, "minecraft:grass_block", "spawnOn") && !spawn(sel, "minecraft:glass", "spawnOn")
 					&& spawn(sel, "minecraft:short_grass", "spawnIn") && !spawn(sel, "minecraft:oak_planks", "spawnIn"), "spawn flags in the palette");
 
-				AreaSelection area = ctx.computeOnClient(_ -> DataManager.getSelectionManager().getCurrentSelection());
+				AreaSelection area = ctx.computeOnClient(unused -> DataManager.getSelectionManager().getCurrentSelection());
 				// From the server world, as Litematica does in singleplayer: the client never gets chest and hopper contents.
 				LitematicaSchematic schem = sp.getServer().computeOnServer(server -> LitematicaSchematic.createFromWorld(server.overworld(), area,
 					new LitematicaSchematic.SchematicSaveInfo(false, false), "test", msg -> {}));
-				ctx.runOnClient(_ -> {
+				ctx.runOnClient(unused -> {
 					SchematicPlacement p = SchematicPlacement.createFor(schem, new BlockPos(31, -63, 1), "Cottage copy", true, true);
 					DataManager.getSchematicPlacementManager().addSchematicPlacement(p, false);
 				});
@@ -144,7 +146,7 @@ public class EndToEndTest implements FabricClientGameTest {
 				JsonObject inGame = json(call(ctx, "GET", "/api/state"));
 				check(inGame.getAsJsonArray("shared").get(0).getAsJsonObject().get("inGame").getAsBoolean(), "shared schematic marked as loaded");
 				check(inGame.getAsJsonArray("placements").size() == 1, "a loaded share isn't listed again under your placements");
-				String loaded = ctx.computeOnClient(_ -> {
+				String loaded = ctx.computeOnClient(unused -> {
 					for (SchematicPlacement p : DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()) {
 						if (p.getSchematicFile() == null || !p.getSchematicFile().getFileName().toString().equals(shared + ".litematic")) continue;
 						int entities = 0;
@@ -155,7 +157,7 @@ public class EndToEndTest implements FabricClientGameTest {
 				});
 				check(loaded.equals("31, -63, 1 4"), "loaded at the shared origin with the chest, furnace, hopper and comparator: " + loaded);
 				call(ctx, "POST", "/api/unload?id=" + shared);
-				check(ctx.computeOnClient(_ -> DataManager.getSchematicPlacementManager().getAllSchematicsPlacements().size()) == 1, "unload removes it from Litematica");
+				check(ctx.computeOnClient(unused -> DataManager.getSchematicPlacementManager().getAllSchematicsPlacements().size()) == 1, "unload removes it from Litematica");
 				check(st3.contains("\"margin\":8") && st3.contains("\"chunksCaptured\""), "shared list carries the capture");
 				JsonObject sst = json(save("status-shared.json", call(ctx, "GET", "/api/status?type=shared&id=" + shared)));
 				check(sst.getAsJsonArray("counts").toString().equals(c.toString()), "server status " + sst.get("counts") + " matches client " + c);
@@ -284,6 +286,8 @@ public class EndToEndTest implements FabricClientGameTest {
 				shaderPack(ctx);
 				ctx.takeScreenshot("litweb-scene");
 			}
+			// The production test checks for this, so a run that never reaches the end can't pass.
+			Files.writeString(out.resolve("passed"), "");
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -291,8 +295,8 @@ public class EndToEndTest implements FabricClientGameTest {
 
 	/** A BuildPrint build and selection show up like Litematica's: listed, viewable and compared with the world. */
 	private static void buildPrint(ClientGameTestContext ctx, TestSingleplayerContext sp) {
-		ctx.waitFor(_ -> BuildprintBlueprints.isAvailable(), 200);
-		ctx.runOnClient(_ -> {
+		ctx.waitFor(unused -> BuildprintBlueprints.isAvailable(), 200);
+		ctx.runOnClient(unused -> {
 			String why = BuildprintBlueprints.problem("litweb-test");
 			check(why == null, "BuildPrint refuses the test blueprint: " + why);
 			check(BuildprintBlueprints.set("litweb-test", "Test tower", new int[] {50, -60, 1, 50, -59, 1, 51, -60, 1},
@@ -314,7 +318,7 @@ public class EndToEndTest implements FabricClientGameTest {
 		check(c.get(1).getAsInt() == 1 && c.get(2).getAsInt() == 1 && c.get(4).getAsInt() == 1, "BuildPrint status counts " + c);
 
 		// The same build loaded a second time in the same spot gets its own row.
-		ctx.runOnClient(_ -> check(BuildprintBlueprints.set("litweb-test-2", "Test tower", new int[] {50, -60, 1, 50, -59, 1, 51, -60, 1},
+		ctx.runOnClient(unused -> check(BuildprintBlueprints.set("litweb-test-2", "Test tower", new int[] {50, -60, 1, 50, -59, 1, 51, -60, 1},
 			new String[] {"minecraft:stone", "minecraft:oak_planks", "minecraft:oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]"}) != null, "second blueprint written"));
 		Set<String> towers = new HashSet<>();
 		for (int i = 0; i < 40 && towers.size() < 2; i++, ctx.waitTicks(5)) {
@@ -325,7 +329,7 @@ public class EndToEndTest implements FabricClientGameTest {
 		check(towers.size() == 2 && towers.stream().allMatch(t -> t.contains("#")), "two same-named builds in one spot have distinct ids " + towers);
 
 		// With Litematica's selection back at its untouched default, BuildPrint's is the one shown.
-		ctx.runOnClient(_ -> {
+		ctx.runOnClient(unused -> {
 			AreaSelection area = DataManager.getSelectionManager().getCurrentSelection();
 			Box box = area.getAllSubRegionBoxes().get(0);
 			area.setSubRegionCornerPos(box, PositionUtils.Corner.CORNER_1, BlockPos.ZERO);

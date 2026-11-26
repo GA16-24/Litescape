@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "environment": "*",
   "entrypoints": {
-    "fabric-client-gametest": ["dev.ga16.litweb.test.EndToEndTest"]
+    "fabric-client-gametest": ["dev.ga16.litweb.test.EndToEndTest"],
+    "server": ["dev.ga16.litweb.test.ServerSmokeTest"]
   }
 }

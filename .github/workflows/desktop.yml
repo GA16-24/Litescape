@@ -112,7 +112,7 @@ jobs:
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME#desktop-v}"
-          gh release upload "v$version" dist/* "mod/litescape-$version.jar" --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload "v$version" dist/* "mod/litescape-$version+"*.jar --repo "$GITHUB_REPOSITORY" --clobber
       - name: Release on GA16-24/homebrew-tap and update Casks/litescape.rb
         env:
           GH_TOKEN: ${{ secrets.TAP_TOKEN }}

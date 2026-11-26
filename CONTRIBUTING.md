@@ -24,7 +24,7 @@ Closed without review:
 
 - Features, redesigns and new settings with no agreed issue.
 - Refactors, renames and formatting changes that don't fix anything.
-- Support for other mod loaders or Minecraft versions.
+- Support for other mod loaders, or for a Minecraft version Litematica doesn't release for.
 - Changes that let the web server listen beyond `127.0.0.1`, or that loosen the `Host`/`Origin` checks or the server's access rules.
 
 ## Rules for a PR
@@ -65,14 +65,15 @@ AI tools are fine. You are still the author: read every line, run the checks and
 
 ## Local checks
 
-You need JDK 25 and Node 24. CI runs these on every PR:
+You need JDK 25 and Node 24. Gradle downloads JDK 21 for the 1.21.x tests if you don't have it. CI runs these on every PR, once per Minecraft version:
 
 ```sh
 # Build with all javac lints as errors, like CI
 ./gradlew build compileGametestJava --init-script .github/ci.init.gradle --warning-mode=fail
 
-# Boot the real Minecraft client and run the end-to-end test
-./gradlew runClientGameTest --init-script .github/ci.init.gradle --warning-mode=fail
+# Run the end-to-end test with the release jar in a real Minecraft client, and boot a dedicated server with it,
+# on every Minecraft version in versions/ (or one release line, such as :1.21.6:productionTest)
+./gradlew productionTest --init-script .github/ci.init.gradle --warning-mode=fail
 
 # Web app: lint, format, import order (warnings fail), then unit tests
 npx @biomejs/biome@2.6.6 ci --error-on-warnings .
@@ -85,7 +86,8 @@ For the web dev server, shader dev server and fixtures, see the Development sect
 
 ## Project conventions
 
-- The mod is one jar for client and server. Code in `src/main` runs on both sides, so it can't touch client classes. Client-only code goes in `src/client`.
+- The mod is one jar for client and server, built once per Litematica release line from the folders in `versions/`. `src/` is written for the newest Minecraft version. Code that differs on older versions goes in [Stonecutter](https://stonecutter.kikugie.dev/) comments (`//? if <1.21.5 {`), and `./gradlew build` compiles every version.
+- Code in `src/main` runs on both sides, so it can't touch client classes. Client-only code goes in `src/client`.
 - The web app is plain ES modules with no build step. Don't add a bundler, framework or npm dependency. `vendor/` holds third-party code and is excluded from Biome. Don't edit it.
 - New Gradle dependencies need a reason in the PR. Dependency review fails on any known vulnerability.
 - Server reads must only touch chunks that are already loaded. Never load or generate terrain on behalf of a request.

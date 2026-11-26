@@ -8,6 +8,18 @@ pluginManagement {
 
 plugins {
 	id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+	id 'dev.kikugie.stonecutter' version '0.10'
+}
+
+// One subproject per Litematica release line, named after the first Minecraft version it covers.
+// Each has its dependencies in versions/<name>/gradle.properties and builds from the shared src/.
+stonecutter {
+	kotlinController = false
+	centralScript = 'build.gradle'
+	create(rootProject) {
+		versions '26.3'
+		vcsVersion = '26.3'
+	}
 }
 
 rootProject.name = 'litescape'

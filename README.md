@@ -125,10 +125,11 @@ Opening the Shaders tab asks Modrinth for the popular packs' icons and download 
 ## Development
 
 ```sh
-./gradlew build              # mod jar in build/libs/
-./gradlew runClientGameTest  # boots the real client, builds a test house, checks the HTTP API and a small test shader pack end to end
-node web-dev/serve.mjs       # web app on :8194 using the fixtures the game test recorded
-./gradlew shaderDev -Ppacks=<folder>  # the shader API on :8195 without Minecraft; serve.mjs forwards /api/shaders to it
+./gradlew build                     # one mod jar per Minecraft version in build/libs/
+./gradlew :26.3:runClientGameTest   # boots the real client, builds a test house, checks the HTTP API and a small test shader pack end to end
+./gradlew :1.21.6:productionTest    # the same test with the release jar in a production client on 1.21.6, 1.21.7 and 1.21.8, plus a dedicated server boot
+node web-dev/serve.mjs              # web app on :8194 using the fixtures the game test recorded
+./gradlew :26.3:shaderDev -Ppacks=<folder>  # the shader API on :8195 without Minecraft; serve.mjs forwards /api/shaders to it
 node web-dev/expr.test.mjs   # custom-uniform expression tests
 node web-dev/ui-tokens.test.mjs  # style.css colors come from its tokens; font sizes and radii stay on the scale
 cd desktop && npm ci && npm start  # the desktop app; installs the jar from build/libs, so run ./gradlew build first
@@ -138,7 +139,7 @@ cd desktop && npm run dist         # desktop installers for this OS in desktop/d
 
 To release the desktop app, bump `version` in `desktop/package.json`, merge, and push a matching `desktop-v<version>` tag. The Desktop release workflow builds macOS, Windows and Linux, publishes them as a release on the public [GA16-24/homebrew-tap](https://github.com/GA16-24/homebrew-tap) repo and updates the cask there. It needs a `TAP_TOKEN` secret in the `homebrew-tap` environment: a fine-grained token with Contents read and write on that repo. To sign and notarize the macOS app later, remove `identity` and `hardenedRuntime` from `desktop/package.json` and add the [electron-builder signing secrets](https://www.electron.build/code-signing-mac) to the build job.
 
-The game test writes its API responses and textures to `build/run/clientGameTest/litweb-fixtures/`. The dev server replays them and simulates a build in progress, so you can work on the UI without Minecraft running. `/dev?mode=offline|noworld|empty|full` switches between the page's states.
+The game test writes its API responses and textures to `versions/26.3/build/run/clientGameTest/litweb-fixtures/`. The dev server replays them and simulates a build in progress, so you can work on the UI without Minecraft running. `/dev?mode=offline|noworld|empty|full` switches between the page's states.
 
 The web app is plain ES modules with a vendored copy of three.js r170 (MIT). It has no build step.
 

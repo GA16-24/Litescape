@@ -1,8 +1,19 @@
+import java.time.Duration
+import net.fabricmc.loom.task.RemapJarTask
+import net.fabricmc.loom.task.prod.ClientProductionRunTask
+import net.fabricmc.loom.task.prod.ServerProductionRunTask
+
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
 }
 
-version = project.mod_version
+// Stonecutter runs this script once per subproject in versions/, whose gradle.properties holds that line's dependencies.
+def obfuscated = sc.current.parsed < '26.1'
+apply plugin: obfuscated ? 'net.fabricmc.fabric-loom-remap' : 'net.fabricmc.fabric-loom'
+// Unobfuscated Loom has no mod* configurations; on obfuscated versions they remap mod jars to Mojang names.
+def mod = { String configuration -> obfuscated ? 'mod' + configuration.capitalize() : configuration }
+
+version = "${project.mod_version}+${sc.current.version}"
 group = project.maven_group
 
 base { archivesName = project.archives_base_name }
@@ -38,19 +49,20 @@ fabricApi {
 
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	clientImplementation "maven.modrinth:litematica:${project.litematica_version}"
-	clientImplementation "maven.modrinth:malilib:${project.malilib_version}"
+	if (obfuscated) mappings loom.officialMojangMappings()
+	add mod('implementation'), "net.fabricmc:fabric-loader:${project.loader_version}"
+	add mod('implementation'), "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	add mod('clientImplementation'), "maven.modrinth:litematica:${project.litematica_version}"
+	add mod('clientImplementation'), "maven.modrinth:malilib:${project.malilib_version}"
 	// Optional at runtime: the client reads its public API only when it is installed. All rights reserved, so it is never bundled.
-	clientCompileOnly "maven.modrinth:buildprint:${project.buildprint_version}"
-	gametestImplementation "maven.modrinth:buildprint:${project.buildprint_version}"
+	add mod('clientCompileOnly'), "maven.modrinth:buildprint:${project.buildprint_version}"
+	add mod('gametestImplementation'), "maven.modrinth:buildprint:${project.buildprint_version}"
 }
 
 processResources {
-	def version = project.version
-	inputs.property "version", version
-	filesMatching("fabric.mod.json") { expand "version": version }
+	def props = [version: project.version, minecraft: project.minecraft_dependency]
+	inputs.properties props
+	filesMatching("fabric.mod.json") { expand props }
 }
 
 java {
@@ -58,15 +70,90 @@ java {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+	// 1.21.x runs on Java 21, so every jar targets it.
+	it.options.release = 21
 	it.options.encoding = "UTF-8"
 }
 
-// Serves /api/shaders without Minecraft, for web-dev/serve.mjs: ./gradlew shaderDev [-Ppacks=<shaderpacks folder>]
+// The jar players install. Copied to the root build/libs, where the desktop app and the release workflow pick up every version's jar.
+def modJar = tasks.named(obfuscated ? 'remapJar' : 'jar')
+tasks.register('collectJar', Copy) {
+	from modJar
+	into rootProject.layout.buildDirectory.dir('libs')
+}
+tasks.named('assemble') { dependsOn 'collectJar' }
+
+// The production test runs the jar above in a real Fabric install, as a player would, on every Minecraft version
+// in this subproject's production_tests.
+def gametestJar = tasks.register('gametestJar', Jar) {
+	from sourceSets.gametest.output
+	archiveClassifier = obfuscated ? 'gametest-dev' : 'gametest'
+}
+def testMod = obfuscated ? tasks.register('remapGametestJar', RemapJarTask) {
+	inputFile = gametestJar.flatMap { it.archiveFile }
+	classpath.from sourceSets.gametest.compileClasspath
+	archiveClassifier = 'gametest'
+	addNestedDependencies = false
+} : gametestJar
+
+def productionTests = tasks.register('productionTest') {
+	group = 'verification'
+	description = 'Runs the end-to-end test in a production client and boots a production dedicated server, on every tested Minecraft version.'
+}
+project.production_tests.split(',')*.trim().each { row ->
+	def (mc, fabricApiVersion, buildprint) = row.split(/\s+/)
+	def fabricApiJar = configurations.detachedConfiguration(dependencies.create("net.fabricmc.fabric-api:fabric-api:$fabricApiVersion"))
+	def clientMods = configurations.detachedConfiguration(
+		// Fabric API's release jar leaves out its test modules.
+		fabricApi.module('fabric-client-gametest-api-v1', fabricApiVersion),
+		dependencies.create("maven.modrinth:litematica:${project.litematica_version}"),
+		dependencies.create("maven.modrinth:malilib:${project.malilib_version}"),
+		dependencies.create("maven.modrinth:buildprint:$buildprint"))
+	[fabricApiJar, clientMods]*.transitive = false
+	// The Java players run: 1.21.x launchers ship Java 21, 26.x needs 25.
+	def java = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(mc.startsWith('1.') ? 21 : 25) }
+	def runs = layout.buildDirectory.dir("production/$mc")
+
+	def client = tasks.register("productionClientTest_$mc", ClientProductionRunTask) {
+		minecraftVersion = mc
+		mods.from modJar, testMod, fabricApiJar, clientMods
+		javaLauncher = java
+		def dir = runs.map { it.dir('client') }
+		runDir = dir
+		jvmArgs.add '-Dfabric.client.gametest'
+		// A separate home keeps the test away from the developer's ~/.litescape.
+		jvmArgs.add dir.map { "-Duser.home=${it.dir('home').asFile}".toString() }
+		timeout = Duration.ofMinutes(20)
+		def passed = dir.map { it.file('litweb-fixtures/passed') }
+		doFirst { passed.get().asFile.delete() }
+		doLast { if (!passed.get().asFile.exists()) throw new GradleException("The end-to-end test did not finish on Minecraft $mc") }
+	}
+	def server = tasks.register("productionServerTest_$mc", ServerProductionRunTask) {
+		minecraftVersion = mc
+		loaderVersion = project.loader_version
+		installerVersion = project.installer_version
+		mods.from modJar, testMod, fabricApiJar
+		javaLauncher = java
+		def dir = runs.map { it.dir('server') }
+		runDir = dir
+		jvmArgs.add '-Dlitweb.serverSmokeTest=true'
+		timeout = Duration.ofMinutes(10)
+		doFirst {
+			def d = dir.get().asFile
+			d.mkdirs()
+			new File(d, 'eula.txt').text = 'eula=true\n'
+			new File(d, 'server.properties').text = 'server-port=0\nlevel-type=minecraft\\:flat\n'
+			new File(d, 'litweb-server-ok').delete()
+		}
+		doLast { if (!new File(dir.get().asFile, 'litweb-server-ok').exists()) throw new GradleException("The dedicated server did not start with the mod on Minecraft $mc") }
+	}
+	productionTests.configure { dependsOn client, server }
+}
+
+// Serves /api/shaders without Minecraft, for web-dev/serve.mjs: ./gradlew :26.3:shaderDev [-Ppacks=<shaderpacks folder>]
 tasks.register('shaderDev', JavaExec) {
 	group = 'development'
 	classpath = sourceSets.gametest.runtimeClasspath
 	mainClass = 'dev.ga16.litweb.test.ShaderDev'
-	args = ['8195', project.findProperty('packs') ?: file('run/shaderpacks').path, layout.buildDirectory.file('shader-dev-settings.json').get().asFile.path]
+	args = ['8195', project.findProperty('packs') ?: rootProject.file('run/shaderpacks').path, layout.buildDirectory.file('shader-dev-settings.json').get().asFile.path]
 }
-

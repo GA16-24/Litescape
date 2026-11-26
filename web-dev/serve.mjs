@@ -1,8 +1,8 @@
 // Dev server for the web app: serves src/client/resources/web plus the API from fixtures
-// recorded by `./gradlew runClientGameTest` (build/run/clientGameTest/litweb-fixtures).
+// recorded by `./gradlew :26.3:runClientGameTest` (versions/26.3/build/run/clientGameTest/litweb-fixtures).
 // Simulates a build in progress so the live-progress UI can be checked without Minecraft.
 //   node web-dev/serve.mjs [port] [fixturesDir]
-// /api/shaders/* goes to the Java shader API (./gradlew shaderDev, port 8195) since that needs glslang.
+// /api/shaders/* goes to the Java shader API (./gradlew :26.3:shaderDev, port 8195) since that needs glslang.
 
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -10,7 +10,8 @@ import { extname, join, normalize } from 'node:path';
 
 const root = new URL('../src/client/resources/web/', import.meta.url).pathname;
 const port = +(process.argv[2] || 8194);
-const fx = process.argv[3] || new URL('../build/run/clientGameTest/litweb-fixtures/', import.meta.url).pathname;
+const fx =
+  process.argv[3] || new URL('../versions/26.3/build/run/clientGameTest/litweb-fixtures/', import.meta.url).pathname;
 const types = {
   '.html': 'text/html',
   '.js': 'text/javascript',
@@ -55,7 +56,7 @@ async function proxyShaders(req, res, send) {
     });
     res.end(Buffer.from(await r.arrayBuffer()));
   } catch {
-    send(503, { error: "The shader API isn't running. Start it with ./gradlew shaderDev" });
+    send(503, { error: "The shader API isn't running. Start it with ./gradlew :26.3:shaderDev" });
   }
 }
 
