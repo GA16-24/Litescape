@@ -101,6 +101,7 @@ const S = {
   at: new Map(), // placement id -> [x, y, z] typed to move it to when sharing
   announced: new Set(), // share requests already announced with a toast
   answering: new Map(), // shared id -> accepted | denied, until the polled state shows the server has it
+  hidden: new Set(), // "server:sharedId" hidden in this browser, for servers from before share requests
   showHidden: false,
 };
 
@@ -300,10 +301,17 @@ const serverInfo = (key = viewServer()) => {
 };
 const sharedList = () => (isLive() ? S.api.shared : serverInfo()?.shared) || [];
 const findShared = (id) => sharedList().find((s) => s.id === id);
-// Someone else's share is a request until you accept or deny it. A server from before requests sends no answer.
+// Someone else's share is a request until you accept or deny it. A server from before requests sends no answer, so Hide stays in this browser.
 const answerOf = (s) => S.answering.get(s.id) || s.answer;
-const isHidden = (s) => answerOf(s) === 'denied';
+const isHidden = (s) => (s.answer ? answerOf(s) === 'denied' : S.hidden.has(`${viewServer()}:${s.id}`));
 const isPending = (s) => !s.mine && s.access !== 'private' && answerOf(s) === 'pending';
+function setHidden(id, on) {
+  S.hidden[on ? 'add' : 'delete'](`${viewServer()}:${id}`);
+  try {
+    localStorage.setItem('litweb.hidden', JSON.stringify([...S.hidden]));
+  } catch {}
+  renderNav();
+}
 async function answer(id, accept) {
   S.answering.set(id, accept ? 'accepted' : 'denied');
   renderNav();
@@ -1067,9 +1075,9 @@ function sharedNavHtml() {
       sub: `${s.mine ? t('You') : esc(s.ownerName)} · ${dims(s.size)}${live && s.dim !== a.dim ? ` · ${esc(s.dim.replace('minecraft:', '').replace('the_', ''))}` : ''}`,
       meta: accessBadge(s),
       action:
-        s.mine || !live || !s.answer
+        s.mine || (s.answer && !live)
           ? ''
-          : `<button class="row-action" data-answer="${esc(s.id)}" data-accept="${hid}" data-tip="${hid ? t('Show it in your list again') : t('Hide it from your list')}">${hid ? `${ICON.eye}${t('Unhide')}` : `${ICON.eyeOff}${t('Hide')}`}</button>`,
+          : `<button class="row-action" ${s.answer ? `data-answer="${esc(s.id)}" data-accept="${hid}"` : `data-hide="${esc(s.id)}"`} data-tip="${hid ? t('Show it in your list again') : t('Hide it from your list')}">${hid ? `${ICON.eye}${t('Unhide')}` : `${ICON.eyeOff}${t('Hide')}`}</button>`,
       pct: live ? S.pct.get(`shared:${s.id}`) : null,
     });
   }
@@ -1872,6 +1880,12 @@ $('nav').addEventListener('click', (e) => {
   if (ans) {
     e.stopPropagation();
     answer(ans.dataset.answer, ans.dataset.accept === 'true');
+    return;
+  }
+  const hide = e.target.closest('[data-hide]');
+  if (hide) {
+    e.stopPropagation();
+    setHidden(hide.dataset.hide, !S.hidden.has(`${viewServer()}:${hide.dataset.hide}`));
     return;
   }
   if (e.target.closest('[data-show-hidden]')) {
@@ -3520,6 +3534,7 @@ try {
   if (localStorage.getItem('litweb.inspector') === '0' || innerWidth <= 900) toggle('inspector', false);
   if (localStorage.getItem('litweb.tab') === 'shaders') SH.tab = 'shaders';
   S.server = localStorage.getItem('litweb.server');
+  S.hidden = new Set(JSON.parse(localStorage.getItem('litweb.hidden') || '[]'));
 } catch {}
 translateDom();
 document.querySelectorAll('[data-mod]').forEach((k) => {
