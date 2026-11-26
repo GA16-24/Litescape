@@ -85,11 +85,11 @@ public class EndToEndTest implements FabricClientGameTest {
 				check(sel.getAsJsonArray("size").toString().equals("[20,14,19]"), "selection size " + sel.get("size"));
 				collectTextures(sel);
 
-				AreaSelection area = ctx.computeOnClient(mc -> DataManager.getSelectionManager().getCurrentSelection());
+				AreaSelection area = ctx.computeOnClient(_ -> DataManager.getSelectionManager().getCurrentSelection());
 				// From the server world, as Litematica does in singleplayer: the client never gets chest and hopper contents.
 				LitematicaSchematic schem = sp.getServer().computeOnServer(server -> LitematicaSchematic.createFromWorld(server.overworld(), area,
 					new LitematicaSchematic.SchematicSaveInfo(false, false), "test", msg -> {}));
-				ctx.runOnClient(mc -> {
+				ctx.runOnClient(_ -> {
 					SchematicPlacement p = SchematicPlacement.createFor(schem, new BlockPos(31, -63, 1), "Cottage copy", true, true);
 					DataManager.getSchematicPlacementManager().addSchematicPlacement(p, false);
 				});
@@ -133,7 +133,7 @@ public class EndToEndTest implements FabricClientGameTest {
 				JsonObject inGame = json(call(ctx, "GET", "/api/state"));
 				check(inGame.getAsJsonArray("shared").get(0).getAsJsonObject().get("inGame").getAsBoolean(), "shared schematic marked as loaded");
 				check(inGame.getAsJsonArray("placements").size() == 1, "a loaded share isn't listed again under your placements");
-				String loaded = ctx.computeOnClient(mc -> {
+				String loaded = ctx.computeOnClient(_ -> {
 					for (SchematicPlacement p : DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()) {
 						if (p.getSchematicFile() == null || !p.getSchematicFile().getFileName().toString().equals(shared + ".litematic")) continue;
 						int entities = 0;
@@ -144,7 +144,7 @@ public class EndToEndTest implements FabricClientGameTest {
 				});
 				check(loaded.equals("31, -63, 1 3"), "loaded at the shared origin with the chest, furnace and hopper: " + loaded);
 				call(ctx, "POST", "/api/unload?id=" + shared);
-				check(ctx.computeOnClient(mc -> DataManager.getSchematicPlacementManager().getAllSchematicsPlacements().size()) == 1, "unload removes it from Litematica");
+				check(ctx.computeOnClient(_ -> DataManager.getSchematicPlacementManager().getAllSchematicsPlacements().size()) == 1, "unload removes it from Litematica");
 				check(st3.contains("\"margin\":8") && st3.contains("\"chunksCaptured\""), "shared list carries the capture");
 				JsonObject sst = json(save("status-shared.json", call(ctx, "GET", "/api/status?type=shared&id=" + shared)));
 				check(sst.getAsJsonArray("counts").toString().equals(c.toString()), "server status " + sst.get("counts") + " matches client " + c);
