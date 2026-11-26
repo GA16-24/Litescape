@@ -22,8 +22,12 @@ import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandlerRegistry;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.BlockModelPart;
+*///?}
+//? if >=1.21.5 <26.1 {
+/*import net.minecraft.client.renderer.block.model.BlockModelPart;
 import net.minecraft.client.renderer.block.model.BlockStateModel;
+*///?} elif <1.21.5 {
+/*import net.minecraft.client.resources.model.BakedModel;
 *///?}
 //? if >=1.21.6 <26.1 {
 /*import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
@@ -103,17 +107,27 @@ final class Models {
 		//? if >=26.1 {
 		BlockStateModel model = mc.getModelManager().getBlockStateModelSet().get(state);
 		List<BlockStateModelPart> parts = new ArrayList<>();
-		//?} else {
+		TextureAtlasSprite particle = model.particleMaterial().sprite();
+		//?} elif >=1.21.5 {
 		/*BlockStateModel model = mc.getBlockRenderer().getBlockModel(state);
 		List<BlockModelPart> parts = new ArrayList<>();
+		TextureAtlasSprite particle = model.particleIcon();
 		*///?}
+		//? if >=1.21.5 {
 		model.collectParts(RandomSource.create(42L), parts);
 		for (var part : parts) {
 			for (Direction d : Direction.values()) for (BakedQuad q : part.getQuads(d)) quads.add(quad(state, q, d));
 			for (BakedQuad q : part.getQuads(null)) quads.add(quad(state, q, null));
 		}
+		//?} else {
+		/*BakedModel model = mc.getBlockRenderer().getBlockModel(state);
+		TextureAtlasSprite particle = model.getParticleIcon();
+		// The same seed for every face, so a model with random variants shows one of them on all sides.
+		for (Direction d : Direction.values()) for (BakedQuad q : model.getQuads(state, d, RandomSource.create(42L))) quads.add(quad(state, q, d));
+		for (BakedQuad q : model.getQuads(state, null, RandomSource.create(42L))) quads.add(quad(state, q, null));
+		*///?}
 		FluidState fluid = state.getFluidState();
-		if (quads.isEmpty() && fluid.isEmpty()) boxFallback(state, model, quads);
+		if (quads.isEmpty() && fluid.isEmpty()) boxFallback(state, particle, quads);
 		o.add("q", quads);
 
 		if (!fluid.isEmpty()) {
@@ -144,14 +158,11 @@ final class Models {
 	}
 
 	/** Blocks drawn by special renderers (chests, signs, beds...) get their outline box in the particle texture. */
-	private void boxFallback(BlockState state, BlockStateModel model, JsonArray quads) {
+	private void boxFallback(BlockState state, TextureAtlasSprite particle, JsonArray quads) {
 		VoxelShape shape = state.getShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
 		if (shape.isEmpty()) return;
 		AABB b = shape.bounds();
-		//? if >=26.1 {
-		int t = texture(model.particleMaterial().sprite());
-		//?} else
-		//int t = texture(model.particleIcon());
+		int t = texture(particle);
 		float x0 = (float) b.minX, y0 = (float) b.minY, z0 = (float) b.minZ, x1 = (float) b.maxX, y1 = (float) b.maxY, z1 = (float) b.maxZ;
 		float[][] faces = {
 			{x0, y0, z1, x0, y0, z0, x1, y0, z0, x1, y0, z1}, // down

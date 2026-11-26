@@ -53,8 +53,7 @@ public final class LitWebClient implements ClientModInitializer {
 			if (!announced && mc.player != null) {
 				announced = true;
 				Component message = Component.literal("Litescape: ")
-					.append(Component.literal(WebServer.url()).withStyle(s -> s.withClickEvent(new ClickEvent.RunCommand("litweb"))
-						.withColor(ChatFormatting.AQUA).withUnderlined(true)))
+					.append(Component.literal(WebServer.url()).withStyle(s -> s.withClickEvent(runLitweb()).withColor(ChatFormatting.AQUA).withUnderlined(true)))
 					.append(Component.translatable("litweb.chat.or_command").withStyle(ChatFormatting.GRAY));
 				//? if >=26.1 {
 				mc.player.sendSystemMessage(message);
@@ -106,6 +105,13 @@ public final class LitWebClient implements ClientModInitializer {
 			openUri(web);
 		});
 		return true;
+	}
+
+	private static ClickEvent runLitweb() {
+		//? if >=1.21.5 {
+		return new ClickEvent.RunCommand("litweb");
+		//?} else
+		//return new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/litweb");
 	}
 
 	private static void openUri(URI uri) {

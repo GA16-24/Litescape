@@ -161,7 +161,8 @@ public class EndToEndTest implements FabricClientGameTest {
 				check(inGame.getAsJsonArray("placements").size() == 1, "a loaded share isn't listed again under your placements");
 				String loaded = ctx.computeOnClient(unused -> {
 					for (SchematicPlacement p : DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()) {
-						if (p.getSchematicFile() == null || !p.getSchematicFile().getFileName().toString().equals(shared + ".litematic")) continue;
+						// A Path, or a File before Litematica 0.22; either prints as the file's path.
+						if (!String.valueOf(p.getSchematicFile()).endsWith(java.io.File.separator + shared + ".litematic")) continue;
 						int entities = 0;
 						for (String region : p.getSchematic().getAreas().keySet()) entities += p.getSchematic().getBlockEntityMapForRegion(region).size();
 						return p.getOrigin().toShortString() + " " + entities;

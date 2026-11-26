@@ -105,6 +105,14 @@ stonecutter {
 	}
 }
 
+// 1.21.5 turned BakedQuad into a record, so before it the accessors are getters.
+stonecutter {
+	replacements.perl(sc.current.parsed < '1.21.5') {
+		replace '\\bq\\.(sprite|tintIndex|direction|vertices)\\(\\)', 'q.get\\u$1()', '\\bq\\.get(Sprite|TintIndex|Direction|Vertices)\\(\\)', 'q.\\l$1()'
+		replace '\\bq\\.shade\\(\\)', 'q.isShade()', '\\bq\\.isShade\\(\\)', 'q.shade()'
+	}
+}
+
 // The jar players install. Copied to the root build/libs, where the desktop app and the release workflow pick up every version's jar.
 def modJar = tasks.named(obfuscated ? 'remapJar' : 'jar')
 tasks.register('collectJar', Copy) {
