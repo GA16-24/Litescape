@@ -180,6 +180,9 @@ if (tests[mc]) {
 		doFirst {
 			dir.get().asFile.deleteDir()
 			dir.get().dir('tmp').asFile.mkdirs()
+			// Ticks drive the test, not frames. Under CI's software rendering, an uncapped loading screen took the
+			// cores 1.21.9's integrated server needed to prepare spawn, and world loading timed out.
+			dir.get().file('options.txt').asFile.text = 'maxFps:30\nmenuBackgroundBlurriness:0\n'
 		}
 		doLast { if (!passed.get().asFile.exists()) throw new GradleException("The end-to-end test did not finish on Minecraft $mc") }
 	}
