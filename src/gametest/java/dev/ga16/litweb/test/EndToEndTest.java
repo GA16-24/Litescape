@@ -26,10 +26,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+//? if >=1.21.4 {
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+//?} else {
+/*import dev.ga16.litweb.test.legacy.ClientGameTests.ClientGameTestContext;
+import dev.ga16.litweb.test.legacy.ClientGameTests.FabricClientGameTest;
+import dev.ga16.litweb.test.legacy.ClientGameTests.TestServerContext;
+import dev.ga16.litweb.test.legacy.ClientGameTests.TestSingleplayerContext;
+*///?}
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;

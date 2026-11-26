@@ -62,11 +62,11 @@ jobs:
       # Also validates gradle-wrapper.jar checksums against the official Gradle releases.
       - uses: gradle/actions/setup-gradle@v6.4.1
       - name: Build with all javac lints as errors and Gradle deprecations as errors
-        run: ./gradlew ":$LINE:build" ":$LINE:compileGametestJava" --init-script .github/ci.init.gradle --warning-mode=fail --stacktrace
+        run: .github/retry-downloads.sh ./gradlew ":$LINE:build" ":$LINE:compileGametestJava" --init-script .github/ci.init.gradle --warning-mode=fail --stacktrace
       - name: Install virtual display and software Vulkan/GL
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb mesa-vulkan-drivers
       - name: Release jar in a production client and dedicated server
-        run: ./gradlew ":$LINE:productionTest" "-Ptest_minecraft=$MINECRAFT" --init-script .github/ci.init.gradle --warning-mode=fail --stacktrace
+        run: .github/retry-downloads.sh ./gradlew ":$LINE:productionTest" "-Ptest_minecraft=$MINECRAFT" --init-script .github/ci.init.gradle --warning-mode=fail --stacktrace
       - if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7.0.2
         with:
