@@ -394,6 +394,20 @@ export default {
   Layers: 'レイヤー',
   'Next layer mode': '次のレイヤーモード',
   'Layer up or down': 'レイヤーを上下に移動',
+  Step: 'ステップ',
+  "Can fire as soon as it's placed. Check what it faces first.":
+    '置いた瞬間に作動することがあります。先に向きを確認してください。',
+  "Water and lava go last, so they don't flow over the build.": '水とマグマは建築の上に流れないよう最後に置きます。',
+  'Nothing to place it against yet. Put a temporary block next to it.':
+    'まだ設置できる面がありません。隣に仮ブロックを置いてください。',
+  'Falls without a block under it. Put a temporary one there.':
+    '下にブロックがないと落ちます。仮ブロックを置いてください。',
+  'Every block is placed': 'すべてのブロックを設置しました',
+  'Step {n} of {total}': 'ステップ {n} / {total}',
+  'Layers: survival build order': 'レイヤー：サバイバルの建築順',
+  'Order: previous or next block': '建築順：前または次のブロック',
+  Order: '建築順',
+  'Survival build order: one block at a time': 'サバイバルの建築順：1ブロックずつ',
   App: 'アプリ',
   'Search views and commands': 'ビューとコマンドを検索',
   'Details panel': '詳細パネル',

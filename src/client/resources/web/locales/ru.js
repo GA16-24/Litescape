@@ -435,6 +435,20 @@ export default {
   Layers: 'Слои',
   'Next layer mode': 'Следующий режим слоёв',
   'Layer up or down': 'Слой вверх или вниз',
+  Step: 'Шаг',
+  "Can fire as soon as it's placed. Check what it faces first.":
+    'Может сработать сразу после установки. Сначала проверьте, куда он смотрит.',
+  "Water and lava go last, so they don't flow over the build.":
+    'Вода и лава ставятся в конце, чтобы не растеклись по постройке.',
+  'Nothing to place it against yet. Put a temporary block next to it.':
+    'Пока не к чему приставить. Поставьте рядом временный блок.',
+  'Falls without a block under it. Put a temporary one there.': 'Упадёт без блока снизу. Поставьте туда временный.',
+  'Every block is placed': 'Все блоки поставлены',
+  'Step {n} of {total}': 'Шаг {n} из {total}',
+  'Layers: survival build order': 'Слои: порядок постройки в выживании',
+  'Order: previous or next block': 'Порядок: предыдущий или следующий блок',
+  Order: 'Порядок',
+  'Survival build order: one block at a time': 'Порядок постройки в выживании: по одному блоку',
   App: 'Приложение',
   'Search views and commands': 'Поиск видов и команд',
   'Details panel': 'Панель сведений',

@@ -78,12 +78,14 @@
             <button type="button" role="radio" aria-checked="true" data-mode="all">All</button>
             <button type="button" role="radio" aria-checked="false" data-mode="below">Up to</button>
             <button type="button" role="radio" aria-checked="false" data-mode="single">Layer</button>
+            <button type="button" role="radio" aria-checked="false" data-mode="order" data-tip="Survival build order: one block at a time">Order</button>
           </div>
           <!-- biome-ignore-end lint/a11y/useSemanticElements: see above -->
           <div class="layer-slider" id="layer-slider-wrap">
             <output id="layer-value"></output>
             <input type="range" id="layer-slider" min="0" max="0" value="0" aria-label="Layer">
           </div>
+          <div class="hover-card order-card" id="order-card" role="status" hidden></div>
         </div>
         <div class="hint" id="hint">Drag to orbit · Right-drag to pan · Scroll to zoom</div>
       </section>

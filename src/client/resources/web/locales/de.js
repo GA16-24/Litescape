@@ -400,6 +400,21 @@ export default {
   Layers: 'Ebenen',
   'Next layer mode': 'Nächster Ebenenmodus',
   'Layer up or down': 'Eine Ebene hoch oder runter',
+  Step: 'Schritt',
+  "Can fire as soon as it's placed. Check what it faces first.":
+    'Kann auslösen, sobald er platziert ist. Prüfe zuerst, wohin er zeigt.',
+  "Water and lava go last, so they don't flow over the build.":
+    'Wasser und Lava kommen zuletzt, damit sie nicht über den Bau fließen.',
+  'Nothing to place it against yet. Put a temporary block next to it.':
+    'Noch nichts zum Dranbauen. Setze einen vorübergehenden Block daneben.',
+  'Falls without a block under it. Put a temporary one there.':
+    'Fällt ohne Block darunter. Setze vorübergehend einen dorthin.',
+  'Every block is placed': 'Alle Blöcke sind platziert',
+  'Step {n} of {total}': 'Schritt {n} von {total}',
+  'Layers: survival build order': 'Ebenen: Baureihenfolge im Überlebensmodus',
+  'Order: previous or next block': 'Reihenfolge: vorheriger oder nächster Block',
+  Order: 'Reihenfolge',
+  'Survival build order: one block at a time': 'Baureihenfolge im Überlebensmodus: ein Block nach dem anderen',
   App: 'App',
   'Search views and commands': 'Ansichten und Befehle suchen',
   'Details panel': 'Detailbereich',

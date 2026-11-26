@@ -873,6 +873,17 @@ button {
 .layer-slider[aria-disabled="true"] {
   opacity: 0.45;
 }
+.layers .order-card {
+  position: static;
+  pointer-events: auto;
+  width: 240px;
+}
+.oc-warn .i {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--state);
+}
 
 /* ---------- inspector ---------- */
 /* T3's floating details card: under the topbar, over the scene; the camera keeps the build in the uncovered part */

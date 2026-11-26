@@ -399,6 +399,21 @@ export default {
   Layers: 'Capas',
   'Next layer mode': 'Siguiente modo de capas',
   'Layer up or down': 'Subir o bajar una capa',
+  Step: 'Paso',
+  "Can fire as soon as it's placed. Check what it faces first.":
+    'Puede activarse en cuanto lo colocas. Comprueba primero hacia dónde mira.',
+  "Water and lava go last, so they don't flow over the build.":
+    'El agua y la lava van al final, para que no se derramen sobre la construcción.',
+  'Nothing to place it against yet. Put a temporary block next to it.':
+    'Aún no hay nada contra lo que colocarlo. Pon un bloque temporal al lado.',
+  'Falls without a block under it. Put a temporary one there.':
+    'Se cae si no tiene un bloque debajo. Pon uno temporal ahí.',
+  'Every block is placed': 'Todos los bloques están colocados',
+  'Step {n} of {total}': 'Paso {n} de {total}',
+  'Layers: survival build order': 'Capas: orden de construcción en supervivencia',
+  'Order: previous or next block': 'Orden: bloque anterior o siguiente',
+  Order: 'Orden',
+  'Survival build order: one block at a time': 'Orden de construcción en supervivencia: un bloque cada vez',
   App: 'Aplicación',
   'Search views and commands': 'Buscar vistas y comandos',
   'Details panel': 'Panel de detalles',

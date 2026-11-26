@@ -22,6 +22,10 @@ self.onmessage = (e) => {
     V = m;
     return;
   }
+  if (m.type === 'order' && V) {
+    V.rank = m.rank; // build step per cell, -1 for blocks the game places by itself
+    return;
+  }
   if (m.type === 'ent' && V) {
     V.ent = m.ent; // palette index -> block.properties id, for mc_Entity
     return;
@@ -93,6 +97,13 @@ function build(o) {
     if (e.t) {
       // Captured surroundings: no build status, so they step aside while a filter or material is picked.
       if (o.terrain !== 'off' && o.iso < 0 && (!st || o.filter === 'all')) vis[i] = 1;
+      continue;
+    }
+    if (o.step >= 0 && V.rank) {
+      // Order mode: earlier steps are built, the next block is a ghost, the rest isn't there yet.
+      const r = V.rank[i];
+      if (r < 0 ? o.step < o.steps : r > o.step) continue;
+      vis[i] = r === o.step || (st?.[i] === 2 && o.ghosts) ? 2 : 1;
       continue;
     }
     if (o.iso >= 0 && e.mid !== o.iso) continue;

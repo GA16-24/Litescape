@@ -399,6 +399,20 @@ export default {
   Layers: 'Couches',
   'Next layer mode': 'Mode de couche suivant',
   'Layer up or down': "Monter ou descendre d'une couche",
+  Step: 'Étape',
+  "Can fire as soon as it's placed. Check what it faces first.":
+    'Peut s’activer dès qu’il est posé. Vérifiez d’abord vers où il est tourné.',
+  "Water and lava go last, so they don't flow over the build.":
+    'L’eau et la lave viennent en dernier, pour ne pas couler sur la construction.',
+  'Nothing to place it against yet. Put a temporary block next to it.':
+    'Rien contre quoi le poser pour l’instant. Mettez un bloc temporaire à côté.',
+  'Falls without a block under it. Put a temporary one there.': 'Tombe sans bloc en dessous. Mettez-en un temporaire.',
+  'Every block is placed': 'Tous les blocs sont posés',
+  'Step {n} of {total}': 'Étape {n} sur {total}',
+  'Layers: survival build order': 'Couches : ordre de construction en survie',
+  'Order: previous or next block': 'Ordre : bloc précédent ou suivant',
+  Order: 'Ordre',
+  'Survival build order: one block at a time': 'Ordre de construction en survie : un bloc à la fois',
   App: 'Application',
   'Search views and commands': 'Rechercher des vues et des commandes',
   'Details panel': 'Panneau de détails',
