@@ -363,8 +363,10 @@ public class EndToEndTest implements FabricClientGameTest {
 		String id = java.net.URLEncoder.encode(p.get("id").getAsString(), java.nio.charset.StandardCharsets.UTF_8);
 		JsonObject view = json(call(ctx, "GET", "/api/view?type=placement&id=" + id));
 		check(view.getAsJsonArray("size").toString().equals("[2,2,1]"), "BuildPrint build size " + view.get("size"));
-		JsonArray c = json(call(ctx, "GET", "/api/status?type=placement&id=" + id)).getAsJsonArray("counts");
-		// One correct, one missing, one with the wrong state.
+		// One correct, one missing, one with the wrong state, once the client has the two blocks set above.
+		JsonArray c = null;
+		for (int i = 0; i < 40 && (c == null || !(c.get(1).getAsInt() == 1 && c.get(2).getAsInt() == 1 && c.get(4).getAsInt() == 1)); i++, ctx.waitTicks(5))
+			c = json(call(ctx, "GET", "/api/status?type=placement&id=" + id)).getAsJsonArray("counts");
 		check(c.get(1).getAsInt() == 1 && c.get(2).getAsInt() == 1 && c.get(4).getAsInt() == 1, "BuildPrint status counts " + c);
 
 		// The same build loaded a second time in the same spot gets its own row.
