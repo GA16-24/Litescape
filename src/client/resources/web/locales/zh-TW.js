@@ -220,6 +220,7 @@ export default {
   '{n} h ago': '{n} 小時前',
   'Updated just now': '剛剛更新',
   'Updated {n}s ago': '{n} 秒前更新',
+  '{n} shulkers': '{n} 界伏盒',
   '{n} stacks': '{n} 組',
   'Showing only {name}': '只顯示 {name}',
   'Press Esc to show everything': '按 Esc 顯示全部',

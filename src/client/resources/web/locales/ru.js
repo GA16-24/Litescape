@@ -252,6 +252,7 @@ export default {
   '{n} h ago': '{n} ч назад',
   'Updated just now': 'Обновлено только что',
   'Updated {n}s ago': 'Обновлено {n} с назад',
+  '{n} shulkers': { one: '{n} шалкер', few: '{n} шалкера', many: '{n} шалкеров', other: '{n} шалкера' },
   '{n} stacks': { one: '{n} стак', few: '{n} стака', many: '{n} стаков', other: '{n} стака' },
   'Showing only {name}': 'Показано только: {name}',
   'Press Esc to show everything': 'Нажмите Esc, чтобы показать всё',

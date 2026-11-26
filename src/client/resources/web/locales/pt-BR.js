@@ -231,6 +231,7 @@ export default {
   '{n} h ago': 'há {n} h',
   'Updated just now': 'Atualizado agora mesmo',
   'Updated {n}s ago': 'Atualizado há {n} s',
+  '{n} shulkers': { one: '{n} caixa de shulker', other: '{n} caixas de shulker' },
   '{n} stacks': { one: '{n} pack', other: '{n} packs' },
   'Showing only {name}': 'Mostrando só {name}',
   'Press Esc to show everything': 'Pressione Esc para mostrar tudo',
