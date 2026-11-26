@@ -243,6 +243,14 @@ public class EndToEndTest implements FabricClientGameTest {
 					Files.createDirectories(file.getParent());
 					Files.write(file, f.join().body());
 				}
+				// A loaded share that stops being shared stays in Litematica, so it shows as a placement again, not nowhere.
+				call(ctx, "POST", "/api/load?id=" + shared);
+				call(ctx, "POST", "/api/unshare?id=" + shared);
+				JsonObject gone = json(call(ctx, "GET", "/api/state"));
+				for (int i = 0; i < 40 && !gone.getAsJsonArray("shared").isEmpty(); i++, ctx.waitTicks(5)) gone = json(call(ctx, "GET", "/api/state"));
+				check(gone.getAsJsonArray("shared").isEmpty() && gone.getAsJsonArray("placements").size() == 2, "unshared load listed as a placement: " + gone.get("placements"));
+				call(ctx, "POST", "/api/unload?id=" + shared);
+
 				buildPrint(ctx, sp);
 				shaderPack(ctx);
 				ctx.takeScreenshot("litweb-scene");
