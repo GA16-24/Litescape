@@ -7,9 +7,11 @@ import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import dev.ga16.litweb.LitWeb;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -66,19 +68,25 @@ final class Servers {
 	static synchronized void remember(String sharedJson) {
 		Id id = current();
 		if (id == null) return;
-		known.putAll(load()); // another instance on the same account may have saved servers since
-		Entry e = known.computeIfAbsent(id.key(), k -> new Entry());
+		Entry e = new Entry();
 		e.name = id.name();
 		e.address = id.address();
 		e.seen = System.currentTimeMillis();
 		e.shared = sharedJson;
+		known.put(id.key(), e);
 		Set<String> ids = new HashSet<>();
 		for (var s : JsonParser.parseString(sharedJson).getAsJsonArray()) ids.add(s.getAsJsonObject().get("id").getAsString());
 		try {
 			Files.createDirectories(DIR);
-			Path tmp = Files.createTempFile(DIR, "servers", ".tmp");
-			Files.writeString(tmp, GSON.toJson(known));
-			Files.move(tmp, FILE, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+			// Another game on the same account may save at the same time; the lock keeps either from dropping the other's servers.
+			try (FileChannel ch = FileChannel.open(DIR.resolve("servers.lock"), StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
+				ch.lock(); // released when the channel closes
+				known.putAll(load());
+				known.put(id.key(), e);
+				Path tmp = Files.createTempFile(DIR, "servers", ".tmp");
+				Files.writeString(tmp, GSON.toJson(known));
+				Files.move(tmp, FILE, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+			}
 			// Drop saved copies of schematics that were unshared or are no longer visible to this player.
 			Path blobs = blobDir(id.key());
 			if (Files.isDirectory(blobs)) try (Stream<Path> files = Files.list(blobs)) {
