@@ -42,6 +42,9 @@ dependencies {
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 	clientImplementation "maven.modrinth:litematica:${project.litematica_version}"
 	clientImplementation "maven.modrinth:malilib:${project.malilib_version}"
+	// Optional at runtime: the client reads its public API only when it is installed. All rights reserved, so it is never bundled.
+	clientCompileOnly "maven.modrinth:buildprint:${project.buildprint_version}"
+	gametestImplementation "maven.modrinth:buildprint:${project.buildprint_version}"
 }
 
 processResources {

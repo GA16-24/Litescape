@@ -33,8 +33,8 @@ export default {
     'O posicionamento foi removido ou não está mais compartilhado. Escolha outro na barra lateral.',
   'Browse views': 'Ver visualizações',
   'Select an area in Minecraft': 'Selecione uma área no Minecraft',
-  'Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll.':
-    'Segure a ferramenta do Litematica (um graveto, por padrão) e mude para o modo <b>Area Selection</b> com <span class="kbd">Ctrl</span> + rolagem.',
+  'Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll. With BuildPrint, use its area selection instead.':
+    'Segure a ferramenta do Litematica (um graveto, por padrão) e mude para o modo <b>Area Selection</b> com <span class="kbd">Ctrl</span> + rolagem. Com o BuildPrint, use a seleção de área dele.',
   'Left-click one corner, right-click the opposite corner.':
     'Clique com o botão esquerdo em um canto e com o direito no canto oposto.',
   'The area appears here in 3D and updates while you adjust it.':
@@ -70,11 +70,11 @@ export default {
   '{owner} and {n} others': { one: '{owner} e mais {n}', other: '{owner} e mais {n}' },
   Selection: 'Seleção',
   '{n} boxes': 'Caixas: {n}',
-  "Nothing selected. Use Litematica's area selection in game.":
-    'Nada selecionado. Use a seleção de área do Litematica no jogo.',
+  "Nothing selected. Use Litematica's or BuildPrint's area selection in game.":
+    'Nada selecionado. Use a seleção de área do Litematica ou do BuildPrint no jogo.',
   'Your placements': 'Seus posicionamentos',
-  'No schematics placed. Load one in Litematica to track its build here.':
-    'Nenhum esquemático posicionado. Carregue um no Litematica para acompanhar a construção aqui.',
+  'No schematics placed. Load one in Litematica or BuildPrint to track its build here.':
+    'Nenhum esquemático posicionado. Carregue um no Litematica ou no BuildPrint para acompanhar a construção aqui.',
   'The server needs Litescape to share': 'O servidor precisa do Litescape para compartilhar',
   'Shared. Open it to choose who can see it': 'Compartilhado. Abra para escolher quem pode ver',
   'Share to the server. Only you see it until you choose who else can':

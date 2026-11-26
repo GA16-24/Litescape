@@ -33,8 +33,8 @@ export default {
     'Le placement a été supprimé ou n’est plus partagé. Choisissez-en un autre dans la barre latérale.',
   'Browse views': 'Parcourir les vues',
   'Select an area in Minecraft': 'Sélectionnez une zone dans Minecraft',
-  'Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll.':
-    'Tenez l’outil de Litematica (un bâton par défaut) et passez en mode <b>Area Selection</b> avec <span class="kbd">Ctrl</span> + molette.',
+  'Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll. With BuildPrint, use its area selection instead.':
+    'Tenez l’outil de Litematica (un bâton par défaut) et passez en mode <b>Area Selection</b> avec <span class="kbd">Ctrl</span> + molette. Avec BuildPrint, utilisez plutôt sa sélection de zone.',
   'Left-click one corner, right-click the opposite corner.': 'Clic gauche sur un coin, clic droit sur le coin opposé.',
   'The area appears here in 3D and updates while you adjust it.':
     'La zone apparaît ici en 3D et se met à jour pendant que vous l’ajustez.',
@@ -70,11 +70,11 @@ export default {
   '{owner} and {n} others': { one: '{owner} et {n} autre', other: '{owner} et {n} autres' },
   Selection: 'Sélection',
   '{n} boxes': 'Boîtes : {n}',
-  "Nothing selected. Use Litematica's area selection in game.":
-    'Rien de sélectionné. Utilisez la sélection de zone de Litematica en jeu.',
+  "Nothing selected. Use Litematica's or BuildPrint's area selection in game.":
+    'Rien de sélectionné. Utilisez la sélection de zone de Litematica ou de BuildPrint en jeu.',
   'Your placements': 'Vos placements',
-  'No schematics placed. Load one in Litematica to track its build here.':
-    'Aucune schématique placée. Chargez-en une dans Litematica pour suivre sa construction ici.',
+  'No schematics placed. Load one in Litematica or BuildPrint to track its build here.':
+    'Aucune schématique placée. Chargez-en une dans Litematica ou BuildPrint pour suivre sa construction ici.',
   'The server needs Litescape to share': 'Le serveur a besoin de Litescape pour partager',
   'Shared. Open it to choose who can see it': 'Partagé. Ouvrez-le pour choisir qui peut le voir',
   'Share to the server. Only you see it until you choose who else can':

@@ -1,5 +1,7 @@
 package dev.ga16.litweb.test;
 
+import com.buildprint.api.BuildprintBlueprints;
+import com.buildprint.api.BuildprintSelection;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -209,12 +211,61 @@ public class EndToEndTest implements FabricClientGameTest {
 					Files.createDirectories(file.getParent());
 					Files.write(file, f.join().body());
 				}
+				buildPrint(ctx, sp);
 				shaderPack(ctx);
 				ctx.takeScreenshot("litweb-scene");
 			}
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	/** A BuildPrint build and selection show up like Litematica's: listed, viewable and compared with the world. */
+	private static void buildPrint(ClientGameTestContext ctx, TestSingleplayerContext sp) {
+		ctx.waitFor(_ -> BuildprintBlueprints.isAvailable(), 200);
+		ctx.runOnClient(_ -> {
+			String why = BuildprintBlueprints.problem("litweb-test");
+			check(why == null, "BuildPrint refuses the test blueprint: " + why);
+			check(BuildprintBlueprints.set("litweb-test", "Test tower", new int[] {50, -60, 1, 50, -59, 1, 51, -60, 1},
+				new String[] {"minecraft:stone", "minecraft:oak_planks", "minecraft:oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]"}) != null, "blueprint written");
+		});
+		sp.getServer().runCommand("setblock 50 -60 1 stone");
+		sp.getServer().runCommand("setblock 51 -60 1 oak_stairs[facing=west]");
+		ctx.waitTicks(10);
+		JsonObject p = null;
+		for (int i = 0; i < 40 && p == null; i++, ctx.waitTicks(5))
+			for (JsonElement e : json(call(ctx, "GET", "/api/state")).getAsJsonArray("placements"))
+				if (e.getAsJsonObject().get("name").getAsString().equals("Test tower")) p = e.getAsJsonObject();
+		check(p != null && p.get("id").getAsString().startsWith("buildprint:"), "BuildPrint build listed: " + p);
+		String id = java.net.URLEncoder.encode(p.get("id").getAsString(), java.nio.charset.StandardCharsets.UTF_8);
+		JsonObject view = json(call(ctx, "GET", "/api/view?type=placement&id=" + id));
+		check(view.getAsJsonArray("size").toString().equals("[2,2,1]"), "BuildPrint build size " + view.get("size"));
+		JsonArray c = json(call(ctx, "GET", "/api/status?type=placement&id=" + id)).getAsJsonArray("counts");
+		// One correct, one missing, one with the wrong state.
+		check(c.get(1).getAsInt() == 1 && c.get(2).getAsInt() == 1 && c.get(4).getAsInt() == 1, "BuildPrint status counts " + c);
+
+		// The same build loaded a second time in the same spot gets its own row.
+		ctx.runOnClient(_ -> check(BuildprintBlueprints.set("litweb-test-2", "Test tower", new int[] {50, -60, 1, 50, -59, 1, 51, -60, 1},
+			new String[] {"minecraft:stone", "minecraft:oak_planks", "minecraft:oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]"}) != null, "second blueprint written"));
+		Set<String> towers = new HashSet<>();
+		for (int i = 0; i < 40 && towers.size() < 2; i++, ctx.waitTicks(5)) {
+			towers.clear();
+			for (JsonElement e : json(call(ctx, "GET", "/api/state")).getAsJsonArray("placements"))
+				if (e.getAsJsonObject().get("name").getAsString().equals("Test tower")) towers.add(e.getAsJsonObject().get("id").getAsString());
+		}
+		check(towers.size() == 2 && towers.stream().allMatch(t -> t.contains("#")), "two same-named builds in one spot have distinct ids " + towers);
+
+		// With Litematica's selection back at its untouched default, BuildPrint's is the one shown.
+		ctx.runOnClient(_ -> {
+			AreaSelection area = DataManager.getSelectionManager().getCurrentSelection();
+			Box box = area.getAllSubRegionBoxes().get(0);
+			area.setSubRegionCornerPos(box, PositionUtils.Corner.CORNER_1, BlockPos.ZERO);
+			area.setSubRegionCornerPos(box, PositionUtils.Corner.CORNER_2, BlockPos.ZERO);
+			BuildprintSelection.add(new int[] {1, -63, 1, 4, -60, 3});
+		});
+		JsonObject sel = json(call(ctx, "GET", "/api/state")).getAsJsonObject("selection");
+		check(sel != null && sel.getAsJsonArray("boxes").toString().equals("[[1,-63,1,4,-60,3]]"), "BuildPrint selection " + sel);
+		check(json(call(ctx, "GET", "/api/view?type=selection")).getAsJsonArray("size").toString().equals("[4,4,3]"), "BuildPrint selection view");
 	}
 
 	private static void place(ServerPlayer player, Item item, BlockPos on, Direction face) {

@@ -33,8 +33,8 @@ export default {
     '此放置已被移除或不再分享。請從側邊欄選擇其他放置。',
   'Browse views': '瀏覽檢視',
   'Select an area in Minecraft': '在 Minecraft 中選取區域',
-  'Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll.':
-    '手持 Litematica 的工具物品（預設為木棒），按 <span class="kbd">Ctrl</span> + 滾輪切換至<b>區域選取</b>模式。',
+  'Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll. With BuildPrint, use its area selection instead.':
+    '手持 Litematica 的工具物品（預設為木棒），按 <span class="kbd">Ctrl</span> + 滾輪切換至<b>區域選取</b>模式。使用 BuildPrint 時，請改用它的區域選取。',
   'Left-click one corner, right-click the opposite corner.': '左鍵點擊一個角，右鍵點擊對角。',
   'The area appears here in 3D and updates while you adjust it.': '該區域會以 3D 顯示在這裡，並隨你的調整即時更新。',
   Offline: '離線',
@@ -67,11 +67,11 @@ export default {
   '{owner} and {n} others': '{owner} 和其他 {n} 人',
   Selection: '選取範圍',
   '{n} boxes': '{n} 個選取框',
-  "Nothing selected. Use Litematica's area selection in game.":
-    '未選取任何區域。請在遊戲中使用 Litematica 的區域選取。',
+  "Nothing selected. Use Litematica's or BuildPrint's area selection in game.":
+    '未選取任何區域。請在遊戲中使用 Litematica 或 BuildPrint 的區域選取。',
   'Your placements': '你的放置',
-  'No schematics placed. Load one in Litematica to track its build here.':
-    '尚未放置投影。在 Litematica 中載入一個，就能在這裡追蹤建造進度。',
+  'No schematics placed. Load one in Litematica or BuildPrint to track its build here.':
+    '尚未放置投影。在 Litematica 或 BuildPrint 中載入一個，就能在這裡追蹤建造進度。',
   'The server needs Litescape to share': '伺服器需要安裝 Litescape 才能分享',
   'Shared. Open it to choose who can see it': '已分享。開啟後可選擇誰能查看',
   'Share to the server. Only you see it until you choose who else can':

@@ -33,8 +33,8 @@ export default {
     'Размещение удалено или больше не опубликовано. Выберите другое на боковой панели.',
   'Browse views': 'Обзор видов',
   'Select an area in Minecraft': 'Выделите область в Minecraft',
-  'Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll.':
-    'Возьмите в руку инструмент Litematica (по умолчанию палка) и переключитесь в режим <b>Area Selection</b> с помощью <span class="kbd">Ctrl</span> + колёсико мыши.',
+  'Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll. With BuildPrint, use its area selection instead.':
+    'Возьмите в руку инструмент Litematica (по умолчанию палка) и переключитесь в режим <b>Area Selection</b> с помощью <span class="kbd">Ctrl</span> + колёсико мыши. В BuildPrint используйте его собственное выделение области.',
   'Left-click one corner, right-click the opposite corner.':
     'Щёлкните левой кнопкой по одному углу, правой — по противоположному.',
   'The area appears here in 3D and updates while you adjust it.':
@@ -84,11 +84,11 @@ export default {
   },
   Selection: 'Выделение',
   '{n} boxes': 'Областей: {n}',
-  "Nothing selected. Use Litematica's area selection in game.":
-    'Ничего не выделено. Выделите область в игре с помощью Litematica.',
+  "Nothing selected. Use Litematica's or BuildPrint's area selection in game.":
+    'Ничего не выделено. Выделите область в игре с помощью Litematica или BuildPrint.',
   'Your placements': 'Ваши размещения',
-  'No schematics placed. Load one in Litematica to track its build here.':
-    'Нет размещённых схем. Загрузите схему в Litematica, чтобы следить здесь за её постройкой.',
+  'No schematics placed. Load one in Litematica or BuildPrint to track its build here.':
+    'Нет размещённых схем. Загрузите схему в Litematica или BuildPrint, чтобы следить здесь за её постройкой.',
   'The server needs Litescape to share': 'Для публикации на сервере нужен Litescape',
   'Shared. Open it to choose who can see it': 'Опубликовано. Откройте, чтобы выбрать, кто это видит',
   'Share to the server. Only you see it until you choose who else can':

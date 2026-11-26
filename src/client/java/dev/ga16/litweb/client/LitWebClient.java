@@ -33,8 +33,8 @@ public final class LitWebClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
-		if (!FabricLoader.getInstance().isModLoaded("litematica")) {
-			LitWeb.LOG.warn("Litematica is not installed; the web viewer is disabled on this client");
+		if (!Schematics.LITEMATICA && !Schematics.BUILDPRINT) {
+			LitWeb.LOG.warn("Neither Litematica nor BuildPrint is installed; the web viewer is disabled on this client");
 			return;
 		}
 		WebServer.start();

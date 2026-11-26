@@ -961,7 +961,7 @@ function emptyHtml(kind) {
     <div class="empty-icon">${ICON.selection}</div>
     <h2>${t('Select an area in Minecraft')}</h2>
     <ol>
-      <li><span>${t('Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll.')}</span></li>
+      <li><span>${t('Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll. With BuildPrint, use its area selection instead.')}</span></li>
       <li><span>${t('Left-click one corner, right-click the opposite corner.')}</span></li>
       <li><span>${t('The area appears here in 3D and updates while you adjust it.')}</span></li>
     </ol></div>`;
@@ -1091,10 +1091,10 @@ function liveNavHtml(a) {
         title: a.selection.name,
         sub: `${dims(boxSize(a.selection.boxes))}${a.selection.boxes.length > 1 ? ` · ${t('{n} boxes', { n: a.selection.boxes.length })}` : ''}`,
       })
-    : `<div class="nav-empty">${t("Nothing selected. Use Litematica's area selection in game.")}</div>`;
+    : `<div class="nav-empty">${t("Nothing selected. Use Litematica's or BuildPrint's area selection in game.")}</div>`;
   h += `</div><div class="nav-section"><div class="nav-head">${t('Your placements')}</div>`;
   if (!a.placements?.length)
-    h += `<div class="nav-empty">${t('No schematics placed. Load one in Litematica to track its build here.')}</div>`;
+    h += `<div class="nav-empty">${t('No schematics placed. Load one in Litematica or BuildPrint to track its build here.')}</div>`;
   for (const p of a.placements || []) {
     const shared = !!p.sharedId;
     const busy = S.busy.has(p.id);

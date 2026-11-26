@@ -33,8 +33,8 @@ export default {
     'La colocación se eliminó o ya no se comparte. Elige otra en la barra lateral.',
   'Browse views': 'Explorar vistas',
   'Select an area in Minecraft': 'Selecciona un área en Minecraft',
-  'Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll.':
-    'Sostén la herramienta de Litematica (un palo por defecto) y cambia al modo <b>Area Selection</b> con <span class="kbd">Ctrl</span> + rueda.',
+  'Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll. With BuildPrint, use its area selection instead.':
+    'Sostén la herramienta de Litematica (un palo por defecto) y cambia al modo <b>Area Selection</b> con <span class="kbd">Ctrl</span> + rueda. Con BuildPrint, usa su selección de área.',
   'Left-click one corner, right-click the opposite corner.':
     'Haz clic izquierdo en una esquina y clic derecho en la esquina opuesta.',
   'The area appears here in 3D and updates while you adjust it.':
@@ -69,11 +69,11 @@ export default {
   '{owner} and {n} others': { one: '{owner} y {n} más', other: '{owner} y {n} más' },
   Selection: 'Selección',
   '{n} boxes': 'Cajas: {n}',
-  "Nothing selected. Use Litematica's area selection in game.":
-    'No hay nada seleccionado. Usa la selección de área de Litematica en el juego.',
+  "Nothing selected. Use Litematica's or BuildPrint's area selection in game.":
+    'No hay nada seleccionado. Usa la selección de área de Litematica o de BuildPrint en el juego.',
   'Your placements': 'Tus colocaciones',
-  'No schematics placed. Load one in Litematica to track its build here.':
-    'No hay esquemas colocados. Carga uno en Litematica para seguir su construcción aquí.',
+  'No schematics placed. Load one in Litematica or BuildPrint to track its build here.':
+    'No hay esquemas colocados. Carga uno en Litematica o BuildPrint para seguir su construcción aquí.',
   'The server needs Litescape to share': 'El servidor necesita Litescape para compartir',
   'Shared. Open it to choose who can see it': 'Compartido. Ábrelo para elegir quién puede verlo',
   'Share to the server. Only you see it until you choose who else can':

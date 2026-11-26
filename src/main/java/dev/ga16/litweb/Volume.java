@@ -163,7 +163,7 @@ public final class Volume {
 		}
 	}
 
-	private static @Nullable BlockState parse(String s) {
+	public static @Nullable BlockState parse(String s) {
 		if (s.equals("?")) return null;
 		try {
 			return BlockStateParser.parseForBlock(BuiltInRegistries.BLOCK, s, false).blockState();

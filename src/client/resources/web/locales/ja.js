@@ -33,8 +33,8 @@ export default {
     'この配置は削除されたか、共有が終了しました。サイドバーから別のものを選んでください。',
   'Browse views': 'ビューを見る',
   'Select an area in Minecraft': 'Minecraft で範囲を選択',
-  'Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll.':
-    'Litematica のツールアイテム（初期設定は棒）を持ち、<span class="kbd">Ctrl</span> + スクロールで<b>範囲選択</b>モードに切り替えます。',
+  'Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll. With BuildPrint, use its area selection instead.':
+    'Litematica のツールアイテム（初期設定は棒）を持ち、<span class="kbd">Ctrl</span> + スクロールで<b>範囲選択</b>モードに切り替えます。BuildPrint の場合は、BuildPrint の範囲選択を使ってください。',
   'Left-click one corner, right-click the opposite corner.': '片方の角を左クリックし、反対側の角を右クリックします。',
   'The area appears here in 3D and updates while you adjust it.':
     '範囲がここに 3D で表示され、調整に合わせて更新されます。',
@@ -70,11 +70,11 @@ export default {
   '{owner} and {n} others': '{owner} と他{n}人',
   Selection: '選択範囲',
   '{n} boxes': '{n}個のボックス',
-  "Nothing selected. Use Litematica's area selection in game.":
-    '何も選択されていません。ゲーム内で Litematica の範囲選択を使ってください。',
+  "Nothing selected. Use Litematica's or BuildPrint's area selection in game.":
+    '何も選択されていません。ゲーム内で Litematica または BuildPrint の範囲選択を使ってください。',
   'Your placements': 'あなたの配置',
-  'No schematics placed. Load one in Litematica to track its build here.':
-    '配置された設計図はありません。Litematica で読み込むと、ここで建築の進捗を確認できます。',
+  'No schematics placed. Load one in Litematica or BuildPrint to track its build here.':
+    '配置された設計図はありません。Litematica または BuildPrint で読み込むと、ここで建築の進捗を確認できます。',
   'The server needs Litescape to share': '共有するにはサーバーに Litescape が必要です',
   'Shared. Open it to choose who can see it': '共有済み。開いて閲覧できる人を選べます',
   'Share to the server. Only you see it until you choose who else can':
