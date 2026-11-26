@@ -228,15 +228,22 @@ final class WebServer {
 		// Who can be picked when sharing with specific players.
 		JsonArray online = new JsonArray();
 		for (var info : mc.getConnection().getOnlinePlayers()) {
-			if (info.getProfile().id().equals(mc.player.getUUID())) continue;
+			//? if >=1.21.9 {
+			UUID id = info.getProfile().id();
+			String name = info.getProfile().name();
+			//?} else {
+			/*UUID id = info.getProfile().getId();
+			String name = info.getProfile().getName();
+			*///?}
+			if (id.equals(mc.player.getUUID())) continue;
 			JsonObject p = new JsonObject();
-			p.addProperty("uuid", info.getProfile().id().toString());
-			p.addProperty("name", info.getProfile().name());
+			p.addProperty("uuid", id.toString());
+			p.addProperty("name", name);
 			online.add(p);
 		}
 		o.add("online", online);
 		String uuid = mc.player.getStringUUID();
-		o.addProperty("player", mc.player.getPlainTextName());
+		o.addProperty("player", mc.player.getName().getString());
 		o.addProperty("dim", level.dimension().identifier().toString());
 		o.addProperty("serverMod", Bridge.serverMod());
 		o.addProperty("litematica", Schematics.LITEMATICA); // shared schematics load into Litematica
@@ -564,7 +571,10 @@ final class WebServer {
 			var info = conn == null ? null : conn.getPlayerInfo(uuid);
 			return info == null ? null : info.getProfile();
 		});
+		//? if >=1.21.9 {
 		var session = mc.services().sessionService();
+		//?} else
+		//var session = mc.getMinecraftSessionService();
 		try {
 			if (profile == null || session.getTextures(profile).skin() == null) {
 				var result = session.fetchProfile(uuid, false);
@@ -581,7 +591,10 @@ final class WebServer {
 		} catch (Exception e) {
 			LitWeb.LOG.debug("No skin for {}", uuid, e); // offline server or Mojang unreachable: use the default skin
 		}
+		//? if >=1.21.9 {
 		Identifier path = net.minecraft.client.resources.DefaultPlayerSkin.get(uuid).body().texturePath();
+		//?} else
+		//Identifier path = net.minecraft.client.resources.DefaultPlayerSkin.get(uuid).texture();
 		try (InputStream in = mc.getResourceManager().open(path)) {
 			return in.readAllBytes();
 		}

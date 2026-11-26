@@ -134,7 +134,7 @@ public final class LitWeb implements ModInitializer {
 			} catch (IOException e) { // expected refusals: permission, limits, missing schematic
 				send(player, req.req(), e.getMessage(), new byte[0]);
 			} catch (Exception e) {
-				LOG.warn("Request {} from {} failed", req.op(), player.getPlainTextName(), e);
+				LOG.warn("Request {} from {} failed", req.op(), player.getName().getString(), e);
 				send(player, req.req(), e.getMessage() == null ? e.toString() : e.getMessage(), new byte[0]);
 			}
 		});
@@ -343,7 +343,7 @@ public final class LitWeb implements ModInitializer {
 		s.id = id;
 		s.name = meta.get("name").getAsString();
 		s.owner = owner;
-		s.ownerName = player.getPlainTextName();
+		s.ownerName = player.getName().getString();
 		s.dim = player.level().dimension().identifier().toString();
 		s.origin = new int[] {v.x0, v.y0, v.z0};
 		s.size = new int[] {v.sx, v.sy, v.sz};
@@ -457,7 +457,7 @@ public final class LitWeb implements ModInitializer {
 			done.set(index);
 			creditedDirty.add(s.id);
 			Contributor c = s.contributors.computeIfAbsent(player.getStringUUID(), k -> new Contributor());
-			c.name = player.getPlainTextName();
+			c.name = player.getName().getString();
 			c.placed++;
 			c.last = System.currentTimeMillis();
 			contributorsDirty = true;
