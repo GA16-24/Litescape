@@ -232,6 +232,7 @@ export default {
   '{n} h ago': 'vor {n} Std.',
   'Updated just now': 'Gerade eben aktualisiert',
   'Updated {n}s ago': 'Vor {n} s aktualisiert',
+  '{n} shulkers': { one: '{n} Shulker-Kiste', other: '{n} Shulker-Kisten' },
   '{n} stacks': { one: '{n} Stapel', other: '{n} Stapel' },
   'Showing only {name}': 'Nur {name} wird angezeigt',
   'Press Esc to show everything': 'Drücke Esc, um alles anzuzeigen',

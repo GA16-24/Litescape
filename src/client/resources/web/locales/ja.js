@@ -226,6 +226,7 @@ export default {
   '{n} h ago': '{n}時間前',
   'Updated just now': 'たった今更新',
   'Updated {n}s ago': '{n}秒前に更新',
+  '{n} shulkers': '{n}シュルカーボックス',
   '{n} stacks': '{n}スタック',
   'Showing only {name}': '{name} のみ表示中',
   'Press Esc to show everything': 'Esc ですべて表示',

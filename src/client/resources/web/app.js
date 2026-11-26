@@ -1836,11 +1836,13 @@ function ago(when) {
 /** "Updated 5s ago" under build progress; `s` is seconds since the last status. */
 const updatedText = (s) => (s < 2 ? t('Updated just now') : t('Updated {n}s ago', { n: s }));
 
+/** "2 shulkers + 3 stacks + 5" for a block count; a shulker box holds 27 stacks of 64. */
 function stacks(n) {
   if (n < 64) return '';
-  const s = Math.floor(n / 64),
+  const b = Math.floor(n / 1728),
+    s = Math.floor((n % 1728) / 64),
     r = n % 64;
-  return t('{n} stacks', { n: s }) + (r ? ` + ${r}` : '');
+  return [b && t('{n} shulkers', { n: b }), s && t('{n} stacks', { n: s }), r].filter(Boolean).join(' + ');
 }
 
 function renderLayers() {

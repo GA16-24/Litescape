@@ -230,6 +230,7 @@ export default {
   '{n} h ago': 'il y a {n} h',
   'Updated just now': 'Mis à jour à l’instant',
   'Updated {n}s ago': 'Mis à jour il y a {n} s',
+  '{n} shulkers': { one: '{n} boîte de shulker', other: '{n} boîtes de shulker' },
   '{n} stacks': { one: '{n} stack', other: '{n} stacks' },
   'Showing only {name}': 'Affichage de {name} uniquement',
   'Press Esc to show everything': 'Appuyez sur Échap pour tout afficher',

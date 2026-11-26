@@ -66,6 +66,7 @@ const EN = {
   '{owner} and {n} others': { one: '{owner} and {n} other', other: '{owner} and {n} others' },
   '{owner}, you and {n} others': { one: '{owner}, you and {n} other', other: '{owner}, you and {n} others' },
   '{n} blocks': { one: '{n} block', other: '{n} blocks' },
+  '{n} shulkers': { one: '{n} shulker', other: '{n} shulkers' },
   '{n} stacks': { one: '{n} stack', other: '{n} stacks' },
   '{n} materials': { one: '{n} material', other: '{n} materials' },
   'Filter {n} materials': { one: 'Filter {n} material', other: 'Filter {n} materials' },

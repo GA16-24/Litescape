@@ -226,6 +226,7 @@ export default {
   '{n} h ago': '{n}시간 전',
   'Updated just now': '방금 업데이트됨',
   'Updated {n}s ago': '{n}초 전 업데이트됨',
+  '{n} shulkers': { other: '셜커 상자 {n}개' },
   '{n} stacks': { other: '{n}세트' },
   'Showing only {name}': '{name}만 표시 중',
   'Press Esc to show everything': 'Esc를 누르면 전부 표시돼요',

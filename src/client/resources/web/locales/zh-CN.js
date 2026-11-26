@@ -221,6 +221,7 @@ export default {
   '{n} h ago': '{n} 小时前',
   'Updated just now': '刚刚更新',
   'Updated {n}s ago': '{n} 秒前更新',
+  '{n} shulkers': '{n} 潜影盒',
   '{n} stacks': '{n} 组',
   'Showing only {name}': '仅显示 {name}',
   'Press Esc to show everything': '按 Esc 显示全部',
