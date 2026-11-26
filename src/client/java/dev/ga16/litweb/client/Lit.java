@@ -175,7 +175,11 @@ final class Lit {
 			if (entities == null) continue;
 			for (var e : entities.entrySet()) {
 				JsonArray items = new JsonArray();
-				for (Tag t : DataConverterNbt.toVanillaCompound(e.getValue()).getListOrEmpty("Items")) {
+				//? if >=1.21.11 {
+				CompoundTag entity = DataConverterNbt.toVanillaCompound(e.getValue());
+				//?} else
+				//CompoundTag entity = e.getValue();
+				for (Tag t : entity.getListOrEmpty("Items")) {
 					if (!(t instanceof CompoundTag tag)) continue;
 					ItemStack stack = ItemStack.CODEC.parse(ops, tag).result().orElse(ItemStack.EMPTY);
 					if (stack.isEmpty()) continue;
@@ -220,7 +224,10 @@ final class Lit {
 
 	private static byte[] placementBlob(SchematicPlacement sp) throws IOException {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		//? if >=1.21.11 {
 		NbtIo.writeCompressed(DataConverterNbt.toVanillaCompound(sp.toData(true)), out);
+		//?} else
+		//NbtIo.writeCompressed(sp.toNbt(true), out);
 		return out.toByteArray();
 	}
 
@@ -228,7 +235,10 @@ final class Lit {
 	 * Another player's upload, so nothing in it is trusted: the NBT is size-bounded, and region sizes are checked
 	 * before Litematica allocates a block array for each.
 	 */
+	//? if >=1.21.11 {
 	private static CompoundData readBlob(byte[] blob) throws IOException {
+	//?} else
+	//private static CompoundTag readBlob(byte[] blob) throws IOException {
 		CompoundTag tag = NbtIo.readCompressed(new ByteArrayInputStream(blob), NbtAccounter.create(256L << 20));
 		CompoundTag regions = tag.getCompoundOrEmpty("Schematics").getCompoundOrEmpty("Regions");
 		long total = 0;
@@ -238,12 +248,18 @@ final class Lit {
 			if (blocks > Volume.MAX_VOLUME - total) throw new IOException("Couldn't read the shared placement");
 			total += blocks;
 		}
+		//? if >=1.21.11 {
 		return DataConverterNbt.fromVanillaCompound(tag);
+		//?} else
+		//return tag;
 	}
 
 	/** A placement that isn't added to Litematica, for reading what's in it. */
 	private static SchematicPlacement readPlacement(byte[] blob) throws IOException {
+		//? if >=1.21.11 {
 		SchematicPlacement p = SchematicPlacement.createFromData(readBlob(blob));
+		//?} else
+		//SchematicPlacement p = SchematicPlacement.createFromNbt(readBlob(blob));
 		if (p == null) throw new IOException("Couldn't read the shared placement");
 		return p;
 	}
@@ -251,14 +267,20 @@ final class Lit {
 	/** Saves the shared schematic to the schematics folder and adds its placement, replacing an earlier load of it. */
 	static void loadShared(String sharedId, byte[] blob) throws IOException {
 		if (!isId(sharedId)) throw new IOException("That schematic is no longer shared");
-		CompoundData data = readBlob(blob);
+		var data = readBlob(blob);
 		Path dir = sharedDir();
 		Files.createDirectories(dir);
 		Path file = dir.resolve(sharedId + LitematicaSchematic.FILE_EXTENSION);
 		unloadShared(sharedId);
+		//? if >=1.21.11 {
 		if (!DataFileUtils.writeCompoundDataToCompressedNbtFile(file, data.getCompound("Schematics"))) throw new IOException("Couldn't save the schematic");
 		LitematicaSchematic schematic = LitematicaSchematic.createFromFile(dir, file.getFileName().toString());
 		SchematicPlacement p = schematic == null ? null : SchematicPlacement.createFromData(schematic, data);
+		//?} else {
+		/*NbtIo.writeCompressed(data.getCompoundOrEmpty("Schematics"), file);
+		LitematicaSchematic schematic = LitematicaSchematic.createFromFile(dir, file.getFileName().toString());
+		SchematicPlacement p = schematic == null ? null : SchematicPlacement.createFromNbt(schematic, data);
+		*///?}
 		if (p == null) throw new IOException("Couldn't read the shared placement");
 		SchematicHolder.getInstance().addSchematic(schematic, false);
 		DataManager.getSchematicPlacementManager().addSchematicPlacement(p, false);
@@ -279,7 +301,8 @@ final class Lit {
 	}
 
 	static void unloadShared(String sharedId) {
-		for (SchematicPlacement p : DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()) {
+		// A copy, since removing changes the list, and Litematica before 0.26 hands out its live one.
+		for (SchematicPlacement p : List.copyOf(DataManager.getSchematicPlacementManager().getAllSchematicsPlacements())) {
 			if (!sharedId.equals(sharedIdOf(p))) continue;
 			DataManager.getSchematicPlacementManager().removeSchematicPlacement(p);
 			SchematicHolder.getInstance().removeSchematic(p.getSchematic());

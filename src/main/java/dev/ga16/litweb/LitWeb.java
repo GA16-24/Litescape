@@ -40,6 +40,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+//? if >=1.21.11
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -181,13 +182,16 @@ public final class LitWeb implements ModInitializer {
 	private boolean allowed(ServerPlayer player, String key) {
 		return switch (config.getProperty(key, "ops")) {
 			case "everyone" -> true;
-			case "ops" -> player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
+			case "ops" -> isOp(player);
 			default -> false;
 		};
 	}
 
 	private static boolean isOp(ServerPlayer player) {
+		//? if >=1.21.11 {
 		return player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
+		//?} else
+		//return player.hasPermissions(2);
 	}
 
 	static boolean canManage(ServerPlayer player, Shared s) {

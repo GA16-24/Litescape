@@ -201,12 +201,20 @@ final class Models {
 		JsonArray a = header(texture(s), cull == null ? -1 : cull.get3DDataValue(), tint, layer, shade);
 		float du = s.getU1() - s.getU0(), dv = s.getV1() - s.getV0();
 		for (int v = 0; v < 4; v++) {
+			//? if >=1.21.11 {
 			Vector3fc p = q.position(v);
-			a.add(round(p.x()));
-			a.add(round(p.y()));
-			a.add(round(p.z()));
-			a.add(round((UVPair.unpackU(q.packedUV(v)) - s.getU0()) / du));
-			a.add(round((UVPair.unpackV(q.packedUV(v)) - s.getV0()) / dv));
+			float x = p.x(), y = p.y(), z = p.z(), u = UVPair.unpackU(q.packedUV(v)), w = UVPair.unpackV(q.packedUV(v));
+			//?} else {
+			/*// Eight ints per vertex, as DefaultVertexFormat.BLOCK lays them out: x, y, z, color, u, v, light, normal.
+			int[] d = q.vertices();
+			float x = Float.intBitsToFloat(d[v * 8]), y = Float.intBitsToFloat(d[v * 8 + 1]), z = Float.intBitsToFloat(d[v * 8 + 2]);
+			float u = Float.intBitsToFloat(d[v * 8 + 4]), w = Float.intBitsToFloat(d[v * 8 + 5]);
+			*///?}
+			a.add(round(x));
+			a.add(round(y));
+			a.add(round(z));
+			a.add(round((u - s.getU0()) / du));
+			a.add(round((w - s.getV0()) / dv));
 		}
 		return a;
 	}
@@ -226,9 +234,13 @@ final class Models {
 		return (level == null ? src.color(state) : src.colorInWorld(state, level, tintPos)) & 0xFFFFFF;
 	}
 	//?} else {
-	/*/^* The web app knows 26.1's layers: solid, cutout, translucent. Tripwire later moved into translucent. ^/
+	/*/^* The web app's layers, 26.1's: 0 solid, 1 cutout, 2 translucent. By name, since older versions have more of them. ^/
 	private static int layer(ChunkSectionLayer layer) {
-		return layer == ChunkSectionLayer.TRIPWIRE ? ChunkSectionLayer.TRANSLUCENT.ordinal() : layer.ordinal();
+		return switch (layer.name()) {
+			case "SOLID" -> 0;
+			case "TRANSLUCENT", "TRIPWIRE" -> 2;
+			default -> 1;
+		};
 	}
 	*///?}
 

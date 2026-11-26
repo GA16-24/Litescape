@@ -65,6 +65,8 @@ dependencies {
 	// Optional at runtime: the client reads its public API only when it is installed. All rights reserved, so it is never bundled.
 	add mod('clientCompileOnly'), "maven.modrinth:buildprint:${project.buildprint_version}"
 	add mod('gametestImplementation'), "maven.modrinth:buildprint:${project.buildprint_version}"
+	// Minecraft ships JSpecify's annotations from 1.21.11 on; the code uses them on every version.
+	if (sc.current.parsed < '1.21.11') compileOnly 'org.jspecify:jspecify:1.0.0'
 	// The shaders tab translates packs with LWJGL's shaderc and spvc, which Minecraft ships only from 26.2 on.
 	// Before that, the jar carries them, built for this Minecraft's LWJGL and every platform Minecraft runs on.
 	def lwjgl = findProperty('bundled_lwjgl')
@@ -92,6 +94,15 @@ tasks.withType(JavaCompile).configureEach {
 	// 1.21.x runs on Java 21, so every jar targets it.
 	it.options.release = 21
 	it.options.encoding = "UTF-8"
+}
+
+// 1.21.11 renamed ResourceLocation to Identifier and ResourceKey.location() to identifier(), and moved Util into util.
+stonecutter {
+	replacements.perl(sc.current.parsed < '1.21.11') {
+		replace '\\bIdentifier\\b', 'ResourceLocation', '\\bResourceLocation\\b', 'Identifier'
+		replace '\\bnet\\.minecraft\\.util\\.Util\\b', 'net.minecraft.Util', '\\bnet\\.minecraft\\.Util\\b', 'net.minecraft.util.Util'
+		replace '(dimension\\(\\)|getKey\\(\\))\\.identifier\\(\\)', '$1.location()', '(dimension\\(\\)|getKey\\(\\))\\.location\\(\\)', '$1.identifier()'
+	}
 }
 
 // The jar players install. Copied to the root build/libs, where the desktop app and the release workflow pick up every version's jar.

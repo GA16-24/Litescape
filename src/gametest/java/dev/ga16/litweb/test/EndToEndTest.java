@@ -77,7 +77,10 @@ public class EndToEndTest implements FabricClientGameTest {
 				/*sp.getClientWorld().waitForChunksRender();
 				*///?}
 				// Grass under the lamp and the observer would turn to dirt at a random moment and change the placement counts.
+				//? if >=1.21.11 {
 				sp.getServer().runCommand("gamerule random_tick_speed 0");
+				//?} else
+				//sp.getServer().runCommand("gamerule randomTickSpeed 0");
 				buildCottage(sp.getServer());
 				ctx.waitTicks(20);
 
@@ -99,6 +102,10 @@ public class EndToEndTest implements FabricClientGameTest {
 				// Mob spawning: a zombie stands on grass but not glass, and fits in short grass but not in planks.
 				check(spawn(sel, "minecraft:grass_block", "spawnOn") && !spawn(sel, "minecraft:glass", "spawnOn")
 					&& spawn(sel, "minecraft:short_grass", "spawnIn") && !spawn(sel, "minecraft:oak_planks", "spawnIn"), "spawn flags in the palette");
+				// The viewer draws layer 2 see-through and the rest opaque; each Minecraft version names its layers differently.
+				check(block(sel, "minecraft:light_blue_stained_glass").getAsJsonArray("q").get(0).getAsJsonArray().get(3).getAsInt() == 2
+					&& block(sel, "minecraft:water").getAsJsonObject("f").get("l").getAsInt() == 2
+					&& block(sel, "minecraft:poppy").getAsJsonArray("q").get(0).getAsJsonArray().get(3).getAsInt() == 1, "render layers in the palette");
 
 				AreaSelection area = ctx.computeOnClient(unused -> DataManager.getSelectionManager().getCurrentSelection());
 				// From the server world, as Litematica does in singleplayer: the client never gets chest and hopper contents.
@@ -396,9 +403,13 @@ public class EndToEndTest implements FabricClientGameTest {
 	}
 
 	private static boolean spawn(JsonObject view, String block, String flag) {
+		return block(view, block).get(flag).getAsBoolean();
+	}
+
+	private static JsonObject block(JsonObject view, String name) {
 		for (JsonElement e : view.getAsJsonArray("palette"))
-			if (e.isJsonObject() && e.getAsJsonObject().get("n").getAsString().equals(block)) return e.getAsJsonObject().get(flag).getAsBoolean();
-		throw new IllegalStateException(block + " isn't in the view");
+			if (e.isJsonObject() && e.getAsJsonObject().get("n").getAsString().equals(name)) return e.getAsJsonObject();
+		throw new IllegalStateException(name + " isn't in the view");
 	}
 
 	private void collectTextures(JsonObject view) {
