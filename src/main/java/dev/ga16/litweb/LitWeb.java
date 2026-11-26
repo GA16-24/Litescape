@@ -71,6 +71,8 @@ public final class LitWeb implements ModInitializer {
 		public Map<String, String> players = new LinkedHashMap<>();
 		/** Player UUID -> blocks they placed that match the schematic, counted since it was shared. */
 		public Map<String, Contributor> contributors = new LinkedHashMap<>();
+		/** Player UUID -> whether they accepted it into their list. No entry = their share request is still pending. */
+		public Map<String, Boolean> answers = new LinkedHashMap<>();
 		/** Blocks of terrain captured around it (0 = none); the snapshot lives in <id>.terrain.bin. */
 		public int margin;
 		/** When the surroundings were captured, and how many of their chunks the server had loaded then. */
@@ -158,6 +160,7 @@ public final class LitWeb implements ModInitializer {
 				if (list != null) for (Shared s : list) {
 					if (s.contributors == null) s.contributors = new LinkedHashMap<>(); // index.json from before contributors existed
 					if (s.players == null) s.players = new LinkedHashMap<>(); // index.json from before access existed
+					if (s.answers == null) s.answers = new LinkedHashMap<>(); // index.json from before share requests existed
 					shared.put(s.id, s);
 				}
 			}
@@ -261,6 +264,14 @@ public final class LitWeb implements ModInitializer {
 				saveIndexAndBroadcast(server);
 				send(player, req.req(), "", new byte[0]);
 			}
+			case "answer" -> { // accept or deny someone else's share request
+				JsonObject a = GSON.fromJson(req.arg(), JsonObject.class);
+				Shared s = require(player, a.get("id").getAsString());
+				if (s.owner.equals(player.getStringUUID())) throw new IOException("You can't answer your own share");
+				s.answers.put(player.getStringUUID(), a.get("accept").getAsBoolean());
+				saveIndexAndBroadcast(server);
+				send(player, req.req(), "", new byte[0]);
+			}
 			case "delete" -> {
 				Shared s = require(player, req.arg());
 				if (!canManage(player, s)) throw new IOException("Only " + s.ownerName + " or an operator can stop sharing this schematic");
@@ -321,6 +332,7 @@ public final class LitWeb implements ModInitializer {
 			s.contributors = old.contributors;
 			s.access = old.access;
 			s.players = old.players;
+			s.answers = old.answers;
 		}
 		// Old clients send no margin; they get no surroundings rather than stale ones from before a move.
 		int margin = meta.has("margin") ? meta.get("margin").getAsInt() : 0;
@@ -534,6 +546,9 @@ public final class LitWeb implements ModInitializer {
 			if (!canSee(player, s)) continue;
 			JsonObject o = GSON.toJsonTree(s).getAsJsonObject();
 			o.addProperty("manage", canManage(player, s));
+			o.remove("answers"); // who turned it down is their own business
+			Boolean answer = s.answers.get(player.getStringUUID());
+			o.addProperty("answer", answer == null ? "pending" : answer ? "accepted" : "denied");
 			list.add(o);
 		}
 		return GSON.toJson(list).getBytes(StandardCharsets.UTF_8);

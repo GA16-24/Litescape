@@ -57,8 +57,19 @@ export default {
     '前回の訪問時、ここであなたに共有されたものはありませんでした。',
   You: 'あなた',
   'Show it in your list again': 'リストに再表示',
-  'Hide it from your list. Only this browser remembers.':
-    'リストから非表示にします。このブラウザーにのみ記憶されます。',
+  'Hide it from your list': 'リストから非表示にします',
+  'Share request': '共有リクエスト',
+  '{name} wants to share this with you. Accept to keep it in your list and follow the build.':
+    '{name} さんがこれを共有しようとしています。承認するとリストに残り、建築の進捗を追えます。',
+  'Hidden from your list': 'リストから非表示にしました',
+  'Share requests': '共有リクエスト',
+  Accept: '承認',
+  Deny: '拒否',
+  'Needs your answer': '回答が必要です',
+  '{name} wants to share a schematic with you': '{name} さんが設計図を共有しようとしています',
+  'New share requests': '新しい共有リクエスト',
+  Review: '確認',
+  "Couldn't answer the share request": '共有リクエストに応答できませんでした',
   Unhide: '再表示',
   Hide: '非表示',
   'Everyone on the server': 'サーバーの全員',
@@ -182,8 +193,8 @@ export default {
   'Everyone who can see it gets the new version.': '閲覧できる全員に新しいバージョンが届きます。',
   "Couldn't capture surroundings": '周辺を取り込めませんでした',
   'Everyone on this server': 'このサーバーの全員',
-  'Anyone with the mod can view it and follow the build.':
-    'MOD を導入している人なら誰でも閲覧し、建築の進捗を追えます。',
+  'Anyone with the mod gets a request to add it to their list.':
+    'Mod を入れている全員に、リストへ追加するリクエストが届きます。',
   'Only people you choose': '選んだ人のみ',
   'Pick the players who can see it.': '閲覧できるプレイヤーを選んでください。',
   'Hidden from everyone else.': '他の人には表示されません。',

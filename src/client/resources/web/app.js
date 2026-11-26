@@ -99,7 +99,9 @@ const S = {
   terrain: 'faded', // captured surroundings: faded | on | off
   margin: new Map(), // placement id -> surroundings picked before sharing
   at: new Map(), // placement id -> [x, y, z] typed to move it to when sharing
-  hidden: new Set(), // "server:sharedId" of others' shared schematics hidden from the sidebar, kept in this browser
+  announced: new Set(), // share requests already announced with a toast
+  answering: new Map(), // shared id -> accepted | denied, until the polled state shows the server has it
+  hidden: new Set(), // "server:sharedId" hidden in this browser, for servers from before share requests
   showHidden: false,
 };
 
@@ -299,13 +301,31 @@ const serverInfo = (key = viewServer()) => {
 };
 const sharedList = () => (isLive() ? S.api.shared : serverInfo()?.shared) || [];
 const findShared = (id) => sharedList().find((s) => s.id === id);
-const isHidden = (s) => S.hidden.has(`${viewServer()}:${s.id}`);
+// Someone else's share is a request until you accept or deny it. A server from before requests sends no answer, so Hide stays in this browser.
+const answerOf = (s) => S.answering.get(s.id) || s.answer;
+const isHidden = (s) => (s.answer ? answerOf(s) === 'denied' : S.hidden.has(`${viewServer()}:${s.id}`));
+const isPending = (s) => !s.mine && s.access !== 'private' && answerOf(s) === 'pending';
 function setHidden(id, on) {
   S.hidden[on ? 'add' : 'delete'](`${viewServer()}:${id}`);
   try {
     localStorage.setItem('litweb.hidden', JSON.stringify([...S.hidden]));
   } catch {}
   renderNav();
+}
+async function answer(id, accept) {
+  S.answering.set(id, accept ? 'accepted' : 'denied');
+  renderNav();
+  renderInspector();
+  try {
+    await api(`api/answer?id=${encodeURIComponent(id)}&accept=${accept}`, { method: 'POST' });
+    if (!accept)
+      toast(t('Hidden from your list'), findShared(id)?.name, { action: t('Undo'), run: () => answer(id, true) });
+  } catch (err) {
+    S.answering.delete(id);
+    toast(t("Couldn't answer the share request"), err.message, { error: true });
+  }
+  renderNav();
+  renderInspector();
 }
 const monogram = (name, key) =>
   `<span class="mono" style="--h:${[...key].reduce((x, ch) => (x * 31 + ch.charCodeAt(0)) % 360, 7)}" aria-hidden="true">${esc((name || '?').trim()[0]?.toUpperCase() || '?')}</span>`;
@@ -775,9 +795,11 @@ async function pollState() {
     const a = await api('api/state');
     const wasConnected = S.connected;
     S.api = a;
+    for (const sh of a.shared || []) if (S.answering.get(sh.id) === sh.answer) S.answering.delete(sh.id); // the server has it now
     S.connected = true;
     if (!wasConnected && S.data) remesh();
     onState();
+    announceRequests();
   } catch {
     S.connected = false;
     if (!S.data) showOffline();
@@ -822,8 +844,8 @@ function onState() {
           ? { type: 'selection' }
           : isLive() && a.placements?.[0]
             ? { type: 'placement', id: a.placements[0].id }
-            : sharedList().find((s) => !isHidden(s))
-              ? { type: 'shared', id: sharedList().find((s) => !isHidden(s)).id }
+            : sharedList().find((s) => !isHidden(s) && !isPending(s))
+              ? { type: 'shared', id: sharedList().find((s) => !isHidden(s) && !isPending(s)).id }
               : null;
     if (first) open(first);
     else {
@@ -1012,7 +1034,8 @@ function renderNav() {
     lastNav = null;
     return;
   }
-  const h = isLive() ? liveNavHtml(a) + sharedNavHtml() : savedNoteHtml() + sharedNavHtml();
+  $('toggle-sidebar').classList.toggle('dot', isLive() && sharedList().some(isPending)); // shows while the sidebar is closed
+  const h = isLive() ? requestsNavHtml() + liveNavHtml(a) + sharedNavHtml() : savedNoteHtml() + sharedNavHtml();
   if (h !== lastNav) {
     // re-rendering every poll would drop keyboard focus
     const focused = document.activeElement?.closest?.('#nav [data-desc]')?.dataset.desc;
@@ -1044,20 +1067,57 @@ function sharedNavHtml() {
     }</div>`;
   for (const s of sharedList()) {
     const hid = isHidden(s);
-    if (hid && !S.showHidden) continue;
+    if ((hid && !S.showHidden) || (live && isPending(s))) continue;
     h += rowHtml({
       desc: { type: 'shared', id: s.id },
       icon: ICON.shared,
       title: s.name,
       sub: `${s.mine ? t('You') : esc(s.ownerName)} · ${dims(s.size)}${live && s.dim !== a.dim ? ` · ${esc(s.dim.replace('minecraft:', '').replace('the_', ''))}` : ''}`,
       meta: accessBadge(s),
-      action: s.mine
-        ? ''
-        : `<button class="row-action" data-hide="${esc(s.id)}" data-tip="${hid ? t('Show it in your list again') : t('Hide it from your list. Only this browser remembers.')}">${hid ? `${ICON.eye}${t('Unhide')}` : `${ICON.eyeOff}${t('Hide')}`}</button>`,
+      action:
+        s.mine || (s.answer && !live)
+          ? ''
+          : `<button class="row-action" ${s.answer ? `data-answer="${esc(s.id)}" data-accept="${hid}"` : `data-hide="${esc(s.id)}"`} data-tip="${hid ? t('Show it in your list again') : t('Hide it from your list')}">${hid ? `${ICON.eye}${t('Unhide')}` : `${ICON.eyeOff}${t('Hide')}`}</button>`,
       pct: live ? S.pct.get(`shared:${s.id}`) : null,
     });
   }
   return `${h}</div>`;
+}
+
+function requestsNavHtml() {
+  const pending = sharedList().filter(isPending);
+  if (!pending.length) return '';
+  let h = `<div class="nav-section"><div class="nav-head">${t('Share requests')}<span class="count">${pending.length}</span></div>`;
+  for (const s of pending)
+    h += `<div class="request">${rowHtml({
+      desc: { type: 'shared', id: s.id },
+      icon: ICON.shared,
+      title: s.name,
+      sub: `${esc(s.ownerName)} · ${dims(s.size)}`,
+      meta: accessBadge(s),
+    })}${answerButtons(s.id, 'sm')}</div>`;
+  return `${h}</div>`;
+}
+const answerButtons = (id, size = '') =>
+  `<div class="btn-row"><button class="btn ${size} primary" data-answer="${esc(id)}" data-accept="true">${ICON.check}${t('Accept')}</button><button class="btn ${size}" data-answer="${esc(id)}" data-accept="false">${ICON.x}${t('Deny')}</button></div>`;
+
+/** Says so when a share request arrives, so it doesn't wait unseen in the sidebar. */
+function announceRequests() {
+  if (!isLive()) return;
+  const fresh = sharedList().filter((s) => isPending(s) && !S.announced.has(s.id));
+  for (const s of fresh) S.announced.add(s.id);
+  if (fresh.length === 1)
+    toast(t('{name} wants to share a schematic with you', { name: fresh[0].ownerName }), fresh[0].name, {
+      icon: ICON.shared,
+      action: t('Review'),
+      run: () => open({ type: 'shared', id: fresh[0].id }),
+    });
+  else if (fresh.length)
+    toast(t('New share requests'), fresh.map((s) => s.name).join(', '), {
+      icon: ICON.shared,
+      action: t('Review'),
+      run: () => open({ type: 'shared', id: fresh[0].id }),
+    });
 }
 
 /** Who can see a shared schematic, counting a change that's still on its way to the server. */
@@ -1290,6 +1350,8 @@ function renderTop() {
     } else if (data.source !== 'placement' && data.source !== 'shared') {
       chips += `<span class="chip" data-tip="${t(data.source === 'server' ? 'Read from the server' : 'Read from chunks your client has loaded')}">${t(data.source === 'server' ? 'From server' : 'Loaded chunks')}</span>`;
     }
+    const asked = d.type === 'shared' && isLive() && findShared(d.id);
+    if (asked && isPending(asked)) chips += `<span class="chip ask">${t('Needs your answer')}</span>`;
     if (S.counts && S.connected)
       chips += `<span class="chip live" data-tip="${t('Build progress updates every 2 seconds')}">${t('Live')}</span>`;
     if (d.type === 'shared' && !isLive())
@@ -1348,6 +1410,12 @@ function renderInspector() {
     }
     return;
   }
+
+  const asked = d.type === 'shared' && isLive() ? findShared(d.id) : null;
+  if (asked && isPending(asked))
+    h += `<section class="panel request"><div class="panel-head"><h3>${t('Share request')}</h3></div>
+      <p class="updated" style="margin:0 0 10px">${t('{name} wants to share this with you. Accept to keep it in your list and follow the build.', { name: esc(asked.ownerName) })}</p>
+      ${answerButtons(asked.id)}</section>`;
 
   if (S.counts) {
     const c = S.counts;
@@ -1654,7 +1722,12 @@ function avatar(uuid, name) {
 }
 
 const ACCESS = [
-  ['everyone', ICON.globe, t('Everyone on this server'), t('Anyone with the mod can view it and follow the build.')],
+  [
+    'everyone',
+    ICON.globe,
+    t('Everyone on this server'),
+    t('Anyone with the mod gets a request to add it to their list.'),
+  ],
   ['players', ICON.people, t('Only people you choose'), t('Pick the players who can see it.')],
   ['private', ICON.lock, t('Only you'), t('Hidden from everyone else.')],
 ];
@@ -1803,6 +1876,12 @@ $('layer-mode').addEventListener('click', (e) => {
 $('layer-slider').addEventListener('input', (e) => setLayer(S.layerMode === 'all' ? 'below' : null, +e.target.value));
 
 $('nav').addEventListener('click', (e) => {
+  const ans = e.target.closest('[data-answer]');
+  if (ans) {
+    e.stopPropagation();
+    answer(ans.dataset.answer, ans.dataset.accept === 'true');
+    return;
+  }
   const hide = e.target.closest('[data-hide]');
   if (hide) {
     e.stopPropagation();
@@ -1857,6 +1936,8 @@ $('inspector').addEventListener('click', (e) => {
   if (mat) return isolate(+mat.dataset.mat);
   const sn = t.closest('[data-share-now]');
   if (sn) return sharePlacement(sn.dataset.shareNow);
+  const ans = t.closest('[data-answer]');
+  if (ans) return answer(ans.dataset.answer, ans.dataset.accept === 'true');
   const mg = t.closest('[data-margin]');
   if (mg) {
     if (mg.getAttribute('aria-disabled') === 'true') return;
@@ -3407,7 +3488,7 @@ function toast(title, body, opts = {}) {
   const el = document.createElement('div');
   el.className = `toast${opts.error ? ' error' : ''}`;
   el.setAttribute('role', opts.error ? 'alert' : 'status');
-  el.innerHTML = `${opts.error ? ICON.alert : ICON.check}<div class="t-body">${esc(title)}${body ? `<small>${esc(body)}</small>` : ''}</div>${opts.action ? `<button class="t-action">${esc(opts.action)}</button>` : ''}`;
+  el.innerHTML = `${opts.icon || (opts.error ? ICON.alert : ICON.check)}<div class="t-body">${esc(title)}${body ? `<small>${esc(body)}</small>` : ''}</div>${opts.action ? `<button class="t-action">${esc(opts.action)}</button>` : ''}`;
   if (opts.action)
     el.querySelector('.t-action').addEventListener('click', () => {
       el.remove();

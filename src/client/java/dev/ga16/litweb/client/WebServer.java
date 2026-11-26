@@ -160,6 +160,14 @@ final class WebServer {
 						await(Bridge.request("access", body.toString(), new byte[0]));
 						json(ex, 200, new JsonObject());
 					}
+					case "/api/answer" -> {
+						if (!post) throw new HttpError(405, "Use POST");
+						JsonObject body = new JsonObject();
+						body.addProperty("id", q.getOrDefault("id", ""));
+						body.addProperty("accept", "true".equals(q.get("accept")));
+						await(Bridge.request("answer", body.toString(), new byte[0]));
+						json(ex, 200, new JsonObject());
+					}
 					case "/api/unshare" -> {
 						if (!post) throw new HttpError(405, "Use POST");
 						await(Bridge.request("delete", q.getOrDefault("id", ""), new byte[0]));

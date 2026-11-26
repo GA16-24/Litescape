@@ -1822,6 +1822,61 @@ button.chip:hover {
   color: var(--text);
   background: var(--active);
 }
+/* a share request waits for an answer */
+.request {
+  margin: 0 0 6px;
+  padding-bottom: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 8px;
+  background: var(--accent-soft);
+}
+/* the card shows the selection, so the row inside it doesn't draw its own */
+.request .row[aria-current="true"] {
+  background: none;
+  box-shadow: none;
+}
+.request:has(.row[aria-current="true"]) {
+  border-color: var(--accent);
+}
+#nav .request .btn-row {
+  margin: 0;
+  padding-left: 36px; /* under the title, past the row's icon */
+}
+.panel.request {
+  margin: 0;
+  padding-bottom: 14px;
+  border: 0;
+  border-radius: 0;
+}
+.nav-head .count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #fff;
+  background: var(--accent);
+}
+.chip.ask {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+.app.no-sidebar #toggle-sidebar.dot {
+  position: relative;
+}
+.app.no-sidebar #toggle-sidebar.dot::after {
+  /* a share request is waiting in the closed sidebar */
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
 .tab-dot {
   width: 6px;
   height: 6px;
