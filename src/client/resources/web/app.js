@@ -16,6 +16,10 @@ const STATUS = {
   6: { key: 'redstone', label: t('Wrong redstone setting'), color: 'var(--redstone)' },
 };
 
+// Blocks a farm needs right before it's switched on: redstone parts and containers.
+const ACTIVE =
+  /^minecraft:(redstone_(wire|torch|wall_torch|block|lamp)|repeater|comparator|observer|(sticky_)?piston|dispenser|dropper|hopper|crafter|lever|\w+_button|\w+_pressure_plate|tripwire(_hook)?|daylight_detector|target|note_block|(powered_|detector_|activator_)?rail|slime_block|honey_block|(calibrated_)?sculk_sensor|lectern|tnt|lightning_rod|(trapped_|ender_)?chest|barrel|(\w+_)?shulker_box|(blast_)?furnace|smoker|brewing_stand|composter|jukebox|chiseled_bookshelf)$/;
+
 const ICON = {
   selection:
     '<svg class="i" viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M9 9h6v6H9z"/></svg>',
@@ -515,6 +519,7 @@ function prepare(data, atlas, refit) {
   data.palette.forEach((e, i) => {
     if (!e || e.air) return;
     e.t = i >= (data.terrainFrom ?? Infinity);
+    e.act = !e.t && ACTIVE.test(e.n);
     const [ids, list] = e.t ? [tmids, data.tmats] : [mids, data.mats];
     if (!ids.has(e.n)) {
       ids.set(e.n, list.length);
@@ -787,12 +792,18 @@ function countMaterials() {
   }
   const blocks = d.blocks16,
     st = S.status;
+  d.act = 0;
+  d.actBad = 0;
   for (let i = 0; i < blocks.length; i++) {
     const e = d.palette[blocks[i]];
     if (!e || e.air || e.t) continue;
     const m = d.mats[e.mid];
     m.total++;
     if (st && st[i] === 1) m.ok++;
+    if (e.act) {
+      d.act++;
+      d.actBad += st?.[i] !== 1; // missing, wrong and not-loaded all mean it isn't safe yet
+    }
   }
   d.unknown = 0;
   d.nonAir = 0;
@@ -1486,6 +1497,18 @@ function renderInspector() {
             `<button type="button" data-legend="${k}"><span class="sw" style="background:${STATUS[k].color}"></span><span class="lbl">${STATUS[k].label}</span><span class="num">${fmt.format(c[k])}</span></button>`,
         )
         .join('')}</div>
+      ${
+        S.status && data.act
+          ? `<div class="ready${data.actBad ? '' : ' ok'}">${data.actBad ? ICON.alert : ICON.check}<span>${
+              data.actBad
+                ? t('Not ready to activate: {bad} of {n} redstone and container blocks are missing or wrong.', {
+                    bad: fmt.format(data.actBad),
+                    n: fmt.format(data.act),
+                  })
+                : t('Ready to activate: all {n} redstone and container blocks are right.', { n: fmt.format(data.act) })
+            }</span></div>`
+          : ''
+      }
       <div class="seg filter-seg" role="radiogroup" aria-label="${t('Show blocks')}">${[
         ['all', t('All'), '1', t('Show all blocks')],
         ['remaining', t('Remaining'), '2', t('Show remaining blocks')],

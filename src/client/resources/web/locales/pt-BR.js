@@ -502,4 +502,8 @@ export default {
   'Save notes': 'Salvar notas',
   'Everyone who can see it reads these.': 'Todos que podem vê-la leem estas notas.',
   "Couldn't save the notes": 'Não foi possível salvar as notas',
+  'Not ready to activate: {bad} of {n} redstone and container blocks are missing or wrong.':
+    'Ainda não está pronto para ligar: {bad} de {n} blocos de redstone e contêineres estão faltando ou errados.',
+  'Ready to activate: all {n} redstone and container blocks are right.':
+    'Pronto para ligar: todos os {n} blocos de redstone e contêineres estão certos.',
 };

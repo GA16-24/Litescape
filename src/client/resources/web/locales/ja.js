@@ -495,4 +495,8 @@ export default {
   'Save notes': 'メモを保存',
   'Everyone who can see it reads these.': '見られる人は全員このメモを読めます。',
   "Couldn't save the notes": 'メモを保存できませんでした',
+  'Not ready to activate: {bad} of {n} redstone and container blocks are missing or wrong.':
+    'まだ起動できません：レッドストーンとコンテナのブロック {n} 個のうち {bad} 個が未設置か間違っています。',
+  'Ready to activate: all {n} redstone and container blocks are right.':
+    '起動できます：レッドストーンとコンテナのブロック {n} 個はすべて正しく設置されています。',
 };

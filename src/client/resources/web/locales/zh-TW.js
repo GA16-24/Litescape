@@ -482,4 +482,7 @@ export default {
   'Save notes': '儲存備註',
   'Everyone who can see it reads these.': '所有能看到它的人都能讀到這些備註。',
   "Couldn't save the notes": '無法儲存備註',
+  'Not ready to activate: {bad} of {n} redstone and container blocks are missing or wrong.':
+    '還不能啟動：{n} 個紅石和容器方塊中有 {bad} 個缺少或錯誤。',
+  'Ready to activate: all {n} redstone and container blocks are right.': '可以啟動：全部 {n} 個紅石和容器方塊都正確。',
 };

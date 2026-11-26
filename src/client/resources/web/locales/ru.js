@@ -539,4 +539,8 @@ export default {
   'Save notes': 'Сохранить заметки',
   'Everyone who can see it reads these.': 'Все, кто может её видеть, читают эти заметки.',
   "Couldn't save the notes": 'Не удалось сохранить заметки',
+  'Not ready to activate: {bad} of {n} redstone and container blocks are missing or wrong.':
+    'Пока нельзя включать: {bad} из {n} блоков редстоуна и хранилищ не поставлены или стоят неправильно.',
+  'Ready to activate: all {n} redstone and container blocks are right.':
+    'Можно включать: все {n} блоков редстоуна и хранилищ стоят правильно.',
 };
