@@ -28,6 +28,15 @@
   --radius: 8px;
   --font: -apple-system, BlinkMacSystemFont, system-ui, "Inter Variable", "Inter", "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  /* the scheme previews in Settings draw both themes at once */
+  --pv-light-bg: #fcfcfc;
+  --pv-light-side: #f4f4f5;
+  --pv-light-line: #e4e4e7;
+  --pv-light-bar: #e4e4e7;
+  --pv-dark-bg: #000;
+  --pv-dark-side: #111;
+  --pv-dark-line: rgba(255, 255, 255, 0.11);
+  --pv-dark-bar: #262626;
   color-scheme: dark;
 }
 
@@ -410,6 +419,10 @@ button {
 .foot-line .i {
   width: 13px;
   height: 13px;
+}
+
+.foot-btn {
+  margin-bottom: 8px;
 }
 
 /* ---------- main ---------- */
@@ -1083,6 +1096,315 @@ button {
   color: var(--faint);
   font-size: 12px;
   padding: 4px 6px;
+}
+
+/* ---------- settings (laid out like T3 Code's settings dialog) ---------- */
+.settings[open] {
+  display: grid;
+  grid-template: "nav head" 48px "nav body" 1fr / 240px 1fr;
+}
+.settings {
+  width: min(1200px, calc(100vw - 80px));
+  height: min(720px, calc(100dvh - 80px));
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  animation: pop 0.14s ease;
+}
+.settings::backdrop {
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
+  backdrop-filter: blur(4px);
+  animation: fade 0.12s ease;
+}
+.set-nav {
+  grid-area: nav;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  overflow-y: auto;
+  background: var(--sidebar);
+  border-right: 1px solid var(--border);
+}
+.set-nav-head {
+  padding: 4px 8px;
+  color: var(--faint);
+  font-size: 12px;
+  font-weight: 500;
+}
+.set-nav button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+.set-nav button:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.set-nav button[aria-current="page"] {
+  background: var(--selected);
+  box-shadow: var(--selected-ring);
+  color: var(--text);
+}
+.set-head {
+  grid-area: head;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px 0 20px;
+  border-bottom: 1px solid var(--border);
+}
+.set-crumbs {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+/* biome-ignore lint/style/noDescendingSpecificity: rules are grouped by component, not by specificity */
+.set-crumbs b {
+  color: var(--text);
+  font-weight: 500;
+}
+.set-body {
+  grid-area: body;
+  overflow-y: auto;
+  padding: 28px max(16px, calc((100% - 848px) / 2)) 40px;
+}
+.set-body h3 {
+  margin: 36px 16px 10px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.set-body section > h3:first-child {
+  margin-top: 0;
+}
+.set-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--raised) 60%, transparent); /* T3 Code's cards sit a shade above the page */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.set-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 48px;
+  padding: 12px 16px;
+}
+.set-row + .set-row {
+  border-top: 1px solid var(--border);
+}
+.set-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+.set-text p,
+.set-note {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+.set-text .kbd {
+  margin-left: 2px;
+  padding: 1px 4px;
+}
+.set-note {
+  margin: 12px 16px 0;
+}
+.set-row .opt-select {
+  max-width: 200px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.set-keys {
+  display: flex;
+  gap: 4px;
+}
+.set-keys .kbd {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 0;
+  background: var(--active);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 20px;
+}
+.schemes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.scheme {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding: 8px 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--raised) 60%, transparent);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+}
+.scheme:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.scheme:has(:checked) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  color: var(--text);
+}
+.scheme:has(:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.scheme input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+/* a small drawing of the viewer in each scheme */
+.pv-wrap {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.pv-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.pv {
+  --pv-bg: var(--pv-light-bg);
+  --pv-side: var(--pv-light-side);
+  --pv-line: var(--pv-light-line);
+  --pv-bar: var(--pv-light-bar);
+  position: absolute;
+  inset: 0;
+  background: var(--pv-bg);
+}
+.pv.dark {
+  --pv-bg: var(--pv-dark-bg);
+  --pv-side: var(--pv-dark-side);
+  --pv-line: var(--pv-dark-line);
+  --pv-bar: var(--pv-dark-bar);
+}
+.pv.half {
+  clip-path: inset(0 0 0 50%);
+}
+.pv i {
+  position: absolute;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+}
+/* biome-ignore lint/style/noDescendingSpecificity: rules are grouped by component, not by specificity */
+.pv b {
+  height: 5px;
+  border-radius: 2px;
+  background: var(--pv-bar);
+}
+.pv-side {
+  inset: 0 auto 0 0;
+  width: 24%;
+  padding: 10px 8px;
+  background: var(--pv-side);
+  box-shadow: 1px 0 0 var(--pv-line);
+}
+.pv-side b:first-child {
+  height: 8px;
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px var(--pv-line);
+  background: none;
+}
+.pv-block {
+  /* centred in the stage: between the sidebar (24%) and the card (22% + 8px from the right) */
+  left: calc(44% - 4px);
+  top: 50%;
+  translate: 0 -50%;
+  width: 14%;
+  aspect-ratio: 1;
+  /* three shaded faces of a cube, like the app's logo */
+  background: conic-gradient(
+    from -60deg,
+    color-mix(in srgb, var(--accent) 70%, #fff) 0 120deg,
+    var(--accent) 0 240deg,
+    color-mix(in srgb, var(--accent) 70%, #000) 0
+  );
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+}
+.pv-card {
+  inset: 10px 8px auto auto;
+  width: 22%;
+  padding: 8px 6px;
+  border-radius: 4px;
+  background: var(--pv-side);
+  box-shadow: 0 0 0 1px var(--pv-line);
+}
+.pv-card b:nth-child(2) {
+  width: 70%;
+}
+
+@media (max-width: 700px) {
+  .settings[open] {
+    grid-template: "head" 48px "nav" auto "body" 1fr / 1fr;
+  }
+  .settings {
+    width: 100vw;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+  .set-nav {
+    flex-direction: row;
+    padding: 8px 12px;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .set-nav-head {
+    display: none;
+  }
+  .set-body {
+    padding: 20px 12px 32px;
+  }
+  .set-body h3 {
+    margin: 28px 4px 8px;
+  }
+  .schemes {
+    gap: 8px;
+  }
 }
 
 /* ---------- palette ---------- */

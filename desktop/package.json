@@ -22,6 +22,8 @@
       "main.js",
       "instances.js",
       "preload.cjs",
+      "settings.html",
+      "settings.js",
       "waiting.html",
       "waiting.js"
     ],
