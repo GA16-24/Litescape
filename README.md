@@ -52,9 +52,9 @@ The macOS build isn't notarized yet. The cask clears the quarantine flag. If you
 
 One jar, both sides. Drop it in `mods/` yourself.
 
-| Where             | Needs                                                                                                                                                                                      |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Client            | Fabric Loader 0.20.1+, Fabric API, Litematica 0.29.1 (and MaLiLib) or BuildPrint 0.1.46, this mod                                                                                          |
+| Where             | Needs                                                                                                                                                                                                           |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Client            | Fabric Loader 0.20.1+, Fabric API, Litematica 0.29.1 (and MaLiLib) or BuildPrint 0.1.46, this mod                                                                                                               |
 | Server (optional) | Fabric server with the [jar from Modrinth](https://modrinth.com/mod/litescape) and [Fabric API](https://modrinth.com/mod/fabric-api) in `mods/`. No Litematica needed. See [Server settings](#server-settings). |
 
 Without the server part, the client reads whatever chunks it has loaded and tells you how much of the area that covers.
@@ -71,13 +71,13 @@ The mod preprocesses a pack like Iris does, compiles it with glslang, converts i
 
 `config/litweb-server.properties` appears on first start.
 
-| Key                     | Default    | Meaning                                                                                              |
-| ----------------------- | ---------- | ---------------------------------------------------------------------------------------------------- |
+| Key                     | Default    | Meaning                                                                                                |
+| ----------------------- | ---------- | ------------------------------------------------------------------------------------------------------ |
 | `region-read`           | `ops`      | Who may read areas for the selection view (`ops`, `everyone`, `none`). Others use their loaded chunks. |
-| `shared-progress`       | `everyone` | Who may request progress on shared schematics. Set `ops` if you worry about scouting.                |
-| `max-shared-per-player` | `20`       | How many schematics one player can share at once.                                                    |
-| `terrain-capture`       | `ops`      | Who may include surroundings (`ops`, `everyone`, `none`). They can reveal ores and bases.            |
-| `terrain-max-margin`    | `32`       | Max blocks of surroundings, up to 64.                                                                |
+| `shared-progress`       | `everyone` | Who may request progress on shared schematics. Set `ops` if you worry about scouting.                  |
+| `max-shared-per-player` | `20`       | How many schematics one player can share at once.                                                      |
+| `terrain-capture`       | `ops`      | Who may include surroundings (`ops`, `everyone`, `none`). They can reveal ores and bases.              |
+| `terrain-max-margin`    | `32`       | Max blocks of surroundings, up to 64.                                                                  |
 
 Shares live in `<world>/litweb/`. Server reads only touch loaded chunks, so nobody can stall the server with a far-away selection.
 
