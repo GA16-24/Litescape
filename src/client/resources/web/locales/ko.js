@@ -146,6 +146,8 @@ export default {
   'Shared by': '공유한 사람',
   'Visible to': '볼 수 있는 사람',
   Dimension: '차원',
+  'In the Nether': '네더에서',
+  'In the Overworld': '오버월드에서',
   Overview: '개요',
   'Update copy': '사본 업데이트',
   'Stop sharing': '공유 중지',

@@ -147,6 +147,8 @@ export default {
   'Shared by': 'Partagé par',
   'Visible to': 'Visible par',
   Dimension: 'Dimension',
+  'In the Nether': 'Dans le Nether',
+  'In the Overworld': 'À la Surface',
   Overview: 'Aperçu',
   'Update copy': 'Mettre à jour la copie',
   'Stop sharing': 'Arrêter le partage',

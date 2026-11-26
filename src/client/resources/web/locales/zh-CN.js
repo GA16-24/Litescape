@@ -146,6 +146,8 @@ export default {
   'Shared by': '共享者',
   'Visible to': '可见范围',
   Dimension: '维度',
+  'In the Nether': '下界坐标',
+  'In the Overworld': '主世界坐标',
   Overview: '概览',
   'Update copy': '更新副本',
   'Stop sharing': '停止共享',
