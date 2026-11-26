@@ -57,8 +57,19 @@ export default {
     'Rien ne vous avait été partagé ici lors de votre dernière visite.',
   You: 'Vous',
   'Show it in your list again': 'L’afficher de nouveau dans votre liste',
-  'Hide it from your list. Only this browser remembers.':
-    'Le masquer de votre liste. Seul ce navigateur s’en souvient.',
+  'Hide it from your list': 'Le masquer de votre liste',
+  'Share request': 'Demande de partage',
+  '{name} wants to share this with you. Accept to keep it in your list and follow the build.':
+    '{name} veut partager ceci avec vous. Acceptez pour le garder dans votre liste et suivre la construction.',
+  'Hidden from your list': 'Masqué de votre liste',
+  'Share requests': 'Demandes de partage',
+  Accept: 'Accepter',
+  Deny: 'Refuser',
+  'Needs your answer': 'En attente de votre réponse',
+  '{name} wants to share a schematic with you': '{name} veut partager une schématique avec vous',
+  'New share requests': 'Nouvelles demandes de partage',
+  Review: 'Examiner',
+  "Couldn't answer the share request": 'Impossible de répondre à la demande de partage',
   Unhide: 'Afficher',
   Hide: 'Masquer',
   'Everyone on the server': 'Tout le monde sur le serveur',
@@ -185,8 +196,8 @@ export default {
   'Everyone who can see it gets the new version.': 'Tous ceux qui peuvent le voir reçoivent la nouvelle version.',
   "Couldn't capture surroundings": 'Impossible de capturer les alentours',
   'Everyone on this server': 'Tout le monde sur ce serveur',
-  'Anyone with the mod can view it and follow the build.':
-    'Tous ceux qui ont le mod peuvent le voir et suivre la construction.',
+  'Anyone with the mod gets a request to add it to their list.':
+    'Toute personne ayant le mod reçoit une demande pour l’ajouter à sa liste.',
   'Only people you choose': 'Seulement les personnes choisies',
   'Pick the players who can see it.': 'Choisissez les joueurs qui peuvent le voir.',
   'Hidden from everyone else.': 'Masqué pour tous les autres.',

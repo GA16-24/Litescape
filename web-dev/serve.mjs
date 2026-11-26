@@ -86,12 +86,15 @@ function withContributors(st) {
     manage: false,
     access: 'everyone',
   };
+  // Alice also asks to share her lighthouse, so the page shows a share request until you answer it.
+  const request = { ...theirs, id: LIGHTHOUSE, name: 'Harbor Lighthouse' };
   return {
     ...st,
-    shared: [...shared.map((s) => ({ ...s, manage: true, ...access.get(s.id) })), theirs].map((s) => ({
-      ...s,
-      inGame: inGame.has(s.id),
-    })),
+    shared: [
+      ...shared.map((s) => ({ ...s, manage: true, answer: 'pending', ...access.get(s.id) })),
+      { ...theirs, answer: answers.get(theirs.id) || 'accepted' },
+      { ...request, answer: answers.get(LIGHTHOUSE) || 'pending' },
+    ].map((s) => ({ ...s, inGame: inGame.has(s.id) })),
     placements: st.placements.map((p) => ({ ...p, author: p.author || 'Kestrel_Builds' })),
     ...servers(st),
   };
@@ -102,6 +105,9 @@ const access = new Map();
 const inGame = new Set(); // shared ids loaded in Litematica from the page
 const ALICE = 'b6d1f0f2-0000-4000-8000-00000000a1ce';
 const BOB = '5c2e7a10-0000-4000-8000-000000000b0b';
+const LIGHTHOUSE = 'a7d0c3a2-1111-4000-8000-00000000beef';
+// Share requests answered in the page, by shared id.
+const answers = new Map();
 
 // The world the game test ran in, plus a remembered server whose list was saved on an earlier visit.
 function servers(st) {
@@ -110,7 +116,7 @@ function servers(st) {
   const saved = [
     {
       ...s0,
-      id: 'a7d0c3a2-1111-4000-8000-00000000beef',
+      id: LIGHTHOUSE,
       name: 'Harbor Lighthouse',
       owner: ALICE,
       ownerName: 'Alice_Mines',
@@ -192,6 +198,10 @@ createServer(async (req, res) => {
       case '/api/unload':
         await new Promise((r) => setTimeout(r, 400));
         inGame[url.pathname === '/api/load' ? 'add' : 'delete'](url.searchParams.get('id'));
+        return send(200, {});
+      case '/api/answer':
+        await new Promise((r) => setTimeout(r, 300));
+        answers.set(url.searchParams.get('id'), url.searchParams.get('accept') === 'true' ? 'accepted' : 'denied');
         return send(200, {});
       case '/api/share':
       case '/api/unshare':
