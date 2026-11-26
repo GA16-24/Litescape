@@ -473,4 +473,9 @@ export default {
     'Die Platzierung ist in Litematica gesperrt. Entsperre sie, um sie zu verschieben.',
   "Couldn't save the schematic": 'Die Schematic konnte nicht gespeichert werden',
   "Couldn't read the shared placement": 'Die geteilte Platzierung konnte nicht gelesen werden',
+  Notes: 'Notizen',
+  'Rates per hour, build order, how to turn it on': 'Rate pro Stunde, Bauablauf, wie man sie einschaltet',
+  'Save notes': 'Notizen speichern',
+  'Everyone who can see it reads these.': 'Alle, die sie sehen können, lesen diese Notizen.',
+  "Couldn't save the notes": 'Notizen konnten nicht gespeichert werden',
 };

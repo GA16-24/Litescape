@@ -1068,6 +1068,23 @@ button {
 .at-field .mat-filter[aria-invalid="true"] {
   border-color: var(--danger);
 }
+.notes-edit {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 96px;
+  max-height: 320px;
+  field-sizing: content; /* grows with the notes where supported */
+  padding: 8px 10px;
+  resize: vertical;
+  line-height: 1.45;
+}
+.notes {
+  margin: 0 0 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
 .mat-filter::placeholder {
   color: var(--faint);
 }

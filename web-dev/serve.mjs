@@ -85,13 +85,15 @@ function withContributors(st) {
     mine: false,
     manage: false,
     access: 'everyone',
+    notes:
+      'About 2,800 items an hour with two hoppers per slice.\n\nBuild order: the hopper line first, then the comparators, then the item frames.\nTurn it on: give each filter hopper 18 of its item in the first slot and one renamed stick in each of the other four, then connect the input chest.',
   };
   // Alice also asks to share her lighthouse, so the page shows a share request until you answer it.
   const request = { ...theirs, id: LIGHTHOUSE, name: 'Harbor Lighthouse' };
   return {
     ...st,
     shared: [
-      ...shared.map((s) => ({ ...s, manage: true, answer: 'pending', ...access.get(s.id) })),
+      ...shared.map((s) => ({ ...s, manage: true, answer: 'pending', ...access.get(s.id), ...notes.get(s.id) })),
       { ...theirs, answer: answers.get(theirs.id) || 'accepted' },
       { ...request, answer: answers.get(LIGHTHOUSE) || 'pending' },
     ].map((s) => ({ ...s, inGame: inGame.has(s.id) })),
@@ -102,6 +104,7 @@ function withContributors(st) {
 
 // Access changes made in the page, by shared id (the real server keeps them in index.json).
 const access = new Map();
+const notes = new Map(); // shared id -> { notes } saved in the page
 const inGame = new Set(); // shared ids loaded in Litematica from the page
 const ALICE = 'b6d1f0f2-0000-4000-8000-00000000a1ce';
 const BOB = '5c2e7a10-0000-4000-8000-000000000b0b';
@@ -192,6 +195,14 @@ createServer(async (req, res) => {
           return send(500, { error: `Unknown access ${a.access}` });
         await new Promise((r) => setTimeout(r, 300));
         access.set(a.id, { access: a.access, players: a.players });
+        return send(200, {});
+      }
+      case '/api/notes': {
+        const chunks = [];
+        for await (const c of req) chunks.push(c);
+        const n = JSON.parse(Buffer.concat(chunks));
+        await new Promise((r) => setTimeout(r, 300));
+        notes.set(n.id, { notes: n.notes.trim() || undefined });
         return send(200, {});
       }
       case '/api/load':

@@ -103,6 +103,7 @@ const S = {
   answering: new Map(), // shared id -> accepted | denied, until the polled state shows the server has it
   hidden: new Set(), // "server:sharedId" hidden in this browser, for servers from before share requests
   showHidden: false,
+  notes: new Map(), // shared id -> notes typed but not saved yet
 };
 
 // ---------------------------------------------------------------- three.js
@@ -1497,6 +1498,7 @@ function renderInspector() {
     h += `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-unshare="${esc(sh.id)}">${ICON.stop}${t('Stop sharing')}</button></div>`;
   h += '</section>';
   const shared = sh || (pl?.sharedId && findShared(pl.sharedId));
+  if (shared) h += notesHtml(shared);
   if (shared) h += surroundingsHtml(shared);
   if (shared?.manage && isLive()) h += accessHtml(shared);
   if (shared) h += contributorsHtml(shared, a.player);
@@ -1528,6 +1530,8 @@ function renderInspector() {
       )}${mats.length > 300 ? `<div class="mats-more">${t('{n} more. Filter to find them.', { n: mats.length - 300 })}</div>` : ''}${!mats.length ? `<div class="mats-more">${t('No matching materials')}</div>` : ''}</div></section>`;
 
   const typing = document.activeElement?.id === 'access-add' ? document.activeElement.selectionStart : -1;
+  const noteEl = document.activeElement?.id === 'notes-edit' ? document.activeElement : null;
+  const noting = noteEl && [noteEl.selectionStart, noteEl.selectionEnd, noteEl.scrollTop];
   const atFocus = document.activeElement?.dataset?.at
     ? [document.activeElement.id, document.activeElement.selectionStart]
     : null;
@@ -1544,6 +1548,11 @@ function renderInspector() {
     add.focus(); // this re-render runs every 2 s while progress updates
     add.setSelectionRange(typing, typing);
   }
+  if (noting && $('notes-edit') !== noteEl) {
+    $('notes-edit')?.focus(); // keep the caret while progress re-renders the panel
+    $('notes-edit')?.setSelectionRange(noting[0], noting[1]);
+    if ($('notes-edit')) $('notes-edit').scrollTop = noting[2];
+  }
   if (atFocus && $(atFocus[0]) && document.activeElement !== $(atFocus[0])) {
     $(atFocus[0]).focus(); // the 2 s progress re-render would otherwise drop the caret mid-number
     $(atFocus[0]).setSelectionRange(atFocus[1], atFocus[1]);
@@ -1552,6 +1561,42 @@ function renderInspector() {
   if (f && document.activeElement?.id !== 'mat-filter' && S.matFocus) {
     f.focus();
     f.setSelectionRange(f.value.length, f.value.length);
+  }
+}
+
+// ---------------------------------------------------------------- designer notes
+
+/** What the designer wants builders to know. The owner and operators edit it; everyone who can see it reads it. */
+function notesHtml(sh) {
+  const head = `<section class="panel" id="notes"><div class="panel-head"><h3>${t('Notes')}</h3>`;
+  if (!sh.manage || !isLive()) return sh.notes ? `${head}</div><p class="notes">${esc(sh.notes)}</p></section>` : '';
+  const draft = S.notes.get(sh.id) ?? sh.notes ?? '';
+  const saving = S.busy.has(`notes:${sh.id}`);
+  const dirty = draft.trim() !== (sh.notes || '');
+  // The newline after <textarea> is dropped by the parser, so a note that starts with one keeps it.
+  return `${head}${saving ? `<span class="row-meta">${t('Saving…')}</span>` : ''}</div>
+    <textarea id="notes-edit" class="mat-filter notes-edit" data-for="${esc(sh.id)}" maxlength="4000" rows="5" aria-label="${t('Notes')}" placeholder="${t('Rates per hour, build order, how to turn it on')}">
+${esc(draft)}</textarea>
+    <div class="btn-row" style="margin:8px 0 6px"><button class="btn" id="save-notes" data-save-notes="${esc(sh.id)}" ${dirty && !saving ? '' : 'disabled'}>${ICON.check}${t('Save notes')}</button></div>
+    <p class="updated" style="margin:0 0 12px">${t('Everyone who can see it reads these.')}</p></section>`;
+}
+
+async function saveNotes(id) {
+  const key = `notes:${id}`;
+  const notes = S.notes.get(id);
+  if (notes === undefined || S.busy.has(key)) return;
+  S.busy.add(key);
+  renderInspector();
+  try {
+    await api('api/notes', { method: 'POST', body: JSON.stringify({ id, notes }) });
+    S.api = await api('api/state'); // the server pushed the new list before it replied
+    if (S.notes.get(id) === notes) S.notes.delete(id); // unless they kept typing
+    onState();
+  } catch (err) {
+    toast(t("Couldn't save the notes"), err.message, { error: true });
+  } finally {
+    S.busy.delete(key);
+    renderInspector();
   }
 }
 
@@ -1953,6 +1998,8 @@ $('inspector').addEventListener('click', (e) => {
     S.margin.set(mg.dataset.for, +mg.dataset.margin);
     return renderInspector();
   }
+  const sv = t.closest('[data-save-notes]');
+  if (sv) return saveNotes(sv.dataset.saveNotes);
   const rc = t.closest('[data-recapture]');
   if (rc) return recapture(rc.dataset.recapture, 'remove' in rc.dataset ? 0 : undefined);
   const tm = t.closest('[data-terrain]')?.dataset.terrain;
@@ -1997,6 +2044,12 @@ $('inspector').addEventListener('input', (e) => {
     const pl = S.api.placements.find((p) => p.id === e.target.dataset.for);
     if (pl) S.at.set(pl.id, Object.assign([...atOf(pl)], { [e.target.dataset.at]: e.target.value }));
     renderInspector();
+  }
+  if (e.target.id === 'notes-edit') {
+    const id = e.target.dataset.for;
+    S.notes.set(id, e.target.value);
+    // No re-render per keystroke: that would cut off IME composition.
+    $('save-notes').disabled = S.busy.has(`notes:${id}`) || e.target.value.trim() === (findShared(id)?.notes || '');
   }
   if (e.target.id === 'access-add') {
     S.accessQuery = e.target.value;

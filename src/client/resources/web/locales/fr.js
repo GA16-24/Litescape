@@ -473,4 +473,10 @@ export default {
     'Le placement est verrouillé dans Litematica. Déverrouillez-le pour le déplacer.',
   "Couldn't save the schematic": 'Impossible d’enregistrer la schematic',
   "Couldn't read the shared placement": 'Impossible de lire le placement partagé',
+  Notes: 'Notes',
+  'Rates per hour, build order, how to turn it on':
+    'Rendement par heure, ordre de construction, comment la mettre en marche',
+  'Save notes': 'Enregistrer les notes',
+  'Everyone who can see it reads these.': 'Tous ceux qui peuvent la voir lisent ces notes.',
+  "Couldn't save the notes": "Impossible d'enregistrer les notes",
 };

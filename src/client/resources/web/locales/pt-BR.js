@@ -473,4 +473,9 @@ export default {
     'O posicionamento está travado no Litematica. Destrave para movê-lo.',
   "Couldn't save the schematic": 'Não foi possível salvar a schematic',
   "Couldn't read the shared placement": 'Não foi possível ler o posicionamento compartilhado',
+  Notes: 'Notas',
+  'Rates per hour, build order, how to turn it on': 'Taxas por hora, ordem de construção, como ligar',
+  'Save notes': 'Salvar notas',
+  'Everyone who can see it reads these.': 'Todos que podem vê-la leem estas notas.',
+  "Couldn't save the notes": 'Não foi possível salvar as notas',
 };

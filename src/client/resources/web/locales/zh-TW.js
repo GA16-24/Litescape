@@ -455,4 +455,9 @@ export default {
   'The placement is locked in Litematica. Unlock it to move it.': '該放置在 Litematica 中已鎖定。解鎖後才能移動。',
   "Couldn't save the schematic": '無法儲存投影',
   "Couldn't read the shared placement": '無法讀取分享的放置',
+  Notes: '備註',
+  'Rates per hour, build order, how to turn it on': '每小時產量、建造順序、啟動步驟',
+  'Save notes': '儲存備註',
+  'Everyone who can see it reads these.': '所有能看到它的人都能讀到這些備註。',
+  "Couldn't save the notes": '無法儲存備註',
 };

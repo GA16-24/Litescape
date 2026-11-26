@@ -58,6 +58,8 @@ public final class LitWeb implements ModInitializer {
 	static final int MAX_UPLOAD_BYTES = 32 << 20;
 	/** Players one schematic can be shared with by name; keeps index.json and the list push small. */
 	static final int MAX_PLAYERS = 100;
+	/** Characters of designer notes per schematic; the whole list is pushed to every player on each change. */
+	static final int MAX_NOTES = 4000;
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
 	/** Metadata for one shared schematic; the blocks live in <id>.bin. */
@@ -80,6 +82,8 @@ public final class LitWeb implements ModInitializer {
 		public int chunks, chunksCaptured;
 		/** Whether <id>.litematic holds the Litematica placement with its schematic, chest and hopper contents included. */
 		public boolean placement;
+		/** What the designer wants builders to know: rates, build order, how to turn it on. Null = none. */
+		public @org.jspecify.annotations.Nullable String notes;
 	}
 
 	public static final class Contributor {
@@ -264,6 +268,16 @@ public final class LitWeb implements ModInitializer {
 				saveIndexAndBroadcast(server);
 				send(player, req.req(), "", new byte[0]);
 			}
+			case "notes" -> {
+				JsonObject a = GSON.fromJson(req.arg(), JsonObject.class);
+				Shared s = require(player, a.get("id").getAsString());
+				if (!canManage(player, s)) throw new IOException("Only " + s.ownerName + " or an operator can edit the notes");
+				String notes = a.get("notes").getAsString().strip();
+				if (notes.length() > MAX_NOTES) throw new IOException("Notes can be at most " + MAX_NOTES + " characters");
+				s.notes = notes.isEmpty() ? null : notes;
+				saveIndexAndBroadcast(server);
+				send(player, req.req(), "", new byte[0]);
+			}
 			case "answer" -> { // accept or deny someone else's share request
 				JsonObject a = GSON.fromJson(req.arg(), JsonObject.class);
 				Shared s = require(player, a.get("id").getAsString());
@@ -333,6 +347,7 @@ public final class LitWeb implements ModInitializer {
 			s.access = old.access;
 			s.players = old.players;
 			s.answers = old.answers;
+			s.notes = old.notes;
 		}
 		// Old clients send no margin; they get no surroundings rather than stale ones from before a move.
 		int margin = meta.has("margin") ? meta.get("margin").getAsInt() : 0;

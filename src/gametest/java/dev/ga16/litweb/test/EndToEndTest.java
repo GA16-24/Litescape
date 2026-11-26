@@ -163,6 +163,24 @@ public class EndToEndTest implements FabricClientGameTest {
 				String updated = call(ctx, "GET", "/api/state");
 				check(updated.contains("\"access\":\"players\""), "Update copy keeps access");
 				check(updated.contains("\"margin\":8"), "Update copy keeps the surroundings");
+				// Notes: the owner saves them, every viewer gets them with the list, Update copy keeps them, too long is refused.
+				call(ctx, "POST", "/api/notes", "{\"id\":\"" + shared + "\",\"notes\":\"  Place the water before the trapdoors.\\n\"}");
+				String noted = "";
+				for (int i = 0; i < 40 && !noted.contains("\"notes\""); i++, ctx.waitTicks(5)) noted = call(ctx, "GET", "/api/state");
+				check(noted.contains("\"notes\":\"Place the water before the trapdoors.\""), "trimmed notes reached the client: " + noted);
+				call(ctx, "POST", "/api/share?id=" + placement + "&margin=8");
+				check(call(ctx, "GET", "/api/state").contains("Place the water before the trapdoors."), "Update copy keeps the notes");
+				String tooLong = "";
+				try {
+					call(ctx, "POST", "/api/notes", "{\"id\":\"" + shared + "\",\"notes\":\"" + "x".repeat(4001) + "\"}");
+				} catch (AssertionError e) {
+					tooLong = e.getMessage();
+				}
+				check(tooLong.contains("at most 4000"), "notes over the limit refused: " + tooLong);
+				call(ctx, "POST", "/api/notes", "{\"id\":\"" + shared + "\",\"notes\":\" \"}");
+				String cleared = "";
+				for (int i = 0; i < 40 && (cleared.isEmpty() || cleared.contains("\"notes\"")); i++, ctx.waitTicks(5)) cleared = call(ctx, "GET", "/api/state");
+				check(!cleared.contains("\"notes\""), "blank notes clear them, back to the fixtures' state");
 				// Share at other coordinates: the placement moves there and the shared copy follows, then back for the fixtures.
 				call(ctx, "POST", "/api/share?id=" + placement + "&margin=8&at=32,-63,1");
 				JsonObject moved = json(call(ctx, "GET", "/api/state"));

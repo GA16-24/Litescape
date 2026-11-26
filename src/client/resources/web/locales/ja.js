@@ -466,4 +466,9 @@ export default {
     'この配置は Litematica でロックされています。移動するにはロックを解除してください。',
   "Couldn't save the schematic": '設計図を保存できませんでした',
   "Couldn't read the shared placement": '共有された配置を読み込めませんでした',
+  Notes: 'メモ',
+  'Rates per hour, build order, how to turn it on': '1時間あたりの効率、建築の順番、起動の手順',
+  'Save notes': 'メモを保存',
+  'Everyone who can see it reads these.': '見られる人は全員このメモを読めます。',
+  "Couldn't save the notes": 'メモを保存できませんでした',
 };
