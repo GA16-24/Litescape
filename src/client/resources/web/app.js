@@ -18,7 +18,7 @@ const STATUS = {
 
 // Blocks a farm needs right before it's switched on: redstone parts and containers.
 const ACTIVE =
-  /^minecraft:(redstone_(wire|torch|wall_torch|block|lamp)|repeater|comparator|observer|(sticky_)?piston|dispenser|dropper|hopper|crafter|lever|\w+_button|\w+_pressure_plate|tripwire(_hook)?|daylight_detector|target|note_block|(powered_|detector_|activator_)?rail|slime_block|honey_block|(calibrated_)?sculk_sensor|lectern|tnt|lightning_rod|(trapped_)?chest|barrel|(\w+_)?shulker_box|(blast_)?furnace|smoker|brewing_stand|composter|jukebox|chiseled_bookshelf)$/;
+  /^minecraft:(redstone_(wire|torch|wall_torch|block|lamp)|repeater|comparator|observer|(sticky_)?piston|dispenser|dropper|hopper|crafter|lever|\w+_button|\w+_pressure_plate|tripwire(_hook)?|daylight_detector|target|note_block|(powered_|detector_|activator_)?rail|slime_block|honey_block|(calibrated_)?sculk_sensor|lectern|tnt|lightning_rod|(trapped_|ender_)?chest|barrel|(\w+_)?shulker_box|(blast_)?furnace|smoker|brewing_stand|composter|jukebox|chiseled_bookshelf)$/;
 
 const ICON = {
   selection:
