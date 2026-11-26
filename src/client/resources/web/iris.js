@@ -978,7 +978,12 @@ export class Iris {
         : [t, this.sampler(gl.NEAREST, gl.NEAREST, gl.CLAMP_TO_EDGE, false)];
     const raw = s.name;
     const name = ALIAS[raw] || raw;
-    const custom = this.customTex[prog.stage]?.[raw] || this.customTex[prog.stage]?.[name] || this.customTex.any?.[raw];
+    const m = /^colortex(\d+)$/.exec(name);
+    // Like Iris, in full-screen passes a custom texture stands in for colortexN only until a pass in the stage writes it.
+    const fullscreen = prog.stage !== 'gbuffers' && prog.stage !== 'shadow';
+    const custom =
+      !(fullscreen && m && this.flipped?.has(+m[1])) &&
+      (this.customTex[prog.stage]?.[raw] || this.customTex[prog.stage]?.[name] || this.customTex.any?.[raw]);
     if (custom && plain2D) return [custom, this.sampler(gl.LINEAR_MIPMAP_LINEAR, gl.LINEAR, gl.REPEAT, false)];
     if (shadowSampler && !/^(shadow|watershadow|shadowtex[01])$/.test(name)) return dummy();
     switch (name) {
@@ -1015,7 +1020,6 @@ export class Iris {
       case 'depthtex2':
         return depthTex(this.depth2);
     }
-    const m = /^colortex(\d+)$/.exec(name);
     if (m && +m[1] < 16) {
       const t = this.target(+m[1]);
       // A gbuffers pass that writes this buffer reads the other copy (WebGL forbids reading what you draw to).
@@ -1107,7 +1111,7 @@ export class Iris {
       gl.clear(gl.COLOR_BUFFER_BIT);
     }
 
-    for (const p of this.begin) this.fullscreen(p, fs);
+    this.stage(this.begin, fs);
 
     // Shadow pass.
     if (this.shadowProg && this.groups.length) {
@@ -1145,7 +1149,7 @@ export class Iris {
       }
     }
 
-    for (const p of this.prepare) this.fullscreen(p, fs);
+    this.stage(this.prepare, fs);
 
     // Opaque gbuffers: sky, then terrain.
     const gbFbo = (p) => {
@@ -1195,7 +1199,7 @@ export class Iris {
     this.copyDepth(this.depth0, this.depth1, this.W, this.H);
     this.copyDepth(this.depth0, this.depth2, this.W, this.H);
 
-    for (const p of this.deferred) this.fullscreen(p, fs);
+    this.stage(this.deferred, fs);
 
     // Translucent gbuffers.
     if (this.groups[1]?.count) {
@@ -1217,7 +1221,7 @@ export class Iris {
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
 
-    for (const p of this.composite) this.fullscreen(p, fs);
+    this.stage(this.composite, fs);
 
     // Final pass to the screen.
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -1291,8 +1295,17 @@ export class Iris {
           .filter(([, v]) => v === `colortex${n}`)
           .map(([k]) => this.props[`flip.${p.name}.${k}`])
           .find((x) => x != null);
-      if (over != null ? over.trim() === 'true' : written.has(n)) t.cur ^= 1;
+      if (over != null ? over.trim() === 'true' : written.has(n)) {
+        t.cur ^= 1;
+        this.flipped.add(n);
+      }
     }
+  }
+
+  /** One stage's full-screen passes (begin, prepare, deferred or composite); final keeps composite's flips. */
+  stage(passes, fs) {
+    this.flipped = new Set();
+    for (const p of passes) this.fullscreen(p, fs);
   }
 
   draw(p, group, over, ctx) {
