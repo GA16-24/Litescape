@@ -509,4 +509,13 @@ export default {
     'Aún no está listo para activar: faltan o están mal {bad} de {n} bloques de redstone y contenedores.',
   'Ready to activate: all {n} redstone and container blocks are right.':
     'Listo para activar: los {n} bloques de redstone y contenedores están bien.',
+  'Mob spawning': 'Aparición de criaturas',
+  'Mark blocks mobs can spawn on': 'Marcar bloques donde pueden aparecer criaturas',
+  '{n} blocks where a zombie could spawn at night: room to stand and no light from torches or lamps. Light them, cover them or dig them out.':
+    '{n} bloques donde podría aparecer un zombi de noche: hay espacio para estar de pie y no llega luz de antorchas ni lámparas. Ilumínalos, cúbrelos o quítalos.',
+  'Checks the {m} blocks of surroundings captured around it. A farm needs everything within 128 blocks of where you stand spawnproofed.':
+    'Revisa los {m} bloques de alrededores capturados. Una granja necesita que todo a 128 bloques de donde te quedas esté protegido contra apariciones.',
+  'Checks only the blocks in this view. Share it with surroundings to check the land around it.':
+    'Solo revisa los bloques de esta vista. Compártela con alrededores para revisar el terreno que la rodea.',
+  "The marks don't show while a shader pack is on.": 'Las marcas no se ven mientras hay un paquete de shaders activo.',
 };

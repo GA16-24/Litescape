@@ -35,6 +35,7 @@ self.onmessage = (e) => {
     out.seq = m.seq;
     out.iris = !!m.opts.iris;
     const transfer = [out.vis.buffer];
+    if (out.spawn) transfer.push(out.spawn.buffer);
     for (const g of out.groups) for (const a of Object.values(g)) transfer.push(a.buffer);
     self.postMessage(out, transfer);
   }
@@ -121,7 +122,7 @@ function build(o) {
   const iris = o.iris;
   const groups = [group(iris), group(iris), group(iris)];
   const col = [0, 0, 0];
-  const light = iris ? lightOf() : null;
+  const light = iris ? lightOf(vis) : null;
 
   const emit = (G, x, y, z, q, off, r, g2, b2, pidv, i, e) => {
     // q: [tex, cull, tint, layer, shade, x,y,z,u,v ×4]
@@ -211,6 +212,8 @@ function build(o) {
 
   return {
     vis,
+    spawn: o.spawn ? spawnMarks(vis) : null,
+    spawnTotal: o.spawn ? spawnable().length : 0,
     groups: groups.map((G) => {
       const out = {};
       for (const [k, b] of Object.entries(G)) if (b instanceof Buf) out[k] = b.done();
@@ -309,66 +312,114 @@ function build(o) {
     if (cx < 0 || cy < 0 || cz < 0 || cx >= sx || cy >= sy || cz >= sz) return 15; // open sky outside the volume
     return light[(cy * sz + cz) * sx + cx];
   }
+}
 
-  /** Block light (high nibble) and sky light (low nibble), flood-filled like the game does, over the shown blocks. */
-  function lightOf() {
-    if (V.light && V.lightFor === vis) return V.light;
-    const L = new Uint8Array(n);
-    const opaque = (i) => vis[i] === 1 && pal[blocks[i]] && pal[blocks[i]].opaque;
-    const queue = new Int32Array(n);
-    // Sky: full brightness straight down to the first opaque block, then spread sideways losing 1 per block.
-    let qh = 0,
-      qt = 0;
-    for (let zz = 0; zz < sz; zz++)
-      for (let xx = 0; xx < sx; xx++) {
-        for (let yy = sy - 1; yy >= 0; yy--) {
-          const i = (yy * sz + zz) * sx + xx;
-          if (opaque(i)) break;
-          L[i] = 15;
-          queue[qt++] = i;
-        }
-      }
-    spread(L, queue, qh, qt, opaque);
-    // Block light from emitters, brightest first so each cell is reached at its final level.
-    const B = new Uint8Array(n);
-    qt = 0;
-    const buckets = Array.from({ length: 16 }, () => []);
-    for (let i = 0; i < n; i++) {
-      const e = vis[i] === 1 && pal[blocks[i]];
-      if (e && e.light > 0) buckets[Math.min(15, e.light)].push(i);
-    }
-    for (let lv = 15; lv > 0; lv--)
-      for (const i of buckets[lv]) {
-        B[i] = lv;
+/** Block light (high nibble) and sky light (low nibble), flood-filled like the game does, over the shown blocks. */
+function lightOf(vis) {
+  const { sx, sy, sz, blocks, pal } = V;
+  const layer = sx * sz,
+    n = layer * sy;
+  const L = new Uint8Array(n);
+  const opaque = (i) => vis[i] === 1 && pal[blocks[i]] && pal[blocks[i]].opaque;
+  const queue = new Int32Array(n);
+  // Sky: full brightness straight down to the first opaque block, then spread sideways losing 1 per block.
+  let qt = 0;
+  for (let zz = 0; zz < sz; zz++)
+    for (let xx = 0; xx < sx; xx++) {
+      for (let yy = sy - 1; yy >= 0; yy--) {
+        const i = (yy * sz + zz) * sx + xx;
+        if (opaque(i)) break;
+        L[i] = 15;
         queue[qt++] = i;
       }
-    spread(B, queue, 0, qt, opaque);
-    for (let i = 0; i < n; i++) L[i] |= B[i] << 4;
-    V.light = L;
-    V.lightFor = vis;
-    return L;
+    }
+  spread(L, queue, 0, qt, opaque);
+  // Block light from emitters, brightest first so each cell is reached at its final level.
+  const B = new Uint8Array(n);
+  qt = 0;
+  const buckets = Array.from({ length: 16 }, () => []);
+  for (let i = 0; i < n; i++) {
+    const e = vis[i] === 1 && pal[blocks[i]];
+    if (e && e.light > 0) buckets[Math.min(15, e.light)].push(i);
   }
+  for (let lv = 15; lv > 0; lv--)
+    for (const i of buckets[lv]) {
+      B[i] = lv;
+      queue[qt++] = i;
+    }
+  spread(B, queue, 0, qt, opaque);
+  for (let i = 0; i < n; i++) L[i] |= B[i] << 4;
+  return L;
+}
 
-  function spread(L, queue, qh, qt, opaque) {
-    while (qh < qt) {
-      const i = queue[qh++];
-      const v = L[i];
-      if (v <= 1) continue;
-      const xx = i % sx,
-        zz = ((i / sx) | 0) % sz,
-        yy = (i / layer) | 0;
-      for (let d = 0; d < 6; d++) {
-        const nx = xx + DIRS[d][0],
-          ny = yy + DIRS[d][1],
-          nz = zz + DIRS[d][2];
-        if (nx < 0 || ny < 0 || nz < 0 || nx >= sx || ny >= sy || nz >= sz) continue;
-        const ni = (ny * sz + nz) * sx + nx;
-        if (L[ni] >= v - 1 || opaque(ni)) continue;
-        L[ni] = v - 1;
-        if (qt < queue.length) queue[qt++] = ni;
-      }
+function spread(L, queue, qh, qt, opaque) {
+  const { sx, sy, sz } = V;
+  const layer = sx * sz;
+  while (qh < qt) {
+    const i = queue[qh++];
+    const v = L[i];
+    if (v <= 1) continue;
+    const xx = i % sx,
+      zz = ((i / sx) | 0) % sz,
+      yy = (i / layer) | 0;
+    for (let d = 0; d < 6; d++) {
+      const nx = xx + DIRS[d][0],
+        ny = yy + DIRS[d][1],
+        nz = zz + DIRS[d][2];
+      if (nx < 0 || ny < 0 || nz < 0 || nx >= sx || ny >= sy || nz >= sz) continue;
+      const ni = (ny * sz + nz) * sx + nx;
+      if (L[ni] >= v - 1 || opaque(ni)) continue;
+      L[ni] = v - 1;
+      if (qt < queue.length) queue[qt++] = ni;
     }
   }
+}
+
+/**
+ * Floor blocks a zombie could spawn on at night: it can stand on the block, fits in the two cells above, and the
+ * cell it stands in has no block light. Worked out over every block, shown or not, once per load.
+ * shortcut: overworld rule (block light 0) and light from blocks outside the view is missed; fine for a perimeter check.
+ */
+function spawnable() {
+  if (V.spawn) return V.spawn;
+  const { sx, sy, sz, blocks, pal } = V;
+  const layer = sx * sz,
+    n = layer * sy;
+  const all = new Uint8Array(n);
+  for (let i = 0; i < n; i++) all[i] = pal[blocks[i]] && !pal[blocks[i]].air ? 1 : 0;
+  const L = lightOf(all);
+  const fits = (i) => i >= n || !!pal[blocks[i]]?.spawnIn; // above the view is open air
+  const out = [];
+  for (let i = 0; i < n - layer; i++)
+    if (pal[blocks[i]]?.spawnOn && fits(i + layer) && fits(i + 2 * layer) && L[i + layer] >> 4 === 0) out.push(i);
+  V.spawn = Int32Array.from(out);
+  return V.spawn;
+}
+
+/** Two triangles just above the top of each shown spawnable floor block. */
+function spawnMarks(vis) {
+  const { sx, sz } = V;
+  const layer = sx * sz;
+  const pos = new Buf(Float32Array);
+  for (const i of spawnable()) {
+    if (!vis[i]) continue;
+    const x = i % sx,
+      z = ((i / sx) | 0) % sz,
+      y = ((i / layer) | 0) + 1.02;
+    for (const [a, b] of [
+      [0.1, 0.1],
+      [0.1, 0.9],
+      [0.9, 0.9],
+      [0.1, 0.1],
+      [0.9, 0.9],
+      [0.9, 0.1],
+    ]) {
+      pos.push(x + a);
+      pos.push(y);
+      pos.push(z + b);
+    }
+  }
+  return pos.done();
 }
 
 /** Mostly greys out a surroundings color so the build stands out against it. */

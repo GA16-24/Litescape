@@ -88,6 +88,9 @@ public class EndToEndTest implements FabricClientGameTest {
 				JsonObject sel = json(save("view-selection.json", call(ctx, "GET", "/api/view?type=selection")));
 				check(sel.getAsJsonArray("size").toString().equals("[20,14,19]"), "selection size " + sel.get("size"));
 				collectTextures(sel);
+				// Mob spawning: a zombie stands on grass but not glass, and fits in short grass but not in planks.
+				check(spawn(sel, "minecraft:grass_block", "spawnOn") && !spawn(sel, "minecraft:glass", "spawnOn")
+					&& spawn(sel, "minecraft:short_grass", "spawnIn") && !spawn(sel, "minecraft:oak_planks", "spawnIn"), "spawn flags in the palette");
 
 				AreaSelection area = ctx.computeOnClient(_ -> DataManager.getSelectionManager().getCurrentSelection());
 				// From the server world, as Litematica does in singleplayer: the client never gets chest and hopper contents.
@@ -375,6 +378,12 @@ public class EndToEndTest implements FabricClientGameTest {
 			}
 		}
 		s.runCommand("fill 5 -51 10 15 -51 10 spruce_slab");
+	}
+
+	private static boolean spawn(JsonObject view, String block, String flag) {
+		for (JsonElement e : view.getAsJsonArray("palette"))
+			if (e.isJsonObject() && e.getAsJsonObject().get("n").getAsString().equals(block)) return e.getAsJsonObject().get(flag).getAsBoolean();
+		throw new IllegalStateException(block + " isn't in the view");
 	}
 
 	private void collectTextures(JsonObject view) {

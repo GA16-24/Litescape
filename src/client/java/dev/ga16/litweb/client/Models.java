@@ -20,7 +20,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.level.EmptyBlockGetter;
+import net.minecraft.world.level.NaturalSpawner;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.material.FluidState;
@@ -69,6 +71,10 @@ final class Models {
 		o.addProperty("opaque", state.isSolidRender());
 		o.addProperty("selfCull", state.skipRendering(state, Direction.UP));
 		o.addProperty("light", state.getLightEmission());
+		// Mob spawning, judged for a zombie like the game does: can one stand on this block, and fit inside this cell?
+		o.addProperty("spawnOn", state.isValidSpawn(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, EntityTypes.ZOMBIE));
+		o.addProperty("spawnIn", NaturalSpawner.isValidEmptySpawnBlock(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, state, state.getFluidState(), EntityTypes.ZOMBIE)
+			&& state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).isEmpty());
 
 		JsonArray quads = new JsonArray();
 		BlockStateModel model = mc.getModelManager().getBlockStateModelSet().get(state);
