@@ -47,6 +47,15 @@ public final class Volume {
 		return new Volume(b[0], b[1], b[2], b[3] - b[0] + 1, b[4] - b[1] + 1, b[5] - b[2] + 1);
 	}
 
+	/** |x·y·z| for a size read from untrusted data, or Long.MAX_VALUE when that wouldn't fit in a long. */
+	public static long blocks(int x, int y, int z) {
+		try {
+			return Math.multiplyExact(Math.multiplyExact(Math.abs((long) x), Math.abs((long) y)), Math.abs((long) z));
+		} catch (ArithmeticException e) {
+			return Long.MAX_VALUE;
+		}
+	}
+
 	/** Boxes are {x0,y0,z0,x1,y1,z1} with any corner order; returns the normalized union. */
 	public static int[] union(List<int[]> boxes) {
 		int[] u = {Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE};

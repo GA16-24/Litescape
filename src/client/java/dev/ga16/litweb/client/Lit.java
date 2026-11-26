@@ -229,8 +229,9 @@ final class Lit {
 		long total = 0;
 		for (String name : regions.keySet()) {
 			CompoundTag size = regions.getCompoundOrEmpty(name).getCompoundOrEmpty("Size");
-			total += Math.abs((long) size.getIntOr("x", 0) * size.getIntOr("y", 0) * size.getIntOr("z", 0));
-			if (total > Volume.MAX_VOLUME) throw new IOException("Couldn't read the shared placement");
+			long blocks = Volume.blocks(size.getIntOr("x", 0), size.getIntOr("y", 0), size.getIntOr("z", 0));
+			if (blocks > Volume.MAX_VOLUME - total) throw new IOException("Couldn't read the shared placement");
+			total += blocks;
 		}
 		return DataConverterNbt.fromVanillaCompound(tag);
 	}

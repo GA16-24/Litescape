@@ -6,6 +6,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.ga16.litweb.Volume;
 import dev.ga16.litweb.client.LitWebClient;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.schematic.LitematicaSchematic;
@@ -54,6 +55,9 @@ public class EndToEndTest implements FabricClientGameTest {
 	public void runTest(ClientGameTestContext ctx) {
 		try {
 			Files.createDirectories(out);
+			// Region sizes in a shared placement come from another player; a product that wraps must still count as too large.
+			check(Volume.blocks(1 << 30, 1 << 30, 16) == Long.MAX_VALUE && Volume.blocks(Integer.MIN_VALUE, -1, 1) == 1L << 31
+				&& Volume.blocks(-19, 14, 20) == 5320, "region size overflow");
 			// The singleplayer host isn't an operator, and surroundings default to operators only; allow them like an admin would.
 			Files.writeString(FabricLoader.getInstance().getConfigDir().resolve("litweb-server.properties"), "terrain-capture=everyone\n");
 			// A folder from before servers were kept per account, which the first load should move to this account's folder.
