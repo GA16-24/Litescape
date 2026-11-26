@@ -358,17 +358,21 @@ public final class Pipeline {
 		return out;
 	}
 
-	/** lang/en_US.lang as a flat map. */
-	public static JsonObject lang(Pack pack) {
+	/** lang/en_US.lang as a flat map, with the viewer's language (a Minecraft locale like fr_fr) over it. */
+	public static JsonObject lang(Pack pack, String locale) {
 		JsonObject o = new JsonObject();
-		String t = pack.textIgnoreCase("lang/en_us.lang");
-		if (t == null) return o;
+		readLang(o, pack.textIgnoreCase("lang/en_us.lang"));
+		if (locale.matches("[a-z]{2,3}_[a-z]{2,4}") && !locale.equals("en_us")) readLang(o, pack.textIgnoreCase("lang/" + locale + ".lang"));
+		return o;
+	}
+
+	private static void readLang(JsonObject o, @Nullable String t) {
+		if (t == null) return;
 		for (String line : t.split("\r?\n")) {
 			String s = line.strip();
 			if (s.isEmpty() || s.startsWith("#")) continue;
 			int eq = s.indexOf('=');
 			if (eq > 0) o.addProperty(s.substring(0, eq).strip(), s.substring(eq + 1).strip());
 		}
-		return o;
 	}
 }

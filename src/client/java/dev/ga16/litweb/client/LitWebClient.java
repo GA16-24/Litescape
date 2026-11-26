@@ -48,7 +48,7 @@ public final class LitWebClient implements ClientModInitializer {
 				mc.player.sendSystemMessage(Component.literal("Litescape: ")
 					.append(Component.literal(WebServer.url()).withStyle(s -> s.withClickEvent(new ClickEvent.RunCommand("litweb"))
 						.withColor(ChatFormatting.AQUA).withUnderlined(true)))
-					.append(Component.literal(" (or /litweb)").withStyle(ChatFormatting.GRAY)));
+					.append(Component.translatable("litweb.chat.or_command").withStyle(ChatFormatting.GRAY)));
 			}
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> {
@@ -57,7 +57,7 @@ public final class LitWebClient implements ClientModInitializer {
 		});
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registries) -> dispatcher.register(
 			ClientCommands.literal("litweb").executes(ctx -> {
-				ctx.getSource().sendFeedback(Component.literal(openViewer() ? "Opening the Litescape app" : "Opened " + WebServer.url()));
+				ctx.getSource().sendFeedback(openViewer() ? Component.translatable("litweb.command.opening_app") : Component.translatable("litweb.command.opened", WebServer.url()));
 				return 1;
 			})));
 	}

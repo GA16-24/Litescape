@@ -1,0 +1,5 @@
+{
+  "litweb.chat.or_command": " （或 /litweb）",
+  "litweb.command.opening_app": "正在打开 Litescape 应用",
+  "litweb.command.opened": "已打开 %s"
+}

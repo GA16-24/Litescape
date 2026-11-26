@@ -1,3 +1,4 @@
+import { fmt, LANGS, lang, MC_LOCALE, t, translateDom } from './i18n.js';
 import { Iris } from './iris.js';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import * as THREE from './vendor/three.module.min.js';
@@ -5,13 +6,12 @@ import * as THREE from './vendor/three.module.min.js';
 const $ = (id) => document.getElementById(id);
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 const MOD = isMac ? '⌘' : 'Ctrl';
-const fmt = new Intl.NumberFormat();
 const STATUS = {
-  1: { key: 'ok', label: 'Placed correctly', color: 'var(--ok)' },
-  2: { key: 'missing', label: 'Still missing', color: 'var(--missing)' },
-  3: { key: 'wrong', label: 'Wrong block', color: 'var(--wrong)' },
-  4: { key: 'state', label: 'Wrong orientation or state', color: 'var(--state)' },
-  5: { key: 'unknown', label: 'Not loaded on the server', color: 'var(--unknown)' },
+  1: { key: 'ok', label: t('Placed correctly'), color: 'var(--ok)' },
+  2: { key: 'missing', label: t('Still missing'), color: 'var(--missing)' },
+  3: { key: 'wrong', label: t('Wrong block'), color: 'var(--wrong)' },
+  4: { key: 'state', label: t('Wrong orientation or state'), color: 'var(--state)' },
+  5: { key: 'unknown', label: t('Not loaded on the server'), color: 'var(--unknown)' },
 };
 
 const ICON = {
@@ -312,7 +312,7 @@ const esc = (s) =>
 async function api(path, opts) {
   const r = await fetch(path, opts);
   const body = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(body.error || `${r.status} ${r.statusText}`);
+  if (!r.ok) throw new Error(body.error ? t(body.error) : `${r.status} ${r.statusText}`);
   return body;
 }
 
@@ -417,10 +417,10 @@ async function open(desc, { force = false } = {}) {
     const saved = desc.type === 'shared' && !isLive() ? `&server=${encodeURIComponent(viewServer())}` : '';
     const data = await api(`api/view?type=${desc.type}&id=${encodeURIComponent(desc.id || '')}${saved}`);
     if (S.loadingKey !== token) return;
-    setLoadingText('Loading textures…');
+    setLoadingText(t('Loading textures…'));
     const atlas = await buildAtlas(data.tex);
     if (S.loadingKey !== token) return;
-    setLoadingText('Building mesh…');
+    setLoadingText(t('Building mesh…'));
     prepare(data, atlas, changedView || !S.data || String(S.data.size) !== String(data.size));
     if (desc.type !== 'selection') pollStatus(true);
   } catch (err) {
@@ -902,19 +902,19 @@ function setLoadingText(t) {
 function loadingHtml(desc) {
   const what =
     desc.type === 'selection' && S.api?.serverMod && S.api?.regionRead !== 'no'
-      ? 'Reading blocks from the server…'
+      ? t('Reading blocks from the server…')
       : desc.type === 'shared'
-        ? 'Downloading the shared schematic…'
+        ? t('Downloading the shared schematic…')
         : desc.type === 'placement'
-          ? 'Reading your placement…'
-          : 'Reading loaded chunks…';
+          ? t('Reading your placement…')
+          : t('Reading loaded chunks…');
   return `<div class="loading"><div class="spinner"></div><div class="loading-text">${what}</div></div>`;
 }
 function showOffline() {
   showOverlay(`<div class="empty">
     <div class="empty-icon">${ICON.plug}</div>
-    <h2>Can't reach Minecraft</h2>
-    <p>This page is served by the Litescape mod. Start Minecraft with the mod installed and this page reconnects on its own.</p>
+    <h2>${t("Can't reach Minecraft")}</h2>
+    <p>${t('This page is served by the Litescape mod. Start Minecraft with the mod installed and this page reconnects on its own.')}</p>
     <div class="progress-line"><i></i></div></div>`);
 }
 function showError(desc, msg) {
@@ -922,45 +922,46 @@ function showError(desc, msg) {
     // Retrying can't help: the copy only exists once it's been opened on its server.
     showOverlay(`<div class="empty">
     <div class="empty-icon">${ICON.download}</div>
-    <h2>Not downloaded yet</h2>
-    <p>You haven't opened this one on ${esc(serverInfo()?.name || 'its server')}, so there's no saved copy. Join the server in Minecraft and open it once to keep it here.</p></div>`);
+    <h2>${t('Not downloaded yet')}</h2>
+    <p>${t("You haven't opened this one on {server}, so there's no saved copy. Join the server in Minecraft and open it once to keep it here.", { server: esc(serverInfo()?.name || t('its server')) })}</p></div>`);
     return;
   }
   const nice =
     {
-      'no-permission':
+      'no-permission': t(
         'The server only lets operators read areas. Ask an operator, or change region-read in config/litweb-server.properties.',
+      ),
     }[msg] || msg;
   showOverlay(`<div class="empty">
     <div class="empty-icon" style="color:var(--danger)">${ICON.alert}</div>
-    <h2>Couldn't load this view</h2>
+    <h2>${t("Couldn't load this view")}</h2>
     <p>${esc(nice)}</p>
-    <div class="btn-row"><button class="btn" data-go='${esc(JSON.stringify(desc))}'>${ICON.retry}Try again</button></div></div>`);
+    <div class="btn-row"><button class="btn" data-go='${esc(JSON.stringify(desc))}'>${ICON.retry}${t('Try again')}</button></div></div>`);
 }
 function emptyHtml(kind) {
   if (kind === 'world')
     return `<div class="empty">
     <div class="empty-icon">${ICON.globe}</div>
-    <h2>Join a world</h2>
-    <p>Open a singleplayer world or join a server. Your selection and placements show up here as soon as you're in.</p></div>`;
+    <h2>${t('Join a world')}</h2>
+    <p>${t("Open a singleplayer world or join a server. Your selection and placements show up here as soon as you're in.")}</p></div>`;
   if (kind === 'nothing-shared')
     return `<div class="empty">
     <div class="empty-icon">${ICON.shared}</div>
-    <h2>Nothing shared on ${esc(serverInfo()?.name || 'this server')}</h2>
-    <p>Nobody had shared a schematic with you when you last visited. Pick another server from the switcher.</p></div>`;
+    <h2>${t('Nothing shared on {server}', { server: esc(serverInfo()?.name || t('this server')) })}</h2>
+    <p>${t('Nobody had shared a schematic with you when you last visited. Pick another server from the switcher.')}</p></div>`;
   if (kind === 'gone')
     return `<div class="empty">
     <div class="empty-icon">${ICON.placement}</div>
-    <h2>This view is gone</h2>
-    <p>The placement was removed or is no longer shared. Pick another one from the sidebar.</p>
-    <div class="btn-row"><button class="btn" data-palette>Browse views <kbd class="kbd">${MOD} K</kbd></button></div></div>`;
+    <h2>${t('This view is gone')}</h2>
+    <p>${t('The placement was removed or is no longer shared. Pick another one from the sidebar.')}</p>
+    <div class="btn-row"><button class="btn" data-palette>${t('Browse views')} <kbd class="kbd">${MOD} K</kbd></button></div></div>`;
   return `<div class="empty">
     <div class="empty-icon">${ICON.selection}</div>
-    <h2>Select an area in Minecraft</h2>
+    <h2>${t('Select an area in Minecraft')}</h2>
     <ol>
-      <li><span>Hold Litematica's tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll.</span></li>
-      <li><span>Left-click one corner, right-click the opposite corner.</span></li>
-      <li><span>The area appears here in 3D and updates while you adjust it.</span></li>
+      <li><span>${t('Hold Litematica\'s tool item (a stick by default) and switch to <b>Area Selection</b> mode with <span class="kbd">Ctrl</span> + scroll.')}</span></li>
+      <li><span>${t('Left-click one corner, right-click the opposite corner.')}</span></li>
+      <li><span>${t('The area appears here in 3D and updates while you adjust it.')}</span></li>
     </ol></div>`;
 }
 
@@ -979,11 +980,13 @@ function renderConn() {
   const el = $('conn');
   el.classList.toggle('ok', S.connected === true);
   el.classList.toggle('bad', S.connected === false);
-  el.querySelector('.conn-text').textContent = S.connected === false ? 'Offline' : S.connected ? 'Live' : 'Connecting…';
+  el.querySelector('.conn-text').textContent = t(
+    S.connected === false ? 'Offline' : S.connected ? 'Live' : 'Connecting…',
+  );
   el.title = S.connected
-    ? 'Connected to Minecraft'
+    ? t('Connected to Minecraft')
     : S.connected === false
-      ? 'Minecraft is not reachable. Retrying.'
+      ? t('Minecraft is not reachable. Retrying.')
       : '';
 }
 
@@ -1017,7 +1020,7 @@ function renderNav() {
 
 function savedNoteHtml() {
   const info = serverInfo();
-  return `<div class="saved-note" role="note">${ICON.server}<p><b>Saved copy</b> from ${info?.seen ? ago(info.seen) : 'your last visit'}. Join ${esc(info?.name || 'this server')} in Minecraft for your placements and live progress.</p></div>`;
+  return `<div class="saved-note" role="note">${ICON.server}<p>${t('<b>Saved copy</b> from {when}. Join {server} in Minecraft for your placements and live progress.', { when: info?.seen ? ago(info.seen) : t('your last visit'), server: esc(info?.name || t('this server')) })}</p></div>`;
 }
 
 function sharedNavHtml() {
@@ -1025,15 +1028,17 @@ function sharedNavHtml() {
   const live = isLive();
   const nHidden = sharedList().filter(isHidden).length;
   const toggle = nHidden
-    ? `<button type="button" class="link" data-show-hidden aria-pressed="${S.showHidden}">${S.showHidden ? ICON.eye : ICON.eyeOff}${nHidden} hidden</button>`
+    ? `<button type="button" class="link" data-show-hidden aria-pressed="${S.showHidden}">${S.showHidden ? ICON.eye : ICON.eyeOff}${t('{n} hidden', { n: nHidden })}</button>`
     : '';
-  let h = `<div class="nav-section"><div class="nav-head">${live ? 'Shared on this server' : `Shared on ${esc(serverInfo()?.name || 'this server')}`}${toggle}</div>`;
+  let h = `<div class="nav-section"><div class="nav-head">${live ? t('Shared on this server') : t('Shared on {server}', { server: esc(serverInfo()?.name || t('this server')) })}${toggle}</div>`;
   if (live && !a.serverMod)
-    h += '<div class="nav-empty">Install Litescape on the server to see what other players are building.</div>';
+    h += `<div class="nav-empty">${t('Install Litescape on the server to see what other players are building.')}</div>`;
   else if (!sharedList().length)
-    h += live
-      ? '<div class="nav-empty">Nothing shared yet. Share one of your placements so others can follow it.</div>'
-      : '<div class="nav-empty">Nothing was shared with you here on your last visit.</div>';
+    h += `<div class="nav-empty">${
+      live
+        ? t('Nothing shared yet. Share one of your placements so others can follow it.')
+        : t('Nothing was shared with you here on your last visit.')
+    }</div>`;
   for (const s of sharedList()) {
     const hid = isHidden(s);
     if (hid && !S.showHidden) continue;
@@ -1041,11 +1046,11 @@ function sharedNavHtml() {
       desc: { type: 'shared', id: s.id },
       icon: ICON.shared,
       title: s.name,
-      sub: `${s.mine ? 'You' : esc(s.ownerName)} · ${dims(s.size)}${live && s.dim !== a.dim ? ` · ${esc(s.dim.replace('minecraft:', '').replace('the_', ''))}` : ''}`,
+      sub: `${s.mine ? t('You') : esc(s.ownerName)} · ${dims(s.size)}${live && s.dim !== a.dim ? ` · ${esc(s.dim.replace('minecraft:', '').replace('the_', ''))}` : ''}`,
       meta: accessBadge(s),
       action: s.mine
         ? ''
-        : `<button class="row-action" data-hide="${esc(s.id)}" data-tip="${hid ? 'Show it in your list again' : 'Hide it from your list. Only this browser remembers.'}">${hid ? `${ICON.eye}Unhide` : `${ICON.eyeOff}Hide`}</button>`,
+        : `<button class="row-action" data-hide="${esc(s.id)}" data-tip="${hid ? t('Show it in your list again') : t('Hide it from your list. Only this browser remembers.')}">${hid ? `${ICON.eye}${t('Unhide')}` : `${ICON.eyeOff}${t('Hide')}`}</button>`,
       pct: live ? S.pct.get(`shared:${s.id}`) : null,
     });
   }
@@ -1059,12 +1064,14 @@ function accessOf(sh) {
 function accessText(sh) {
   const { access, players } = accessOf(sh);
   const n = Object.keys(players).length;
-  if (access === 'everyone') return 'Everyone on the server';
-  if (access === 'private' || !n) return `Only ${sh.mine ? 'you' : sh.ownerName}`; // nobody picked yet
-  if (sh.mine) return `You and ${n} player${n === 1 ? '' : 's'}`;
+  if (access === 'everyone') return t('Everyone on the server');
+  if (access === 'private' || !n) return sh.mine ? t('Only you') : t('Only {name}', { name: sh.ownerName }); // nobody picked yet
+  if (sh.mine) return t('You and {n} players', { n });
   const me = Object.values(players).includes(S.api?.player) ? 1 : 0; // names: the page doesn't know your UUID
   const others = n - me;
-  return `${sh.ownerName}${me ? (others ? ', you' : ' and you') : ''}${others ? ` and ${others} other${others === 1 ? '' : 's'}` : ''}`;
+  const owner = sh.ownerName;
+  if (!others) return me ? t('{owner} and you', { owner }) : owner;
+  return t(me ? '{owner}, you and {n} others' : '{owner} and {n} others', { owner, n: others });
 }
 function accessBadge(sh) {
   const { access } = accessOf(sh);
@@ -1074,32 +1081,32 @@ function accessBadge(sh) {
 }
 
 function liveNavHtml(a) {
-  let h = '<div class="nav-section"><div class="nav-head">Selection</div>';
+  let h = `<div class="nav-section"><div class="nav-head">${t('Selection')}</div>`;
   h += a.selection
     ? rowHtml({
         desc: { type: 'selection' },
         icon: ICON.selection,
         title: a.selection.name,
-        sub: `${dims(boxSize(a.selection.boxes))}${a.selection.boxes.length > 1 ? ` · ${a.selection.boxes.length} boxes` : ''}`,
+        sub: `${dims(boxSize(a.selection.boxes))}${a.selection.boxes.length > 1 ? ` · ${t('{n} boxes', { n: a.selection.boxes.length })}` : ''}`,
       })
-    : '<div class="nav-empty">Nothing selected. Use Litematica\'s area selection in game.</div>';
-  h += '</div><div class="nav-section"><div class="nav-head">Your placements</div>';
+    : `<div class="nav-empty">${t("Nothing selected. Use Litematica's area selection in game.")}</div>`;
+  h += `</div><div class="nav-section"><div class="nav-head">${t('Your placements')}</div>`;
   if (!a.placements?.length)
-    h += '<div class="nav-empty">No schematics placed. Load one in Litematica to track its build here.</div>';
+    h += `<div class="nav-empty">${t('No schematics placed. Load one in Litematica to track its build here.')}</div>`;
   for (const p of a.placements || []) {
     const shared = !!p.sharedId;
     const busy = S.busy.has(p.id);
     const tip = !a.serverMod
-      ? 'The server needs Litescape to share'
+      ? t('The server needs Litescape to share')
       : shared
-        ? 'Shared. Open it to choose who can see it'
-        : 'Share to the server. Only you see it until you choose who else can';
-    const action = `<button class="row-action ${shared ? 'on' : ''}" data-share="${esc(p.id)}" aria-disabled="${!a.serverMod || busy}" data-tip="${esc(tip)}">${shared ? `${ICON.check}Shared` : ICON.share + (busy ? 'Sharing…' : 'Share')}</button>`;
+        ? t('Shared. Open it to choose who can see it')
+        : t('Share to the server. Only you see it until you choose who else can');
+    const action = `<button class="row-action ${shared ? 'on' : ''}" data-share="${esc(p.id)}" aria-disabled="${!a.serverMod || busy}" data-tip="${esc(tip)}">${shared ? `${ICON.check}${t('Shared')}` : ICON.share + t(busy ? 'Sharing…' : 'Share')}</button>`;
     h += rowHtml({
       desc: { type: 'placement', id: p.id },
       icon: ICON.placement,
       title: p.name,
-      sub: dims(boxSize(p.boxes)) + (p.enabled ? '' : ' · hidden in game'),
+      sub: dims(boxSize(p.boxes)) + (p.enabled ? '' : ` · ${t('hidden in game')}`),
       action,
       pct: S.pct.get(`placement:${p.id}`),
     });
@@ -1127,8 +1134,8 @@ function renderServer() {
   const h = info
     ? `<button type="button" class="server-btn" id="server-btn" aria-haspopup="listbox" aria-expanded="${!$('server-menu').hidden}" aria-controls="server-menu">${monogram(info.name, info.key)}<span class="row-main"><span class="row-title">${esc(info.name)}</span><span class="row-sub">${
         isLive()
-          ? `<span class="live-dot"></span>Connected${info.address ? ` · ${esc(info.address)}` : ''}`
-          : `Saved copy · ${info.seen ? ago(info.seen) : ''}`
+          ? `<span class="live-dot"></span>${t('Connected')}${info.address ? ` · ${esc(info.address)}` : ''}`
+          : `${t('Saved copy')} · ${info.seen ? ago(info.seen) : ''}`
       }</span></span>${ICON.updown}</button>`
     : '';
   el.hidden = !info;
@@ -1167,11 +1174,11 @@ function renderServerMenu() {
   $('server-list').innerHTML =
     srvItems
       .map((s, i) => {
-        const sub = s.live ? `Connected${s.address ? ` · ${esc(s.address)}` : ''}` : esc(s.address || '');
+        const sub = s.live ? `${t('Connected')}${s.address ? ` · ${esc(s.address)}` : ''}` : esc(s.address || '');
         const meta = s.live ? '' : `<span class="row-meta">${ago(s.seen)}</span>`;
-        return `<button type="button" class="pal-item" role="option" id="srv-${i}" data-srv="${i}" aria-selected="${i === srvSel}">${monogram(s.name, s.key)}<span class="row-main"><span class="row-title">${esc(s.name)}</span><span class="row-sub">${sub}</span></span>${s.key === viewServer() ? `<span class="srv-check" aria-label="Showing">${ICON.check}</span>` : meta}</button>`;
+        return `<button type="button" class="pal-item" role="option" id="srv-${i}" data-srv="${i}" aria-selected="${i === srvSel}">${monogram(s.name, s.key)}<span class="row-main"><span class="row-title">${esc(s.name)}</span><span class="row-sub">${sub}</span></span>${s.key === viewServer() ? `<span class="srv-check" aria-label="${t('Showing')}">${ICON.check}</span>` : meta}</button>`;
       })
-      .join('') || '<div class="pal-empty">No matching servers</div>';
+      .join('') || `<div class="pal-empty">${t('No matching servers')}</div>`;
   $('server-search').setAttribute('aria-activedescendant', srvItems.length ? `srv-${srvSel}` : '');
   document.getElementById(`srv-${srvSel}`)?.scrollIntoView({ block: 'nearest' });
 }
@@ -1233,14 +1240,12 @@ document.addEventListener('mousedown', (e) => {
 function renderFoot() {
   const a = S.api;
   if (!a?.inWorld) {
-    $('foot').innerHTML = S.connected ? '<div class="foot-line">Not in a world</div>' : '';
+    $('foot').innerHTML = S.connected ? `<div class="foot-line">${t('Not in a world')}</div>` : '';
     return;
   }
-  const server = a.singleplayer
-    ? 'Singleplayer'
-    : a.serverMod
-      ? 'Server has the viewer'
-      : 'Vanilla server: loaded chunks only';
+  const server = t(
+    a.singleplayer ? 'Singleplayer' : a.serverMod ? 'Server has the viewer' : 'Vanilla server: loaded chunks only',
+  );
   $('foot').innerHTML =
     `<div class="foot-line">${ICON.user}<b>${esc(a.player)}</b><span>· ${esc(a.dim.replace('minecraft:', ''))}</span></div>
     <div class="foot-line">${ICON.server}<span>${server}</span></div>`;
@@ -1255,8 +1260,8 @@ function renderTop() {
   if (d && a) {
     const group =
       d.type === 'shared'
-        ? esc(serverInfo()?.name || 'Shared')
-        : { selection: 'Selection', placement: 'Your placements' }[d.type];
+        ? esc(serverInfo()?.name || t('Shared'))
+        : t({ selection: 'Selection', placement: 'Your placements' }[d.type]);
     const name =
       d.type === 'selection'
         ? a.selection?.name
@@ -1271,30 +1276,31 @@ function renderTop() {
     chips += `<span class="chip num">${dims(data.inner ? data.inner.slice(3) : data.size)}</span>`;
     if (data.unknown) {
       const pct = Math.max(1, Math.floor(100 * (1 - data.unknown / data.blocks16.length)));
-      const why =
+      const why = t(
         data.source === 'server'
           ? 'Only chunks loaded on the server can be read.'
           : a?.serverMod
             ? 'Your client only knows nearby chunks, and server reads need operator permission.'
-            : 'Your client only knows nearby chunks. Install the mod on the server for wider reads.';
-      chips += `<span class="chip warn" data-tip="${why}">${pct}% loaded</span>`;
+            : 'Your client only knows nearby chunks. Install the mod on the server for wider reads.',
+      );
+      chips += `<span class="chip warn" data-tip="${esc(why)}">${t('{pct}% loaded', { pct })}</span>`;
     } else if (data.source !== 'placement' && data.source !== 'shared') {
-      chips += `<span class="chip" data-tip="${data.source === 'server' ? 'Read from the server' : 'Read from chunks your client has loaded'}">${data.source === 'server' ? 'From server' : 'Loaded chunks'}</span>`;
+      chips += `<span class="chip" data-tip="${t(data.source === 'server' ? 'Read from the server' : 'Read from chunks your client has loaded')}">${t(data.source === 'server' ? 'From server' : 'Loaded chunks')}</span>`;
     }
     if (S.counts && S.connected)
-      chips += `<span class="chip live" data-tip="Build progress updates every 2 seconds">Live</span>`;
+      chips += `<span class="chip live" data-tip="${t('Build progress updates every 2 seconds')}">${t('Live')}</span>`;
     if (d.type === 'shared' && !isLive())
-      chips += `<span class="chip" data-tip="The copy you downloaded on your last visit. Build progress is live only while you're on this server.">Saved copy</span>`;
-    if (S.connected === false) chips += `<span class="chip warn">Offline</span>`;
+      chips += `<span class="chip" data-tip="${esc(t("The copy you downloaded on your last visit. Build progress is live only while you're on this server."))}">${t('Saved copy')}</span>`;
+    if (S.connected === false) chips += `<span class="chip warn">${t('Offline')}</span>`;
   }
   if (data && SH.settings.enabled && SH.settings.pack) {
     const name = packName(SH.settings.pack);
     chips +=
       SH.status === 'compiling'
-        ? `<button type="button" class="chip accent" data-open-shaders data-tip="Open shader settings"><span class="spinner xs"></span>${esc(name)}</button>`
+        ? `<button type="button" class="chip accent" data-open-shaders data-tip="${t('Open shader settings')}"><span class="spinner xs"></span>${esc(name)}</button>`
         : SH.status === 'error'
-          ? `<button type="button" class="chip warn" data-open-shaders data-tip="${esc(SH.error || '')}">${esc(name)} failed</button>`
-          : `<button type="button" class="chip accent" data-open-shaders data-tip="Open shader settings">${ICON.sparkle}${esc(name)}</button>`;
+          ? `<button type="button" class="chip warn" data-open-shaders data-tip="${esc(SH.error || '')}">${t('{name} failed', { name: esc(name) })}</button>`
+          : `<button type="button" class="chip accent" data-open-shaders data-tip="${t('Open shader settings')}">${ICON.sparkle}${esc(name)}</button>`;
   }
   if (chips !== lastChips) $('chips').innerHTML = lastChips = chips; // polls re-render every second
   const has = !!data;
@@ -1317,13 +1323,13 @@ function renderInspector() {
     return;
   }
   const scrollTop = el.scrollTop;
-  let h = `<div class="tabs" role="tablist" aria-label="Panel">${[
-    ['details', 'Details'],
-    ['shaders', 'Shaders'],
+  let h = `<div class="tabs" role="tablist" aria-label="${t('Panel')}">${[
+    ['details', t('Details')],
+    ['shaders', t('Shaders')],
   ]
     .map(
       ([k, l]) =>
-        `<button type="button" role="tab" id="tab-${k}" aria-selected="${SH.tab === k}" aria-controls="inspector" tabindex="${SH.tab === k ? 0 : -1}" data-tab="${k}">${l}${k === 'shaders' && SH.settings.enabled ? '<span class="tab-dot" aria-label="on"></span>' : ''}</button>`,
+        `<button type="button" role="tab" id="tab-${k}" aria-selected="${SH.tab === k}" aria-controls="inspector" tabindex="${SH.tab === k ? 0 : -1}" data-tab="${k}">${l}${k === 'shaders' && SH.settings.enabled ? `<span class="tab-dot" aria-label="${t('on')}"></span>` : ''}</button>`,
     )
     .join('')}</div>`;
   if (SH.tab === 'shaders') {
@@ -1345,8 +1351,8 @@ function renderInspector() {
     const total = c[1] + c[2] + c[3] + c[4] + c[5];
     const pct = total ? (100 * c[1]) / total : 0;
     const ago = Math.max(0, Math.round((Date.now() - S.statusAt) / 1000));
-    h += `<section class="panel"><div class="panel-head"><h3>Build progress</h3><span class="row-meta num">${fmt.format(c[1])} / ${fmt.format(total)}</span></div>
-      <div class="big-pct"><strong class="num">${pct >= 99.95 && pct < 100 ? '99.9' : pct.toFixed(pct === 100 || pct === 0 ? 0 : 1)}%</strong><span>${pct === 100 ? 'Complete' : 'placed'}</span></div>
+    h += `<section class="panel"><div class="panel-head"><h3>${t('Build progress')}</h3><span class="row-meta num">${fmt.format(c[1])} / ${fmt.format(total)}</span></div>
+      <div class="big-pct"><strong class="num">${pct >= 99.95 && pct < 100 ? '99.9' : pct.toFixed(pct === 100 || pct === 0 ? 0 : 1)}%</strong><span>${t(pct === 100 ? 'Complete' : 'placed')}</span></div>
       <div class="stack">${[1, 3, 4, 5, 2].map((k) => (c[k] ? `<i style="width:${(100 * c[k]) / total}%;background:${STATUS[k].color}"></i>` : '')).join('')}</div>
       <div class="legend">${[1, 2, 3, 4, 5]
         .filter((k) => c[k] || k <= 2)
@@ -1355,60 +1361,60 @@ function renderInspector() {
             `<button type="button" data-legend="${k}"><span class="sw" style="background:${STATUS[k].color}"></span><span class="lbl">${STATUS[k].label}</span><span class="num">${fmt.format(c[k])}</span></button>`,
         )
         .join('')}</div>
-      <div class="seg filter-seg" role="radiogroup" aria-label="Show blocks">${[
-        ['all', 'All', '1'],
-        ['remaining', 'Remaining', '2'],
-        ['problems', 'Problems', '3'],
+      <div class="seg filter-seg" role="radiogroup" aria-label="${t('Show blocks')}">${[
+        ['all', t('All'), '1', t('Show all blocks')],
+        ['remaining', t('Remaining'), '2', t('Show remaining blocks')],
+        ['problems', t('Problems'), '3', t('Show problems only')],
       ]
         .map(
-          ([k, l, key]) =>
-            `<button type="button" role="radio" aria-checked="${S.filter === k}" data-filter="${k}" data-tip="Show ${l.toLowerCase()} blocks" data-key="${key}">${l}</button>`,
+          ([k, l, key, tip]) =>
+            `<button type="button" role="radio" aria-checked="${S.filter === k}" data-filter="${k}" data-tip="${tip}" data-key="${key}">${l}</button>`,
         )
         .join('')}</div>
-      <div class="sh-field"><span>Show missing blocks as ghosts</span><button type="button" class="switch" role="switch" id="ghosts" aria-checked="${S.ghosts}" aria-label="Show missing blocks as ghosts" data-tip="Ghosts" data-key="G"></button></div>
-      <div class="updated" id="updated-at">${S.statusErr ? `<span style="color:var(--danger)">${esc(S.statusErr)}</span>` : `Updated ${ago < 2 ? 'just now' : `${ago}s ago`}`}</div>
+      <div class="sh-field"><span>${t('Show missing blocks as ghosts')}</span><button type="button" class="switch" role="switch" id="ghosts" aria-checked="${S.ghosts}" aria-label="${t('Show missing blocks as ghosts')}" data-tip="${t('Ghosts')}" data-key="G"></button></div>
+      <div class="updated" id="updated-at">${S.statusErr ? `<span style="color:var(--danger)">${esc(S.statusErr)}</span>` : updatedText(ago)}</div>
     </section>`;
   } else if (d.type !== 'selection') {
     const why = !isLive()
-      ? `Build progress shows while you're on ${esc(serverInfo()?.name || 'its server')}.`
+      ? t("Build progress shows while you're on {server}.", { server: esc(serverInfo()?.name || t('its server')) })
       : S.statusErr
         ? `<span style="color:var(--danger)">${esc(S.statusErr)}</span>`
-        : 'Checking the world…';
-    h += `<section class="panel"><div class="panel-head"><h3>Build progress</h3></div><div class="updated">${why}</div></section>`;
+        : t('Checking the world…');
+    h += `<section class="panel"><div class="panel-head"><h3>${t('Build progress')}</h3></div><div class="updated">${why}</div></section>`;
   }
 
   // With surroundings the view is bigger than the build; describe the build.
   const facts = [
-    ['Size', dims(data.inner ? data.inner.slice(3) : data.size)],
-    ['Blocks', fmt.format(data.nonAir)],
-    ['Origin', (data.inner ? data.origin.map((v, k) => v + data.inner[k]) : data.origin).join(', ')],
+    [t('Size'), dims(data.inner ? data.inner.slice(3) : data.size)],
+    [t('Blocks'), fmt.format(data.nonAir)],
+    [t('Origin'), (data.inner ? data.origin.map((v, k) => v + data.inner[k]) : data.origin).join(', ')],
   ];
   if (d.type === 'selection') {
-    facts.push(['Source', data.source === 'server' ? 'Server' : 'Your loaded chunks']);
-    if (data.unknown) facts.push(['Not loaded', `${fmt.format(data.unknown)} blocks`]);
+    facts.push([t('Source'), t(data.source === 'server' ? 'Server' : 'Your loaded chunks')]);
+    if (data.unknown) facts.push([t('Not loaded'), t('{n} blocks', { n: data.unknown })]);
   }
   const sh = d.type === 'shared' ? findShared(d.id) : null;
   const pl = d.type === 'placement' ? a.placements?.find((p) => p.id === d.id) : null;
   const author = sh?.author || pl?.author;
-  if (author) facts.push(['Author', author]);
+  if (author) facts.push([t('Author'), author]);
   if (sh) {
-    facts.push(['Shared by', sh.mine ? 'You' : sh.ownerName]);
-    if (!sh.manage || !isLive()) facts.push(['Visible to', accessText(sh)]);
-    facts.push(['Dimension', sh.dim.replace('minecraft:', '')]);
-    facts.push(['Shared', new Date(sh.updated).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })]);
+    facts.push([t('Shared by'), sh.mine ? t('You') : sh.ownerName]);
+    if (!sh.manage || !isLive()) facts.push([t('Visible to'), accessText(sh)]);
+    facts.push([t('Dimension'), sh.dim.replace('minecraft:', '')]);
+    facts.push([t('Shared'), new Date(sh.updated).toLocaleString(lang, { dateStyle: 'medium', timeStyle: 'short' })]);
   }
-  h += `<section class="panel"><div class="panel-head"><h3>Overview</h3></div><dl class="facts">${facts.map(([k, v]) => `<dt>${k}</dt><dd title="${esc(v)}">${esc(v)}</dd>`).join('')}</dl>`;
+  h += `<section class="panel"><div class="panel-head"><h3>${t('Overview')}</h3></div><dl class="facts">${facts.map(([k, v]) => `<dt>${k}</dt><dd title="${esc(v)}">${esc(v)}</dd>`).join('')}</dl>`;
   if (pl) {
     const busy = S.busy.has(pl.id);
     h += pl.sharedId
-      ? `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-share-now="${esc(pl.id)}" ${busy ? 'disabled' : ''}>${ICON.share}Update copy</button><button class="btn" data-unshare="${esc(pl.sharedId)}" data-key-of="${esc(pl.id)}">${ICON.stop}Stop sharing</button></div>
-         <p class="updated" style="margin:0 0 12px">Shared. Use Update copy after you move or edit the placement.</p>`
-      : `${a.terrain?.capture ? shareMarginHtml(pl) : ''}<div class="btn-row" style="margin:0 0 6px"><button class="btn primary" data-share-now="${esc(pl.id)}" ${!a.serverMod || busy ? 'disabled' : ''}>${ICON.share}${busy ? 'Sharing…' : 'Share to server'}</button></div>
-         <p class="updated" style="margin:0 0 12px">${a.serverMod ? 'Only you can see it at first. Then choose who else can view it, follow the build and see who helped.' : 'The server needs Litescape to share schematics.'}</p>`;
+      ? `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-share-now="${esc(pl.id)}" ${busy ? 'disabled' : ''}>${ICON.share}${t('Update copy')}</button><button class="btn" data-unshare="${esc(pl.sharedId)}" data-key-of="${esc(pl.id)}">${ICON.stop}${t('Stop sharing')}</button></div>
+         <p class="updated" style="margin:0 0 12px">${t('Shared. Use Update copy after you move or edit the placement.')}</p>`
+      : `${a.terrain?.capture ? shareMarginHtml(pl) : ''}<div class="btn-row" style="margin:0 0 6px"><button class="btn primary" data-share-now="${esc(pl.id)}" ${!a.serverMod || busy ? 'disabled' : ''}>${ICON.share}${t(busy ? 'Sharing…' : 'Share to server')}</button></div>
+         <p class="updated" style="margin:0 0 12px">${t(a.serverMod ? 'Only you can see it at first. Then choose who else can view it, follow the build and see who helped.' : 'The server needs Litescape to share schematics.')}</p>`;
   }
   if ((sh?.manage ?? sh?.mine) && isLive())
     // `manage` is missing from servers on an older version of the mod
-    h += `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-unshare="${esc(sh.id)}">${ICON.stop}Stop sharing</button></div>`;
+    h += `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-unshare="${esc(sh.id)}">${ICON.stop}${t('Stop sharing')}</button></div>`;
   h += '</section>';
   const shared = sh || (pl?.sharedId && findShared(pl.sharedId));
   if (shared) h += surroundingsHtml(shared);
@@ -1419,19 +1425,19 @@ function renderInspector() {
   const mats = data.mats
     .filter((m) => m.total && (!q || m.name.toLowerCase().includes(q)))
     .sort((x, y) => (S.status ? y.total - y.ok - (x.total - x.ok) : 0) || y.total - x.total);
-  h += `<section class="panel"><div class="panel-head"><h3>Materials</h3><button class="link" id="copy-mats" data-tip="Copy as text">${ICON.copy}Copy</button></div>
-    <div class="mat-tools"><input class="mat-filter" id="mat-filter" placeholder="Filter ${data.mats.length} materials" value="${esc(S.matQuery)}"></div>
+  h += `<section class="panel"><div class="panel-head"><h3>${t('Materials')}</h3><button class="link" id="copy-mats" data-tip="${t('Copy as text')}">${ICON.copy}${t('Copy')}</button></div>
+    <div class="mat-tools"><input class="mat-filter" id="mat-filter" placeholder="${t('Filter {n} materials', { n: data.mats.length })}" value="${esc(S.matQuery)}"></div>
     <div class="mats">${mats
       .slice(0, 300)
       .map((m) => {
         const idx = data.mats.indexOf(m);
         const left = m.total - m.ok;
         const done = S.status && left === 0;
-        const sub = S.status ? `${fmt.format(m.ok)} of ${fmt.format(m.total)} placed` : stacks(m.total);
+        const sub = S.status ? t('{ok} of {total} placed', { ok: m.ok, total: m.total }) : stacks(m.total);
         const count = S.status
           ? done
             ? `<span class="m-done">${ICON.check}</span>`
-            : `<b class="num">${fmt.format(left)}</b> left`
+            : t('<b class="num">{n}</b> left', { n: left })
           : `<b class="num">${fmt.format(m.total)}</b>`;
         const bar =
           S.status && !done ? `<span class="mini-bar"><i style="width:${(100 * m.ok) / m.total}%"></i></span>` : '';
@@ -1439,7 +1445,7 @@ function renderInspector() {
       })
       .join(
         '',
-      )}${mats.length > 300 ? `<div class="mats-more">${mats.length - 300} more. Filter to find them.</div>` : ''}${!mats.length ? '<div class="mats-more">No matching materials</div>' : ''}</div></section>`;
+      )}${mats.length > 300 ? `<div class="mats-more">${t('{n} more. Filter to find them.', { n: mats.length - 300 })}</div>` : ''}${!mats.length ? `<div class="mats-more">${t('No matching materials')}</div>` : ''}</div></section>`;
 
   const typing = document.activeElement?.id === 'access-add' ? document.activeElement.selectionStart : -1;
   if (h !== lastInspector) {
@@ -1476,18 +1482,18 @@ function captureBlocks(lo, size, m) {
 
 /** None / 8 / 16 / 32 blocks, up to the server's limit; sizes over the read cap can't be picked. */
 function marginSeg(id, cur, lo, size) {
-  return `<div class="seg filter-seg" role="radiogroup" aria-label="Surroundings">${MARGINS.filter(
+  return `<div class="seg filter-seg" role="radiogroup" aria-label="${t('Surroundings')}">${MARGINS.filter(
     (m) => m <= S.api.terrain.maxMargin,
   )
     .map((m) => {
       const n = captureBlocks(lo, size, m);
       const tip =
         n > READ_MAX
-          ? `Too large: ${fmt.format(n)} blocks, the limit is ${fmt.format(READ_MAX)}`
+          ? t('Too large: {n} blocks, the limit is {max}', { n, max: READ_MAX })
           : m
-            ? `${m} blocks around it, ${fmt.format(n)} blocks in all`
-            : 'Only the schematic';
-      return `<button type="button" role="radio" aria-checked="${cur === m}" aria-disabled="${n > READ_MAX}" data-margin="${m}" data-for="${esc(id)}" data-tip="${tip}">${m || 'None'}</button>`;
+            ? t('{m} blocks around it, {n} blocks in all', { m, n })
+            : t('Only the schematic');
+      return `<button type="button" role="radio" aria-checked="${cur === m}" aria-disabled="${n > READ_MAX}" data-margin="${m}" data-for="${esc(id)}" data-tip="${tip}">${m || t('None')}</button>`;
     })
     .join('')}</div>`;
 }
@@ -1503,22 +1509,22 @@ function pickedMargin(pl) {
 function shareMarginHtml(pl) {
   const lo = [0, 1, 2].map((k) => Math.min(...pl.boxes.map((b) => Math.min(b[k], b[k + 3]))));
   const m = pickedMargin(pl);
-  return `<div class="updated" style="margin:0 0 4px">Include surroundings</div>${marginSeg(pl.id, m, lo, boxSize(pl.boxes))}
-    <p class="updated" style="margin:0 0 12px">${m ? `Also captures the land and builds up to ${m} blocks around it, from the chunks the server has loaded.` : 'Shares only the schematic.'}</p>`;
+  return `<div class="updated" style="margin:0 0 4px">${t('Include surroundings')}</div>${marginSeg(pl.id, m, lo, boxSize(pl.boxes))}
+    <p class="updated" style="margin:0 0 12px">${m ? t('Also captures the land and builds up to {m} blocks around it, from the chunks the server has loaded.', { m }) : t('Shares only the schematic.')}</p>`;
 }
 
 /** Coverage of the captured surroundings, how they're drawn, and Recapture for whoever manages the share. */
 function surroundingsHtml(sh) {
   const canCapture = sh.manage && isLive() && S.api.terrain?.capture;
   if (!sh.margin && !canCapture) return '';
-  let h = `<section class="panel" id="surroundings"><div class="panel-head"><h3>Surroundings</h3>${sh.margin ? `<span class="row-meta">${sh.margin} blocks</span>` : ''}</div>`;
+  let h = `<section class="panel" id="surroundings"><div class="panel-head"><h3>${t('Surroundings')}</h3>${sh.margin ? `<span class="row-meta">${t('{n} blocks', { n: sh.margin })}</span>` : ''}</div>`;
   if (sh.margin) {
     const inView = S.desc.type === 'shared' && S.data?.inner;
     if (inView)
-      h += `<div class="seg filter-seg" role="radiogroup" aria-label="Show surroundings">${[
-        ['faded', 'Faded'],
-        ['on', 'Full color'],
-        ['off', 'Hidden'],
+      h += `<div class="seg filter-seg" role="radiogroup" aria-label="${t('Show surroundings')}">${[
+        ['faded', t('Faded')],
+        ['on', t('Full color')],
+        ['off', t('Hidden')],
       ]
         .map(
           ([k, l]) =>
@@ -1526,28 +1532,27 @@ function surroundingsHtml(sh) {
         )
         .join('')}</div>`;
     const missing = sh.chunks - sh.chunksCaptured;
-    h += `<p class="updated" style="margin:0 0 8px">Captured ${ago(sh.captured)}. ${fmt.format(sh.chunksCaptured)} of ${fmt.format(sh.chunks)} chunks.</p>`;
+    h += `<p class="updated" style="margin:0 0 8px">${t('Captured {when}. {done} of {total} chunks.', { when: ago(sh.captured), done: sh.chunksCaptured, total: sh.chunks })}</p>`;
     if (missing)
-      h += `<p class="updated" style="margin:0 0 8px">${missing === 1 ? "1 chunk wasn't" : `${fmt.format(missing)} chunks weren't`} loaded on the server, so ${missing === 1 ? 'it shows' : 'they show'} empty. Go near ${missing === 1 ? 'it' : 'them'} in game and recapture.</p>`;
+      h += `<p class="updated" style="margin:0 0 8px">${t("{n} chunks weren't loaded on the server, so they show empty. Go near them in game and recapture.", { n: missing })}</p>`;
     if (!inView && isLive())
-      h += '<p class="updated" style="margin:0 0 8px">Open it under Shared on this server to see them.</p>';
+      h += `<p class="updated" style="margin:0 0 8px">${t('Open it under Shared on this server to see them.')}</p>`;
   } else
-    h +=
-      '<p class="updated" style="margin:0 0 8px">Only the schematic is shared. Add the land around it so viewers see where it stands.</p>';
+    h += `<p class="updated" style="margin:0 0 8px">${t('Only the schematic is shared. Add the land around it so viewers see where it stands.')}</p>`;
   if (canCapture) {
     const m = S.margin.get(sh.id) ?? sh.margin;
     const busy = S.busy.has(`cap:${sh.id}`);
     const label = busy
-      ? 'Capturing…'
+      ? t('Capturing…')
       : m === sh.margin
-        ? 'Recapture'
+        ? t('Recapture')
         : m
-          ? `Capture ${m} blocks`
-          : 'Remove surroundings';
-    h += `<div class="updated" style="margin:0 0 4px">Blocks around it</div>${marginSeg(sh.id, m, sh.origin, sh.size)}<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-recapture="${esc(sh.id)}" ${busy || (!m && !sh.margin) ? 'disabled' : ''}>${ICON.retry}${label}</button></div>`;
+          ? t('Capture {m} blocks', { m })
+          : t('Remove surroundings');
+    h += `<div class="updated" style="margin:0 0 4px">${t('Blocks around it')}</div>${marginSeg(sh.id, m, sh.origin, sh.size)}<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-recapture="${esc(sh.id)}" ${busy || (!m && !sh.margin) ? 'disabled' : ''}>${ICON.retry}${label}</button></div>`;
   } else if (sh.margin && sh.manage && isLive())
     // Removing needs no capture permission, and it's the way out when a moved placement can't be recaptured.
-    h += `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-recapture="${esc(sh.id)}" data-remove ${S.busy.has(`cap:${sh.id}`) ? 'disabled' : ''}>${ICON.stop}Remove surroundings</button></div>`;
+    h += `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-recapture="${esc(sh.id)}" data-remove ${S.busy.has(`cap:${sh.id}`) ? 'disabled' : ''}>${ICON.stop}${t('Remove surroundings')}</button></div>`;
   return `${h}</section>`;
 }
 
@@ -1559,9 +1564,12 @@ async function recapture(id, margin = S.margin.get(id) ?? findShared(id)?.margin
   try {
     await api(`api/capture?id=${encodeURIComponent(id)}&margin=${margin}`, { method: 'POST' });
     S.margin.delete(id);
-    toast(margin ? 'Surroundings captured' : 'Surroundings removed', 'Everyone who can see it gets the new version.');
+    toast(
+      t(margin ? 'Surroundings captured' : 'Surroundings removed'),
+      t('Everyone who can see it gets the new version.'),
+    );
   } catch (err) {
-    toast("Couldn't capture surroundings", err.message, { error: true });
+    toast(t("Couldn't capture surroundings"), err.message, { error: true });
   } finally {
     S.busy.delete(key);
     renderInspector();
@@ -1575,15 +1583,15 @@ function avatar(uuid, name) {
 }
 
 const ACCESS = [
-  ['everyone', ICON.globe, 'Everyone on this server', 'Anyone with the mod can view it and follow the build.'],
-  ['players', ICON.people, 'Only people you choose', 'Pick the players who can see it.'],
-  ['private', ICON.lock, 'Only you', 'Hidden from everyone else.'],
+  ['everyone', ICON.globe, t('Everyone on this server'), t('Anyone with the mod can view it and follow the build.')],
+  ['players', ICON.people, t('Only people you choose'), t('Pick the players who can see it.')],
+  ['private', ICON.lock, t('Only you'), t('Hidden from everyone else.')],
 ];
 
 /** Who can see a schematic you manage. Changes apply right away, like the rest of the page. */
 function accessHtml(sh) {
   const cur = accessOf(sh);
-  let h = `<section class="panel" id="access" data-id="${esc(sh.id)}"><div class="panel-head"><h3 id="access-label">Access</h3>${S.access?.id === sh.id ? '<span class="row-meta">Saving…</span>' : ''}</div>
+  let h = `<section class="panel" id="access" data-id="${esc(sh.id)}"><div class="panel-head"><h3 id="access-label">${t('Access')}</h3>${S.access?.id === sh.id ? `<span class="row-meta">${t('Saving…')}</span>` : ''}</div>
     <div class="access-opts" role="radiogroup" aria-labelledby="access-label">`;
   for (const [k, icon, title, sub] of ACCESS)
     h += `<label class="access-opt"><input type="radio" name="access" value="${k}" ${cur.access === k ? 'checked' : ''}><span class="row-icon">${icon}</span><span class="row-main"><span class="row-title">${title}</span><span class="row-sub">${sub}</span></span><span class="access-check">${ICON.check}</span></label>`;
@@ -1593,34 +1601,34 @@ function accessHtml(sh) {
     h += `<div class="people">${people
       .map(
         ([uuid, name]) =>
-          `<div class="person">${avatar(uuid, name)}<span class="c-name">${esc(name)}</span><button type="button" class="icon-btn sm" data-remove-player="${esc(uuid)}" aria-label="Remove ${esc(name)}" data-tip="Remove">${ICON.x}</button></div>`,
+          `<div class="person">${avatar(uuid, name)}<span class="c-name">${esc(name)}</span><button type="button" class="icon-btn sm" data-remove-player="${esc(uuid)}" aria-label="${t('Remove {name}', { name: esc(name) })}" data-tip="${t('Remove')}">${ICON.x}</button></div>`,
       )
       .join('')}</div>`;
     const picks = candidates(sh, cur.players);
     S.accessSel = Math.min(S.accessSel, Math.max(0, picks.length - 1));
     const q = S.accessQuery.trim();
     h += `<div class="person-add">
-      <input id="access-add" class="mat-filter" placeholder="${people.length ? 'Add another player' : 'Add a player by name'}" value="${esc(S.accessQuery)}" autocomplete="off" spellcheck="false"
+      <input id="access-add" class="mat-filter" placeholder="${t(people.length ? 'Add another player' : 'Add a player by name')}" value="${esc(S.accessQuery)}" autocomplete="off" spellcheck="false"
         role="combobox" aria-autocomplete="list" aria-controls="access-sugg" aria-expanded="${S.accessOpen}" aria-activedescendant="${picks.length ? `sugg-${S.accessSel}` : ''}">
-      <div class="sugg" id="access-sugg" role="listbox" aria-label="Players">${
+      <div class="sugg" id="access-sugg" role="listbox" aria-label="${t('Players')}">${
         picks
           .map(
             (p, i) =>
               `<button type="button" tabindex="-1" class="pal-item" role="option" id="sugg-${i}" data-add-player="${i}" aria-selected="${i === S.accessSel}">${avatar(p.uuid, p.name)}<span class="row-main"><span class="row-title">${esc(p.name)}</span><span class="row-sub">${p.why}</span></span></button>`,
           )
           .join('') ||
-        `<div class="pal-empty">${q ? `Nobody online or among the builders is called “${esc(q)}”.` : 'Nobody else is online.'} Players can be added while they're online or once they've helped build.</div>`
+        `<div class="pal-empty">${q ? t('Nobody online or among the builders is called “{name}”.', { name: esc(q) }) : t('Nobody else is online.')} ${t("Players can be added while they're online or once they've helped build.")}</div>`
       }</div></div>`;
   }
-  return `${h}<p class="updated" style="margin:8px 0 12px">Operators can always see shared schematics.</p></section>`;
+  return `${h}<p class="updated" style="margin:8px 0 12px">${t('Operators can always see shared schematics.')}</p></section>`;
 }
 
 /** Players who can be added: those online now, then people who helped build it. */
 function candidates(sh, players) {
   const all = new Map();
-  for (const p of S.api.online || []) all.set(p.uuid, { ...p, why: 'Online now' });
+  for (const p of S.api.online || []) all.set(p.uuid, { ...p, why: t('Online now') });
   for (const [uuid, c] of Object.entries(sh.contributors || {}))
-    if (!all.has(uuid)) all.set(uuid, { uuid, name: c.name, why: 'Helped build' });
+    if (!all.has(uuid)) all.set(uuid, { uuid, name: c.name, why: t('Helped build') });
   all.delete(sh.owner);
   for (const uuid of Object.keys(players)) all.delete(uuid);
   const q = S.accessQuery.trim().toLowerCase();
@@ -1635,7 +1643,7 @@ async function setAccess(id, access, players) {
     await api('api/access', { method: 'POST', body: JSON.stringify({ id, access, players }) });
   } catch (err) {
     S.access = null;
-    toast("Couldn't change who can see it", err.message, { error: true });
+    toast(t("Couldn't change who can see it"), err.message, { error: true });
     renderInspector();
     renderNav();
   }
@@ -1660,40 +1668,35 @@ function contributorsHtml(sh, me) {
     .map(([uuid, c]) => ({ uuid, ...c }))
     .sort((x, y) => y.placed - x.placed);
   const total = list.reduce((n, c) => n + c.placed, 0);
-  let h = `<section class="panel"><div class="panel-head"><h3>Contributors</h3>${total ? `<span class="row-meta num">${fmt.format(total)} placed</span>` : ''}</div>`;
-  if (!list.length) {
-    return (
-      h +
-      '<p class="updated" style="margin:0 0 12px">Nobody has placed a block of it yet. Blocks placed by hand count from the moment it was shared.</p></section>'
-    );
-  }
+  let h = `<section class="panel"><div class="panel-head"><h3>${t('Contributors')}</h3>${total ? `<span class="row-meta num">${t('{n} placed', { n: total })}</span>` : ''}</div>`;
+  if (!list.length)
+    return `${h}<p class="updated" style="margin:0 0 12px">${t('Nobody has placed a block of it yet. Blocks placed by hand count from the moment it was shared.')}</p></section>`;
   h += '<div class="contribs">';
   for (const c of list) {
     const pct = (100 * c.placed) / total;
     h += `<div class="contrib">${avatar(c.uuid, c.name)}
-      <span class="c-main"><span class="c-name">${esc(c.name)}${c.name === me ? '<span class="you">you</span>' : ''}</span><span class="c-sub">Active ${ago(c.last)}</span></span>
+      <span class="c-main"><span class="c-name">${esc(c.name)}${c.name === me ? `<span class="you">${t('you')}</span>` : ''}</span><span class="c-sub">${t('Active {when}', { when: ago(c.last) })}</span></span>
       <span class="c-count"><b class="num">${fmt.format(c.placed)}</b><span class="c-pct num">${pct < 1 ? '<1' : Math.round(pct)}%</span></span>
       <span class="c-bar"><i style="width:${pct.toFixed(1)}%"></i></span></div>`;
   }
-  return (
-    h +
-    '</div><p class="updated" style="margin:0 0 12px">Counts blocks placed by hand that match the schematic.</p></section>'
-  );
+  return `${h}</div><p class="updated" style="margin:0 0 12px">${t('Counts blocks placed by hand that match the schematic.')}</p></section>`;
 }
 
-function ago(t) {
-  const s = Math.max(0, (Date.now() - t) / 1000);
-  if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
-  return new Date(t).toLocaleDateString([], { month: 'short', day: 'numeric' });
+function ago(when) {
+  const s = Math.max(0, (Date.now() - when) / 1000);
+  if (s < 60) return t('just now');
+  if (s < 3600) return t('{n} min ago', { n: Math.floor(s / 60) });
+  if (s < 86400) return t('{n} h ago', { n: Math.floor(s / 3600) });
+  return new Date(when).toLocaleDateString(lang, { month: 'short', day: 'numeric' });
 }
+/** "Updated 5s ago" under build progress; `s` is seconds since the last status. */
+const updatedText = (s) => (s < 2 ? t('Updated just now') : t('Updated {n}s ago', { n: s }));
 
 function stacks(n) {
   if (n < 64) return '';
   const s = Math.floor(n / 64),
     r = n % 64;
-  return `${s} stack${s > 1 ? 's' : ''}${r ? ` + ${r}` : ''}`;
+  return t('{n} stacks', { n: s }) + (r ? ` + ${r}` : '');
 }
 
 function renderLayers() {
@@ -1707,7 +1710,7 @@ function renderLayers() {
   sl.value = String(S.layerY);
   const wrap = $('layer-slider-wrap');
   wrap.setAttribute('aria-disabled', String(S.layerMode === 'all'));
-  $('layer-value').textContent = `y ${data.origin[1] + S.layerY}`;
+  $('layer-value').textContent = `y ${data.origin[1] + S.layerY}`; // a coordinate, the same in every language
   wrap.hidden = top === 0;
 }
 
@@ -1914,7 +1917,7 @@ function isolate(idx) {
   S.pendingFit = true;
   renderInspector();
   remesh();
-  if (S.iso >= 0) toast(`Showing only ${S.data.mats[idx].name}`, 'Press Esc to show everything');
+  if (S.iso >= 0) toast(t('Showing only {name}', { name: S.data.mats[idx].name }), t('Press Esc to show everything'));
 }
 
 async function sharePlacement(id) {
@@ -1925,21 +1928,21 @@ async function sharePlacement(id) {
   renderInspector();
   try {
     // Update copy keeps the surroundings it had (and recaptures them where the placement now is).
-    const t = S.api.terrain;
+    const ter = S.api.terrain;
     // Without permission the stored margin still goes along, so the server keeps (not drops) the snapshot.
     const margin = p?.sharedId
-      ? Math.min(findShared(p.sharedId)?.margin ?? 0, t?.capture ? t.maxMargin : Infinity)
-      : t?.capture && p
+      ? Math.min(findShared(p.sharedId)?.margin ?? 0, ter?.capture ? ter.maxMargin : Infinity)
+      : ter?.capture && p
         ? pickedMargin(p)
         : 0;
     await api(`api/share?id=${encodeURIComponent(id)}&margin=${margin}`, { method: 'POST' });
     toast(
-      p?.sharedId ? 'Shared copy updated' : `Shared “${p?.name ?? 'placement'}”`,
-      p?.sharedId ? 'Who can see it stays the same.' : 'Only you can see it so far.',
+      p?.sharedId ? t('Shared copy updated') : t('Shared “{name}”', { name: p?.name ?? t('placement') }),
+      t(p?.sharedId ? 'Who can see it stays the same.' : 'Only you can see it so far.'),
       p?.sharedId
         ? {}
         : {
-            action: 'Choose who',
+            action: t('Choose who'),
             run: () => {
               S.scrollToAccess = true; // the Access panel shows once the placement and its shared copy are loaded
               open({ type: 'placement', id });
@@ -1948,7 +1951,7 @@ async function sharePlacement(id) {
           },
     );
   } catch (err) {
-    toast("Couldn't share", err.message, { error: true });
+    toast(t("Couldn't share"), err.message, { error: true });
   } finally {
     S.busy.delete(id);
     renderNav();
@@ -1961,12 +1964,12 @@ async function unshare(sharedId, placementId) {
     const pid = placementId || S.api.placements?.find((p) => p.sharedId === sharedId)?.id;
     if (pid && S.desc?.type === 'shared' && S.desc.id === sharedId) open({ type: 'placement', id: pid });
     toast(
-      'Stopped sharing',
-      'Other players can no longer see it.',
-      pid ? { action: 'Undo', run: () => sharePlacement(pid) } : {},
+      t('Stopped sharing'),
+      t('Other players can no longer see it.'),
+      pid ? { action: t('Undo'), run: () => sharePlacement(pid) } : {},
     );
   } catch (err) {
-    toast("Couldn't stop sharing", err.message, { error: true });
+    toast(t("Couldn't stop sharing"), err.message, { error: true });
   }
 }
 
@@ -1976,11 +1979,13 @@ function copyMaterials() {
     .filter((m) => m.total)
     .sort((a, b) => b.total - a.total)
     .map((m) =>
-      S.status ? `${m.name}\t${m.total - m.ok} left\t${m.ok}/${m.total}` : `${m.name}\t${m.total}\t${stacks(m.total)}`,
+      S.status
+        ? `${m.name}\t${t('{n} left', { n: m.total - m.ok })}\t${m.ok}/${m.total}`
+        : `${m.name}\t${m.total}\t${stacks(m.total)}`,
     );
   navigator.clipboard.writeText(rows.join('\n')).then(
-    () => toast('Copied material list', `${rows.length} materials`),
-    () => toast("Couldn't copy", 'The browser blocked clipboard access', { error: true }),
+    () => toast(t('Copied material list'), t('{n} materials', { n: rows.length })),
+    () => toast(t("Couldn't copy"), t('The browser blocked clipboard access'), { error: true }),
   );
 }
 
@@ -1999,7 +2004,7 @@ function screenshot() {
     a.download = `${name}.png`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    toast('Screenshot saved', `${name}.png`);
+    toast(t('Screenshot saved'), `${name}.png`);
   });
   resize();
 }
@@ -2124,7 +2129,7 @@ function pick() {
     : '';
   card.innerHTML = `<div class="hc-title"><img alt="" src="${matIcon((e.t ? d.tmats : d.mats)[e.mid])}" width="16" height="16" style="image-rendering:pixelated">${esc(pretty(e.n))}</div>
     ${props ? `<div class="hc-sub">${esc(props)}</div>` : ''}
-    ${e.t ? `<div class="hc-sub">Surroundings, captured ${ago(findShared(S.desc.id)?.captured)}</div>` : ''}
+    ${e.t ? `<div class="hc-sub">${t('Surroundings, captured {when}', { when: ago(findShared(S.desc.id)?.captured) })}</div>` : ''}
     <div class="hc-pos">${d.origin[0] + hit.x}, ${d.origin[1] + hit.y}, ${d.origin[2] + hit.z}</div>
     ${st ? `<div class="hc-status"><span class="sw" style="width:8px;height:8px;border-radius:2px;background:${STATUS[st].color}"></span>${STATUS[st].label}</div>` : ''}`;
   card.hidden = false;
@@ -2188,7 +2193,7 @@ try {
 if (iris)
   iris.onLost = () => {
     SH.status = 'error';
-    SH.error = 'The graphics driver reset the shader view. Reload the page to use shaders again.';
+    SH.error = t('The graphics driver reset the shader view. Reload the page to use shaders again.');
     SH.live = false;
     syncShaderView();
     renderInspector();
@@ -2243,7 +2248,7 @@ function syncShaderView() {
   const showPill = !!S.data && SH.settings.enabled && SH.status === 'compiling';
   pill.hidden = !showPill;
   if (showPill)
-    pill.innerHTML = `<span class="spinner xs"></span>Compiling ${esc(packName(SH.settings.pack))} for the browser…`;
+    pill.innerHTML = `<span class="spinner xs"></span>${t('Compiling {name} for the browser…', { name: esc(packName(SH.settings.pack)) })}`;
   renderTop();
 }
 
@@ -2283,7 +2288,8 @@ function renderShaderBits() {
 }
 function renderInspectorTabsOnly() {
   const dot = document.querySelector('#tab-shaders');
-  if (dot) dot.innerHTML = `Shaders${SH.settings.enabled ? '<span class="tab-dot" aria-label="on"></span>' : ''}`;
+  if (dot)
+    dot.innerHTML = `${t('Shaders')}${SH.settings.enabled ? `<span class="tab-dot" aria-label="${t('on')}"></span>` : ''}`;
 }
 
 let compileSeq = 0;
@@ -2295,7 +2301,7 @@ async function compileShaders() {
   SH.error = null;
   renderShaderBits();
   try {
-    const body = { pack: id };
+    const body = { pack: id, lang: MC_LOCALE[lang] }; // the pack's own labels, in this language where it has them
     if (SH.settings.options[id]) body.options = SH.settings.options[id];
     const res = await api('api/shaders/load', {
       method: 'POST',
@@ -2328,7 +2334,7 @@ async function compileShaders() {
     if (seq !== compileSeq) return;
     SH.status = 'error';
     SH.error = err.message;
-    toast(`Couldn't load ${packName(id)}`, err.message, { error: true });
+    toast(t("Couldn't load {name}", { name: packName(id) }), err.message, { error: true });
   }
   renderShaderBits();
 }
@@ -2376,7 +2382,7 @@ function saveShaderSettings() {
 function setShaderEnabled(on) {
   if (!S.data) return;
   if (on && !iris) {
-    toast("This browser can't run shader packs", 'It needs WebGL 2 with floating-point render targets.', {
+    toast(t("This browser can't run shader packs"), t('It needs WebGL 2 with floating-point render targets.'), {
       error: true,
     });
     return;
@@ -2385,7 +2391,7 @@ function setShaderEnabled(on) {
   saveShaderSettings();
   if (on && !SH.settings.pack) {
     openShaderTab();
-    toast('Pick a shader pack', 'Choose one you have, or get a popular one.');
+    toast(t('Pick a shader pack'), t('Choose one you have, or get a popular one.'));
   } else if (on && !SH.live && SH.status !== 'compiling') compileShaders();
   remesh();
   renderShaderBits();
@@ -2426,12 +2432,15 @@ async function installPack(slug) {
   try {
     const r = await api(`api/shaders/install?slug=${encodeURIComponent(slug)}`, { method: 'POST' });
     SH.list = await api('api/shaders');
-    toast(`${f?.name || 'Pack'} installed`, 'Saved to your shaderpacks folder, so Iris can use it too.');
+    toast(
+      t('{name} installed', { name: f?.name || t('Pack') }),
+      t('Saved to your shaderpacks folder, so Iris can use it too.'),
+    );
     selectPack(r.id);
   } catch (err) {
-    toast(`Couldn't get ${f?.name || 'the pack'}`, err.message, {
+    toast(t("Couldn't get {name}", { name: f?.name || t('the pack') }), err.message, {
       error: true,
-      action: 'Retry',
+      action: t('Retry'),
       run: () => installPack(slug),
     });
   } finally {
@@ -2474,8 +2483,8 @@ const humanize = (n) =>
 const optLabel = (n) => L(`option.${n}`, humanize(n));
 const screenLabel = (n) => L(`screen.${n}`, humanize(n));
 function valLabel(n, v) {
-  if (v === 'true') return 'On';
-  if (v === 'false') return 'Off';
+  if (v === 'true') return t('On');
+  if (v === 'false') return t('Off');
   const named = L(`value.${n}.${v}`, null);
   return named ?? `${L(`prefix.${n}`, '')}${v}${L(`suffix.${n}`, '')}`;
 }
@@ -2581,7 +2590,7 @@ function optRow(o, showPath) {
   const v = SH.values[o.n] ?? o.d;
   if (o.n in SH.locked) {
     // The pack itself switches this off where it can't work (here: no compute shaders or image storage in WebGL).
-    return `<div class="opt locked"><span class="opt-text"><span class="opt-label" title="${esc(o.n)}">${esc(optLabel(o.n))}</span><span class="opt-sub">Not available in the browser</span></span><span class="opt-static">${esc(valLabel(o.n, SH.locked[o.n]))}</span></div>`;
+    return `<div class="opt locked"><span class="opt-text"><span class="opt-label" title="${esc(o.n)}">${esc(optLabel(o.n))}</span><span class="opt-sub">${t('Not available in the browser')}</span></span><span class="opt-static">${esc(valLabel(o.n, SH.locked[o.n]))}</span></div>`;
   }
   const label = optLabel(o.n);
   let comment = L(`option.${o.n}.comment`, o.c || '');
@@ -2598,27 +2607,27 @@ function optRow(o, showPath) {
   } else
     ctl = `<select class="opt-select" aria-label="${esc(label)}" data-opt-select="${esc(o.n)}">${o.vals.map((x) => `<option value="${esc(x)}"${x === v ? ' selected' : ''}>${esc(valLabel(o.n, x))}</option>`).join('')}</select>`;
   const reset = mod
-    ? `<button type="button" class="opt-reset" data-opt-reset="${esc(o.n)}" aria-label="Reset ${esc(label)}" data-tip="Reset to ${esc(valLabel(o.n, o.d))}">${ICON.retry}</button>`
+    ? `<button type="button" class="opt-reset" data-opt-reset="${esc(o.n)}" aria-label="${t('Reset {name}', { name: esc(label) })}" data-tip="${t('Reset to {value}', { value: esc(valLabel(o.n, o.d)) })}">${ICON.retry}</button>`
     : '';
   return `<div class="opt${mod ? ' mod' : ''}${SH.sliders.has(o.n) && o.vals.length > 1 ? ' wide' : ''}">
     <span class="opt-text"><span class="opt-label" title="${esc(o.n)}">${esc(label)}</span>${sub ? `<span class="opt-sub">${esc(sub)}</span>` : ''}</span>${reset}${ctl}</div>`;
 }
 
-function timeLabel(t) {
-  const h = Math.floor((t / 1000 + 6) % 24),
-    m = Math.floor(((t % 1000) / 1000) * 60);
+function timeLabel(time) {
+  const h = Math.floor((time / 1000 + 6) % 24),
+    m = Math.floor(((time % 1000) / 1000) * 60);
   const part =
-    t < 1000 || t >= 23000
-      ? 'Sunrise'
-      : t < 5000
-        ? 'Morning'
-        : t < 7000
-          ? 'Noon'
-          : t < 11500
-            ? 'Afternoon'
-            : t < 13000
-              ? 'Sunset'
-              : 'Night';
+    time < 1000 || time >= 23000
+      ? t('Sunrise')
+      : time < 5000
+        ? t('Morning')
+        : time < 7000
+          ? t('Noon')
+          : time < 11500
+            ? t('Afternoon')
+            : time < 13000
+              ? t('Sunset')
+              : t('Night');
   return `${h}:${String(m).padStart(2, '0')} · ${part}`;
 }
 
@@ -2629,59 +2638,62 @@ function renderShaders() {
   const name = st.pack ? packName(st.pack) : '';
   let lead;
   if (!iris)
-    lead = `<span class="sh-bad">This browser can't run shader packs. It needs WebGL 2 with floating-point render targets.</span>`;
-  else if (!st.pack) lead = 'Pick a pack below. It runs right here in the page, using the same packs as Iris.';
-  else if (SH.status === 'compiling') lead = `<span class="spinner xs"></span>Compiling ${esc(name)}…`;
+    lead = `<span class="sh-bad">${t("This browser can't run shader packs. It needs WebGL 2 with floating-point render targets.")}</span>`;
+  else if (!st.pack) lead = t('Pick a pack below. It runs right here in the page, using the same packs as Iris.');
+  else if (SH.status === 'compiling')
+    lead = `<span class="spinner xs"></span>${t('Compiling {name}…', { name: esc(name) })}`;
   else if (SH.status === 'error')
-    lead = `<span class="sh-bad">${esc(SH.error)}</span> <button type="button" class="link" data-sh="retry">${ICON.retry}Try again</button>`;
+    lead = `<span class="sh-bad">${esc(SH.error)}</span> <button type="button" class="link" data-sh="retry">${ICON.retry}${t('Try again')}</button>`;
   else if (SH.status === 'ready') {
-    lead = st.enabled ? `Running <b>${esc(name)}</b>.` : `<b>${esc(name)}</b> is ready. Turn shaders on to see it.`;
+    lead = t(st.enabled ? 'Running <b>{name}</b>.' : '<b>{name}</b> is ready. Turn shaders on to see it.', {
+      name: esc(name),
+    });
     if (SH.errors.length)
-      lead += ` <button type="button" class="link warn" data-sh="problems">${SH.errors.length} ${SH.errors.length === 1 ? 'effect' : 'effects'} unavailable</button>`;
-  } else lead = `<b>${esc(name)}</b> is selected.`;
-  h += `<section class="panel"><div class="panel-head"><h3>Shaders</h3><button type="button" class="switch" role="switch" aria-checked="${!!st.enabled}" aria-label="Use shaders" data-sh="toggle" ${iris ? '' : 'disabled'} data-tip="Shaders" data-key="V"></button></div>
+      lead += ` <button type="button" class="link warn" data-sh="problems">${t('{n} effects unavailable', { n: SH.errors.length })}</button>`;
+  } else lead = t('<b>{name}</b> is selected.', { name: esc(name) });
+  h += `<section class="panel"><div class="panel-head"><h3>${t('Shaders')}</h3><button type="button" class="switch" role="switch" aria-checked="${!!st.enabled}" aria-label="${t('Use shaders')}" data-sh="toggle" ${iris ? '' : 'disabled'} data-tip="${t('Shaders')}" data-key="V"></button></div>
     <p class="sh-lead">${lead}</p></section>`;
 
-  h += `<section class="panel"><div class="panel-head"><h3>Your packs</h3><button type="button" class="link" data-sh="folder" data-tip="${esc(SH.list?.dir || '')}">${ICON.folder}Open folder</button></div>`;
+  h += `<section class="panel"><div class="panel-head"><h3>${t('Your packs')}</h3><button type="button" class="link" data-sh="folder" data-tip="${esc(SH.list?.dir || '')}">${ICON.folder}${t('Open folder')}</button></div>`;
   h += packs.length
-    ? `<div class="packs" role="radiogroup" aria-label="Shader pack">${packs.map((p) => `<button type="button" class="pack" role="radio" aria-checked="${p.id === st.pack}" data-pack="${esc(p.id)}" ${iris ? '' : 'disabled'}><span class="pack-dot"></span><span class="pack-name">${esc(p.name)}</span>${p.id === st.pack && SH.status === 'compiling' ? '<span class="spinner xs"></span>' : ''}</button>`).join('')}</div>`
-    : `<div class="nav-empty">No packs yet. Get a popular one below, or put .zip packs in your shaderpacks folder.</div>`;
+    ? `<div class="packs" role="radiogroup" aria-label="${t('Shader pack')}">${packs.map((p) => `<button type="button" class="pack" role="radio" aria-checked="${p.id === st.pack}" data-pack="${esc(p.id)}" ${iris ? '' : 'disabled'}><span class="pack-dot"></span><span class="pack-name">${esc(p.name)}</span>${p.id === st.pack && SH.status === 'compiling' ? '<span class="spinner xs"></span>' : ''}</button>`).join('')}</div>`
+    : `<div class="nav-empty">${t('No packs yet. Get a popular one below, or put .zip packs in your shaderpacks folder.')}</div>`;
   h += '</section>';
 
   const have = new Set(packs.map((p) => p.slug).filter(Boolean));
   const feat = (SH.featured?.list || SH.list?.featured || []).filter((f) => !have.has(f.slug));
   if (feat.length) {
     // Collapsed once you have packs, so the pack's settings stay close to the top.
-    const head = `<h3>${packs.length ? `Get more packs` : 'Popular packs'}</h3><span class="row-meta">${SH.featured?.offline ? 'Modrinth is unreachable' : 'From Modrinth'}</span>`;
+    const head = `<h3>${t(packs.length ? 'Get more packs' : 'Popular packs')}</h3><span class="row-meta">${t(SH.featured?.offline ? 'Modrinth is unreachable' : 'From Modrinth')}</span>`;
     h += packs.length
       ? `<section class="panel"><details class="more"${SH.moreOpen ? ' open' : ''}><summary class="panel-head">${head}</summary><div class="feats">`
       : `<section class="panel"><div class="panel-head">${head}</div><div class="feats">`;
     for (const f of feat) {
       const busy = SH.installing.has(f.slug);
       const dl = f.downloads
-        ? `${new Intl.NumberFormat([], { notation: 'compact' }).format(f.downloads)} downloads`
+        ? t('{n} downloads', { n: new Intl.NumberFormat(lang, { notation: 'compact' }).format(f.downloads) })
         : '';
       h += `<div class="feat">${f.icon ? `<img alt="" src="${esc(f.icon)}" loading="lazy">` : `<span class="feat-icon">${ICON.sparkle}</span>`}
         <span class="feat-main"><span class="feat-name">${esc(f.name)}</span><span class="feat-sub">${esc(f.author)}${dl ? ` · ${dl}` : ''}</span></span>
-        <button type="button" class="btn sm" data-install="${esc(f.slug)}" ${busy || !iris ? 'disabled' : ''}>${busy ? '<span class="spinner xs"></span>Getting…' : `${ICON.download}Get`}</button></div>`;
+        <button type="button" class="btn sm" data-install="${esc(f.slug)}" ${busy || !iris ? 'disabled' : ''}>${busy ? `<span class="spinner xs"></span>${t('Getting…')}` : `${ICON.download}${t('Get')}`}</button></div>`;
     }
     h += packs.length ? '</div></details></section>' : '</div></section>';
   }
 
   if (st.pack && SH.status !== 'error' && iris) {
-    h += `<section class="panel"><div class="panel-head"><h3>Scene</h3></div>
-      <div class="sh-field"><span>Time of day</span><output id="sh-time-out">${esc(timeLabel(st.time))}</output></div>
-      <div class="sh-time">${ICON.sun}<input type="range" id="sh-time" min="0" max="23900" step="100" value="${st.time}" aria-label="Time of day" aria-valuetext="${esc(timeLabel(st.time))}">${ICON.moon}</div>
-      <div class="sh-field"><span>Weather</span><span class="seg flat" role="radiogroup" aria-label="Weather">${[
-        [0, 'Clear'],
-        [1, 'Rain'],
+    h += `<section class="panel"><div class="panel-head"><h3>${t('Scene')}</h3></div>
+      <div class="sh-field"><span>${t('Time of day')}</span><output id="sh-time-out">${esc(timeLabel(st.time))}</output></div>
+      <div class="sh-time">${ICON.sun}<input type="range" id="sh-time" min="0" max="23900" step="100" value="${st.time}" aria-label="${t('Time of day')}" aria-valuetext="${esc(timeLabel(st.time))}">${ICON.moon}</div>
+      <div class="sh-field"><span>${t('Weather')}</span><span class="seg flat" role="radiogroup" aria-label="${t('Weather')}">${[
+        [0, t('Clear')],
+        [1, t('Rain')],
       ]
         .map(
           ([v, l]) =>
             `<button type="button" role="radio" aria-checked="${st.rain === v}" data-rain="${v}">${l}</button>`,
         )
         .join('')}</span></div>
-      <div class="sh-field"><span>Resolution</span><span class="seg flat" role="radiogroup" aria-label="Resolution">${[
+      <div class="sh-field"><span>${t('Resolution')}</span><span class="seg flat" role="radiogroup" aria-label="${t('Resolution')}">${[
         [0.5, '50%'],
         [0.75, '75%'],
         [1, '100%'],
@@ -2698,14 +2710,14 @@ function renderShaders() {
     const modified = SH.schema.filter((o) => SH.values[o.n] !== o.d).length;
     const profs = profiles();
     const cur = profs.length ? currentProfile() : null;
-    h += `<section class="panel"><div class="panel-head"><h3>Pack settings</h3>${modified ? `<button type="button" class="link" data-sh="reset" data-tip="Back to the pack's defaults">${ICON.retry}Reset ${modified}</button>` : ''}</div>`;
+    h += `<section class="panel"><div class="panel-head"><h3>${t('Pack settings')}</h3>${modified ? `<button type="button" class="link" data-sh="reset" data-tip="${esc(t("Back to the pack's defaults"))}">${ICON.retry}${t('Reset {n}', { n: modified })}</button>` : ''}</div>`;
     if (profs.length > 5) {
-      h += `<div class="sh-field"><span>Profile</span><select class="opt-select" id="sh-profile" aria-label="Profile">${cur ? '' : '<option value="" selected>Custom</option>'}${profs.map((p) => `<option value="${esc(p.name)}"${p.name === cur ? ' selected' : ''}>${esc(p.label)}</option>`).join('')}</select></div>`;
+      h += `<div class="sh-field"><span>${t('Profile')}</span><select class="opt-select" id="sh-profile" aria-label="${t('Profile')}">${cur ? '' : `<option value="" selected>${t('Custom')}</option>`}${profs.map((p) => `<option value="${esc(p.name)}"${p.name === cur ? ' selected' : ''}>${esc(p.label)}</option>`).join('')}</select></div>`;
     } else if (profs.length) {
-      h += `<div class="sh-field"><span>Profile</span>${cur ? '' : '<span class="chip">Custom</span>'}</div>
-        <div class="seg flat profiles" role="radiogroup" aria-label="Profile">${profs.map((p) => `<button type="button" role="radio" aria-checked="${p.name === cur}" data-profile="${esc(p.name)}">${esc(p.label)}</button>`).join('')}</div>`;
+      h += `<div class="sh-field"><span>${t('Profile')}</span>${cur ? '' : `<span class="chip">${t('Custom')}</span>`}</div>
+        <div class="seg flat profiles" role="radiogroup" aria-label="${t('Profile')}">${profs.map((p) => `<button type="button" role="radio" aria-checked="${p.name === cur}" data-profile="${esc(p.name)}">${esc(p.label)}</button>`).join('')}</div>`;
     }
-    h += `<div class="mat-tools"><input class="mat-filter" id="sh-search" type="search" placeholder="Search ${SH.schema.length} settings" value="${esc(SH.query)}" aria-label="Search pack settings"></div>`;
+    h += `<div class="mat-tools"><input class="mat-filter" id="sh-search" type="search" placeholder="${t('Search {n} settings', { n: SH.schema.length })}" value="${esc(SH.query)}" aria-label="${t('Search pack settings')}"></div>`;
     const q = SH.query.trim().toLowerCase();
     if (q) {
       const hits = SH.schema.filter((o) =>
@@ -2717,12 +2729,12 @@ function renderShaders() {
             .map((o) => optRow(o, true))
             .join(
               '',
-            )}</div>${hits.length > 60 ? `<div class="mats-more">${hits.length - 60} more. Keep typing to narrow it down.</div>` : ''}`
-        : '<div class="mats-more">No settings match.</div>';
+            )}</div>${hits.length > 60 ? `<div class="mats-more">${t('{n} more. Keep typing to narrow it down.', { n: hits.length - 60 })}</div>` : ''}`
+        : `<div class="mats-more">${t('No settings match.')}</div>`;
     } else {
       const path = SH.screen;
       if (path.length) {
-        h += `<nav class="sh-crumbs" aria-label="Settings screens"><button type="button" class="link" data-screen-up="0">${ICON.back}All</button>${path.map((s, i) => `<span class="sep">›</span>${i === path.length - 1 ? `<b>${esc(screenLabel(s))}</b>` : `<button type="button" class="link" data-screen-up="${i + 1}">${esc(screenLabel(s))}</button>`}`).join('')}</nav>`;
+        h += `<nav class="sh-crumbs" aria-label="${t('Settings screens')}"><button type="button" class="link" data-screen-up="0">${ICON.back}${t('All')}</button>${path.map((s, i) => `<span class="sep">›</span>${i === path.length - 1 ? `<b>${esc(screenLabel(s))}</b>` : `<button type="button" class="link" data-screen-up="${i + 1}">${esc(screenLabel(s))}</button>`}`).join('')}</nav>`;
       }
       const items = screenItems(path[path.length - 1] || '');
       h += `<div class="opts">${
@@ -2732,22 +2744,22 @@ function renderShaders() {
               ? `<button type="button" class="opt opt-link" data-screen="${esc(it.screen)}"><span class="opt-text"><span class="opt-label">${esc(screenLabel(it.screen))}</span>${L(`screen.${it.screen}.comment`, '') ? `<span class="opt-sub">${esc(L(`screen.${it.screen}.comment`, ''))}</span>` : ''}</span>${ICON.chevron}</button>`
               : optRow(it.opt, false),
           )
-          .join('') || '<div class="mats-more">This screen is empty.</div>'
+          .join('') || `<div class="mats-more">${t('This screen is empty.')}</div>`
       }</div>`;
     }
     h += '</section>';
   }
 
   if (SH.errors.length && SH.status === 'ready') {
-    h += `<section class="panel" id="sh-problems"><div class="panel-head"><h3>Unavailable in the browser</h3><span class="row-meta">${SH.errors.length}</span></div>
-      <p class="sh-lead">The pack still runs without these parts of it. Usually that means a missing effect, like colored lighting.</p>
+    h += `<section class="panel" id="sh-problems"><div class="panel-head"><h3>${t('Unavailable in the browser')}</h3><span class="row-meta">${SH.errors.length}</span></div>
+      <p class="sh-lead">${t('The pack still runs without these parts of it. Usually that means a missing effect, like colored lighting.')}</p>
       <div class="problems">${SH.errors.map((e) => `<div class="problem"><code>${esc(e.program)}</code><span>${esc(e.message)}</span></div>`).join('')}</div></section>`;
   }
   return h;
 }
 
-function shaderClick(t) {
-  const sh = t.closest('[data-sh]')?.dataset.sh;
+function shaderClick(el) {
+  const sh = el.closest('[data-sh]')?.dataset.sh;
   if (sh === 'toggle') {
     setShaderEnabled(!SH.settings.enabled);
     return true;
@@ -2758,63 +2770,63 @@ function shaderClick(t) {
   }
   if (sh === 'folder') {
     api('api/shaders/open-folder', { method: 'POST' }).catch((e) =>
-      toast("Couldn't open the folder", e.message, { error: true }),
+      toast(t("Couldn't open the folder"), e.message, { error: true }),
     );
     return true;
   }
   if (sh === 'reset') {
     setOptions(Object.fromEntries(SH.schema.map((o) => [o.n, o.d])));
-    toast('Pack settings reset', 'Back to the defaults.');
+    toast(t('Pack settings reset'), t('Back to the defaults.'));
     return true;
   }
   if (sh === 'problems') {
     $('sh-problems')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     return true;
   }
-  const pack = t.closest('[data-pack]')?.dataset.pack;
+  const pack = el.closest('[data-pack]')?.dataset.pack;
   if (pack) {
     selectPack(pack);
     return true;
   }
-  const inst = t.closest('[data-install]')?.dataset.install;
+  const inst = el.closest('[data-install]')?.dataset.install;
   if (inst) {
     installPack(inst);
     return true;
   }
-  const rain = t.closest('[data-rain]')?.dataset.rain;
+  const rain = el.closest('[data-rain]')?.dataset.rain;
   if (rain != null) {
     setShaderScene({ rain: +rain });
     return true;
   }
-  const scale = t.closest('[data-scale]')?.dataset.scale;
+  const scale = el.closest('[data-scale]')?.dataset.scale;
   if (scale != null) {
     setShaderScene({ scale: +scale });
     return true;
   }
-  const prof = t.closest('[data-profile]')?.dataset.profile;
+  const prof = el.closest('[data-profile]')?.dataset.profile;
   if (prof) {
     applyProfile(prof);
     return true;
   }
-  const scr = t.closest('[data-screen]')?.dataset.screen;
+  const scr = el.closest('[data-screen]')?.dataset.screen;
   if (scr) {
     SH.screen = [...SH.screen, scr];
     renderInspector();
     $('inspector').querySelector('.sh-crumbs .link')?.focus();
     return true;
   }
-  const up = t.closest('[data-screen-up]')?.dataset.screenUp;
+  const up = el.closest('[data-screen-up]')?.dataset.screenUp;
   if (up != null) {
     SH.screen = SH.screen.slice(0, +up);
     renderInspector();
     return true;
   }
-  const tog = t.closest('[data-opt-toggle]')?.dataset.optToggle;
+  const tog = el.closest('[data-opt-toggle]')?.dataset.optToggle;
   if (tog) {
     setOptions({ [tog]: SH.values[tog] === 'true' ? 'false' : 'true' });
     return true;
   }
-  const rs = t.closest('[data-opt-reset]')?.dataset.optReset;
+  const rs = el.closest('[data-opt-reset]')?.dataset.optReset;
   if (rs) {
     setOptions({ [rs]: SH.byName.get(rs).d });
     return true;
@@ -2857,72 +2869,107 @@ const COMMANDS = () => {
     st = !!S.status;
   const pl = S.desc?.type === 'placement' ? S.api?.placements?.find((p) => p.id === S.desc.id) : null;
   return [
-    has && { title: 'Fit to view', key: 'F', icon: ICON.fit, run: fit },
-    has && { title: 'Reload view', key: 'R', icon: ICON.retry, run: () => open(S.desc, { force: true }) },
-    has && { title: 'Save screenshot', key: 'S', icon: ICON.camera, run: screenshot },
-    has && { title: 'Layers: show all', key: 'L', icon: ICON.layers, run: () => setLayer('all') },
-    has && { title: 'Layers: up to current layer', icon: ICON.layers, run: () => setLayer('below') },
-    has && { title: 'Layers: single layer', icon: ICON.layers, run: () => setLayer('single') },
-    st && { title: 'Show all blocks', key: '1', icon: ICON.filter, run: () => setFilter('all') },
-    st && { title: 'Show remaining blocks', key: '2', icon: ICON.filter, run: () => setFilter('remaining') },
-    st && { title: 'Show problems only', key: '3', icon: ICON.filter, run: () => setFilter('problems') },
+    has && { title: t('Fit to view'), key: 'F', icon: ICON.fit, run: fit },
+    has && { title: t('Reload view'), key: 'R', icon: ICON.retry, run: () => open(S.desc, { force: true }) },
+    has && { title: t('Save screenshot'), key: 'S', icon: ICON.camera, run: screenshot },
+    has && { title: t('Layers: show all'), key: 'L', icon: ICON.layers, run: () => setLayer('all') },
+    has && { title: t('Layers: up to current layer'), icon: ICON.layers, run: () => setLayer('below') },
+    has && { title: t('Layers: single layer'), icon: ICON.layers, run: () => setLayer('single') },
+    st && { title: t('Show all blocks'), key: '1', icon: ICON.filter, run: () => setFilter('all') },
+    st && { title: t('Show remaining blocks'), key: '2', icon: ICON.filter, run: () => setFilter('remaining') },
+    st && { title: t('Show problems only'), key: '3', icon: ICON.filter, run: () => setFilter('problems') },
     st && {
-      title: S.ghosts ? 'Hide missing-block ghosts' : 'Show missing-block ghosts',
+      title: t(S.ghosts ? 'Hide missing-block ghosts' : 'Show missing-block ghosts'),
       key: 'G',
       icon: ICON.eye,
       run: toggleGhosts,
     },
-    has && { title: 'Copy material list', icon: ICON.copy, run: copyMaterials },
+    has && { title: t('Copy material list'), icon: ICON.copy, run: copyMaterials },
     has &&
       iris && {
-        title: SH.settings.enabled ? 'Turn shaders off' : 'Turn shaders on',
+        title: t(SH.settings.enabled ? 'Turn shaders off' : 'Turn shaders on'),
         key: 'V',
         icon: ICON.sparkle,
         run: () => setShaderEnabled(!SH.settings.enabled),
       },
-    has && { title: 'Open shader settings', icon: ICON.sparkle, run: openShaderTab },
+    has && { title: t('Open shader settings'), icon: ICON.sparkle, run: openShaderTab },
     ...(has && iris
       ? (SH.list?.packs || [])
           .filter((p) => p.id !== SH.settings.pack || !SH.settings.enabled)
-          .map((p) => ({ title: `Use shader pack: ${p.name}`, icon: ICON.sparkle, run: () => selectPack(p.id) }))
+          .map((p) => ({
+            title: t('Use shader pack: {name}', { name: p.name }),
+            icon: ICON.sparkle,
+            run: () => selectPack(p.id),
+          }))
       : []),
     ...(has && SH.settings.enabled
       ? [
-          ['Sunrise', 0],
-          ['Noon', 6000],
-          ['Sunset', 12000],
-          ['Midnight', 18000],
-        ].map(([l, t]) => ({ title: `Shader time: ${l}`, icon: ICON.sun, run: () => setShaderScene({ time: t }) }))
+          [t('Sunrise'), 0],
+          [t('Noon'), 6000],
+          [t('Sunset'), 12000],
+          [t('Midnight'), 18000],
+        ].map(([l, time]) => ({
+          title: t('Shader time: {time}', { time: l }),
+          icon: ICON.sun,
+          run: () => setShaderScene({ time }),
+        }))
       : []),
     ...(has && SH.status === 'ready'
       ? profiles().map((p) => ({
-          title: `Shader profile: ${p.label}`,
+          title: t('Shader profile: {name}', { name: p.label }),
           icon: ICON.sparkle,
           run: () => applyProfile(p.name),
         }))
       : []),
     pl &&
       S.api.serverMod && {
-        title: pl.sharedId ? 'Update shared copy' : 'Share this placement to the server',
+        title: t(pl.sharedId ? 'Update shared copy' : 'Share this placement to the server'),
         icon: ICON.share,
         run: () => sharePlacement(pl.id),
       },
-    pl?.sharedId && { title: 'Stop sharing this placement', icon: ICON.stop, run: () => unshare(pl.sharedId, pl.id) },
-    { title: 'Toggle sidebar', key: `${MOD} B`, icon: ICON.sidebar, run: () => toggle('sidebar') },
-    { title: 'Toggle details panel', key: 'I', icon: ICON.panel, run: () => toggle('inspector') },
+    pl?.sharedId && {
+      title: t('Stop sharing this placement'),
+      icon: ICON.stop,
+      run: () => unshare(pl.sharedId, pl.id),
+    },
+    { title: t('Toggle sidebar'), key: `${MOD} B`, icon: ICON.sidebar, run: () => toggle('sidebar') },
+    { title: t('Toggle details panel'), key: 'I', icon: ICON.panel, run: () => toggle('inspector') },
     {
       icon: document.documentElement.dataset.theme === 'light' ? ICON.moon : ICON.sun,
-      title:
-        'Switch theme: ' +
-        (document.documentElement.dataset.theme === 'light'
-          ? 'dark'
+      title: t(
+        document.documentElement.dataset.theme === 'light'
+          ? 'Switch theme: dark'
           : document.documentElement.dataset.theme === 'dark'
-            ? 'system'
-            : 'light'),
+            ? 'Switch theme: system'
+            : 'Switch theme: light',
+      ),
       run: cycleTheme,
     },
+    // Each language by its own name, with the name in the current language below, so either finds it.
+    ...Object.entries(LANGS)
+      .filter(([code]) => code !== lang)
+      .map(([code, name]) => ({
+        title: t('Language: {name}', { name }),
+        sub: langNames?.of(code),
+        icon: ICON.globe,
+        run: () => setLang(code),
+      })),
   ].filter(Boolean);
 };
+
+const langNames = (() => {
+  try {
+    return new Intl.DisplayNames(lang, { type: 'language' });
+  } catch {
+    return null;
+  }
+})();
+function setLang(code) {
+  try {
+    localStorage.setItem('litweb.lang', code);
+  } catch {}
+  location.reload(); // every string is rendered with the language picked at load
+}
 
 function paletteItems(q) {
   const a = S.api;
@@ -2930,39 +2977,39 @@ function paletteItems(q) {
   if (isLive()) {
     if (a.selection)
       items.push({
-        group: 'Views',
+        group: t('Views'),
         icon: ICON.selection,
         title: a.selection.name,
-        sub: `Selection · ${dims(boxSize(a.selection.boxes))}`,
+        sub: `${t('Selection')} · ${dims(boxSize(a.selection.boxes))}`,
         run: () => open({ type: 'selection' }),
       });
     for (const p of a.placements || [])
       items.push({
-        group: 'Views',
+        group: t('Views'),
         icon: ICON.placement,
         title: p.name,
-        sub: `Your placement · ${dims(boxSize(p.boxes))}`,
+        sub: `${t('Your placement')} · ${dims(boxSize(p.boxes))}`,
         run: () => open({ type: 'placement', id: p.id }),
       });
   }
   for (const s of sharedList())
     items.push({
-      group: 'Views',
+      group: t('Views'),
       icon: ICON.shared,
       title: s.name,
-      sub: `Shared by ${s.mine ? 'you' : s.ownerName} · ${dims(s.size)}`,
+      sub: `${s.mine ? t('Shared by you') : t('Shared by {name}', { name: s.ownerName })} · ${dims(s.size)}`,
       run: () => open({ type: 'shared', id: s.id }),
     });
   for (const s of serverList())
     if (s.key !== viewServer())
       items.push({
-        group: 'Servers',
+        group: t('Servers'),
         icon: ICON.server,
-        title: `Switch to ${s.name}`,
-        sub: s.live ? 'Connected' : `Saved copy · ${ago(s.seen)}`,
+        title: t('Switch to {name}', { name: s.name }),
+        sub: s.live ? t('Connected') : `${t('Saved copy')} · ${ago(s.seen)}`,
         run: () => pickServer(s.key),
       });
-  for (const c of COMMANDS()) items.push({ group: 'Commands', icon: ICON.cmd, ...c });
+  for (const c of COMMANDS()) items.push({ group: t('Commands'), icon: ICON.cmd, ...c });
   if (!q) return items;
   const ql = q.toLowerCase();
   return items
@@ -3008,7 +3055,7 @@ function renderPalette() {
       <span class="row-icon">${it.icon}</span><span class="row-main"><span class="row-title">${esc(it.title)}</span>${it.sub ? `<span class="row-sub">${esc(it.sub)}</span>` : ''}</span>
       ${it.key ? `<kbd class="kbd">${it.key}</kbd>` : ''}</button>`;
   });
-  $('palette-list').innerHTML = h || '<div class="pal-empty">No results</div>';
+  $('palette-list').innerHTML = h || `<div class="pal-empty">${t('No results')}</div>`;
   $('palette-input').setAttribute('aria-activedescendant', palItems.length ? `pal-${palSel}` : '');
   document.getElementById(`pal-${palSel}`)?.scrollIntoView({ block: 'nearest' });
 }
@@ -3173,6 +3220,7 @@ try {
   S.server = localStorage.getItem('litweb.server');
   S.hidden = new Set(JSON.parse(localStorage.getItem('litweb.hidden') || '[]'));
 } catch {}
+translateDom();
 document.querySelectorAll('[data-mod]').forEach((k) => {
   k.textContent = `${MOD} K`;
 });
@@ -3189,8 +3237,7 @@ setInterval(() => {
   if (S.counts && !$('app').classList.contains('no-inspector')) {
     const u = $('updated-at');
     if (u && !S.statusErr) {
-      const ago = Math.round((Date.now() - S.statusAt) / 1000);
-      u.textContent = `Updated ${ago < 2 ? 'just now' : `${ago}s ago`}`;
+      u.textContent = updatedText(Math.round((Date.now() - S.statusAt) / 1000));
     }
   }
 }, 1000);
