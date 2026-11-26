@@ -1233,7 +1233,6 @@ button {
 .set-note {
   margin: 12px 16px 0;
 }
-/* biome-ignore lint/style/noDescendingSpecificity: rules are grouped by component, not by specificity */
 .set-row .opt-select {
   max-width: 200px;
   height: 32px;
