@@ -111,6 +111,7 @@ public class EndToEndTest implements FabricClientGameTest {
 				String placement = state.getAsJsonArray("placements").get(0).getAsJsonObject().get("id").getAsString();
 				JsonObject vp = json(save("view-placement.json", call(ctx, "GET", "/api/view?type=placement&id=" + placement)));
 				collectTextures(vp);
+				check(vp.has("biomes") && !vp.getAsJsonArray("biomes").isEmpty(), "biomes under the placement: " + vp.get("biomes"));
 				// The copy is 30 blocks east of the cottage, so its hopper is at 38 -60 13.
 				String hopper = String.valueOf(vp.getAsJsonObject("contents").get("38,-60,13"));
 				check(hopper.equals("[[0,18,\"Redstone Dust\",\"minecraft:item/redstone\"],[1,1,\"Stick\",\"minecraft:item/stick\"]]"), "hopper contents in the placement view: " + vp.get("contents"));
@@ -128,6 +129,7 @@ public class EndToEndTest implements FabricClientGameTest {
 				save("state-3.json", st3);
 				JsonObject sv = json(save("view-shared.json", call(ctx, "GET", "/api/view?type=shared&id=" + shared)));
 				collectTextures(sv);
+				check(sv.get("biomes").equals(vp.get("biomes")), "a shared view in this world names the build's biomes: " + sv.get("biomes"));
 				// The copy sits at 31 -63 1 and is 20×14×19; 8 blocks below it is under the world floor (-64).
 				check(sv.getAsJsonArray("size").toString().equals("[36,23,35]"), "view with surroundings " + sv.get("size"));
 				check(sv.getAsJsonArray("inner").toString().equals("[8,1,8,20,14,19]"), "schematic inside its surroundings " + sv.get("inner"));

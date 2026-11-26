@@ -35,7 +35,10 @@ import java.util.zip.InflaterInputStream;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.biome.Biome;
 import org.jspecify.annotations.Nullable;
 
 /** Local HTTP server for the web app. Binds to loopback only. */
@@ -282,6 +285,21 @@ final class WebServer {
 		return o;
 	}
 
+	/** Names of the biomes in a box, most of the box first, from the player's loaded chunks. Client thread. */
+	private static JsonArray biomes(ClientLevel level, int x0, int y0, int z0, int sx, int sy, int sz) {
+		Map<ResourceKey<Biome>, Integer> n = new HashMap<>();
+		// Biomes are stored per 4×4×4 cell, so read one per cell.
+		for (int qx = x0 >> 2; qx <= (x0 + sx - 1) >> 2; qx++)
+			for (int qz = z0 >> 2; qz <= (z0 + sz - 1) >> 2; qz++) {
+				if (!level.hasChunk(qx >> 2, qz >> 2)) continue;
+				for (int qy = y0 >> 2; qy <= (y0 + sy - 1) >> 2; qy++) level.getNoiseBiome(qx, qy, qz).unwrapKey().ifPresent(k -> n.merge(k, 1, Integer::sum));
+			}
+		JsonArray out = new JsonArray();
+		n.entrySet().stream().sorted(Map.Entry.<ResourceKey<Biome>, Integer>comparingByValue().reversed())
+			.forEach(e -> out.add(Component.translatable(e.getKey().identifier().toLanguageKey("biome")).getString()));
+		return out;
+	}
+
 	private static String sharedId(String owner, String key) {
 		return UUID.nameUUIDFromBytes((owner + ":" + key).getBytes(StandardCharsets.UTF_8)).toString();
 	}
@@ -291,6 +309,7 @@ final class WebServer {
 		Cached withTerrain = null;
 		JsonObject contents = null;
 		String source, name;
+		String dim = null; // the view's dimension when it may not be the player's; "" for another server's world
 		switch (type) {
 			case "selection" -> {
 				Schematics.Selection sel = onClient(Schematics::selection);
@@ -332,7 +351,11 @@ final class WebServer {
 					withTerrain = sharedVolume(id, cur);
 					v = withTerrain.volume();
 					contents = withTerrain.contents();
+					dim = "";
+					for (var e : JsonParser.parseString(Bridge.sharedJson).getAsJsonArray())
+						if (e.getAsJsonObject().get("id").getAsString().equals(id)) dim = e.getAsJsonObject().get("dim").getAsString();
 				} else {
+					dim = "";
 					// A remembered server: show the copy saved when it was last opened there.
 					byte[] blob = Servers.blob(serverKey, id);
 					if (blob == null) throw new HttpError(404, "not-saved");
@@ -357,9 +380,14 @@ final class WebServer {
 		buf.asShortBuffer().put(v.blocks);
 		out.addProperty("blocks", Base64.getEncoder().encodeToString(buf.array()));
 		Volume fv = v;
+		String fdim = dim;
+		int[] in = withTerrain != null && withTerrain.inner() != null ? withTerrain.inner() : new int[] {0, 0, 0, v.sx, v.sy, v.sz};
 		onClient(() -> {
 			BlockPos center = new BlockPos(fv.x0 + fv.sx / 2, fv.y0 + fv.sy / 2, fv.z0 + fv.sz / 2);
 			new Models(mc.level, center).export(fv.palette, out);
+			// The player's chunks only hold this world's biomes, so a view from another dimension or server gets none.
+			if (fdim == null || fdim.equals(mc.level.dimension().identifier().toString()))
+				out.add("biomes", biomes(mc.level, fv.x0 + in[0], fv.y0 + in[1], fv.z0 + in[2], in[3], in[4], in[5]));
 			return null;
 		});
 		return out;
