@@ -1,0 +1,5 @@
+{
+  "litweb.chat.or_command": " (o /litweb)",
+  "litweb.command.opening_app": "Abriendo la aplicación de Litescape",
+  "litweb.command.opened": "Abierto: %s"
+}

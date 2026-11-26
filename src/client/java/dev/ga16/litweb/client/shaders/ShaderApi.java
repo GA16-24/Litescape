@@ -221,7 +221,7 @@ public final class ShaderApi {
 			list.add(j);
 		}
 		out.add("options", list);
-		out.add("lang", Pipeline.lang(pack));
+		out.add("lang", Pipeline.lang(pack, str(req, "lang")));
 		return out;
 	}
 
