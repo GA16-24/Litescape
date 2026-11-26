@@ -98,6 +98,7 @@ const S = {
   scrollToAccess: false, // bring the Access panel into view once it renders
   terrain: 'faded', // captured surroundings: faded | on | off
   margin: new Map(), // placement id -> surroundings picked before sharing
+  at: new Map(), // placement id -> [x, y, z] typed to move it to when sharing
   hidden: new Set(), // "server:sharedId" of others' shared schematics hidden from the sidebar, kept in this browser
   showHidden: false,
 };
@@ -1407,13 +1408,15 @@ function renderInspector() {
   }
   h += `<section class="panel"><div class="panel-head"><h3>${t('Overview')}</h3></div><dl class="facts">${facts.map(([k, v]) => `<dt>${k}</dt><dd title="${esc(v)}">${esc(v)}</dd>`).join('')}</dl>`;
   if (pl) {
-    const busy = S.busy.has(pl.id);
+    const busy = S.busy.has(pl.id) || !validAt(pl);
+    if (a.serverMod && pl.origin) h += positionHtml(pl);
     h += pl.sharedId
       ? `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-share-now="${esc(pl.id)}" ${busy ? 'disabled' : ''}>${ICON.share}${t('Update copy')}</button><button class="btn" data-unshare="${esc(pl.sharedId)}" data-key-of="${esc(pl.id)}">${ICON.stop}${t('Stop sharing')}</button></div>
          <p class="updated" style="margin:0 0 12px">${t('Shared. Use Update copy after you move or edit the placement.')}</p>`
       : `${a.terrain?.capture ? shareMarginHtml(pl) : ''}<div class="btn-row" style="margin:0 0 6px"><button class="btn primary" data-share-now="${esc(pl.id)}" ${!a.serverMod || busy ? 'disabled' : ''}>${ICON.share}${t(busy ? 'Sharing…' : 'Share to server')}</button></div>
          <p class="updated" style="margin:0 0 12px">${t(a.serverMod ? 'Only you can see it at first. Then choose who else can view it, follow the build and see who helped.' : 'The server needs Litescape to share schematics.')}</p>`;
   }
+  if (sh && !sh.mine && isLive() && a.litematica) h += loadHtml(sh);
   if ((sh?.manage ?? sh?.mine) && isLive())
     // `manage` is missing from servers on an older version of the mod
     h += `<div class="btn-row" style="margin:0 0 12px"><button class="btn" data-unshare="${esc(sh.id)}">${ICON.stop}${t('Stop sharing')}</button></div>`;
@@ -1450,6 +1453,9 @@ function renderInspector() {
       )}${mats.length > 300 ? `<div class="mats-more">${t('{n} more. Filter to find them.', { n: mats.length - 300 })}</div>` : ''}${!mats.length ? `<div class="mats-more">${t('No matching materials')}</div>` : ''}</div></section>`;
 
   const typing = document.activeElement?.id === 'access-add' ? document.activeElement.selectionStart : -1;
+  const atFocus = document.activeElement?.dataset?.at
+    ? [document.activeElement.id, document.activeElement.selectionStart]
+    : null;
   if (h !== lastInspector) {
     el.innerHTML = lastInspector = h;
     el.scrollTop = scrollTop;
@@ -1463,10 +1469,73 @@ function renderInspector() {
     add.focus(); // this re-render runs every 2 s while progress updates
     add.setSelectionRange(typing, typing);
   }
+  if (atFocus && $(atFocus[0]) && document.activeElement !== $(atFocus[0])) {
+    $(atFocus[0]).focus(); // the 2 s progress re-render would otherwise drop the caret mid-number
+    $(atFocus[0]).setSelectionRange(atFocus[1], atFocus[1]);
+  }
   const f = $('mat-filter');
   if (f && document.activeElement?.id !== 'mat-filter' && S.matFocus) {
     f.focus();
     f.setSelectionRange(f.value.length, f.value.length);
+  }
+}
+
+// ---------------------------------------------------------------- position and loading in game
+
+/** The X, Y and Z typed for a placement, or its origin when nothing was typed. */
+function atOf(pl) {
+  return S.at.get(pl.id) ?? pl.origin.map(String);
+}
+function validAt(pl) {
+  if (!pl.origin) return true; // BuildPrint placements can't be moved from here
+  return atOf(pl).every((v) => /^\s*-?\d{1,8}\s*$/.test(v));
+}
+function movedAt(pl) {
+  return !!pl.origin && validAt(pl) && atOf(pl).some((v, k) => +v !== pl.origin[k]);
+}
+
+function positionHtml(pl) {
+  const at = atOf(pl);
+  const hint = !validAt(pl)
+    ? `<span style="color:var(--danger)">${t('Use whole numbers for X, Y and Z.')}</span>`
+    : movedAt(pl)
+      ? t(pl.sharedId ? 'Update copy moves the placement here first.' : 'Sharing moves the placement here first.')
+      : t("The placement's origin. Change it to share the schematic somewhere else.");
+  return `<div class="updated" style="margin:0 0 4px">${t('Position')}</div><div class="at-row">${['X', 'Y', 'Z']
+    .map(
+      (k, i) =>
+        `<label class="at-field"><span>${k}</span><input class="mat-filter" id="at-${i}" data-at="${i}" data-for="${esc(pl.id)}" inputmode="numeric" autocomplete="off" spellcheck="false" value="${esc(at[i])}" aria-invalid="${!/^\s*-?\d{1,8}\s*$/.test(at[i])}"></label>`,
+    )
+    .join('')}</div><p class="updated" style="margin:0 0 12px">${hint}</p>`;
+}
+
+/** Load in Litematica for someone else's shared schematic. */
+function loadHtml(sh) {
+  if (!sh.placement)
+    return `<p class="updated" style="margin:0 0 12px">${t('{name} needs to update the copy before you can load it in Litematica.', { name: esc(sh.ownerName) })}</p>`;
+  const busy = S.busy.has(`load:${sh.id}`);
+  return `<div class="btn-row" style="margin:0 0 6px"><button class="btn ${sh.inGame ? '' : 'primary'}" data-load="${esc(sh.id)}" ${sh.inGame ? 'data-unload' : ''} ${busy ? 'disabled' : ''}>${sh.inGame ? ICON.stop + t('Remove from Litematica') : ICON.download + t(busy ? 'Loading…' : 'Load in Litematica')}</button></div>
+    <p class="updated" style="margin:0 0 12px">${t(sh.inGame ? 'It shows in game as a Litematica placement. Load it again after the owner updates it.' : 'Adds it to Litematica at its shared position, with what goes in its chests and hoppers.')}</p>`;
+}
+
+async function loadInGame(id, unload) {
+  const key = `load:${id}`;
+  if (S.busy.has(key)) return;
+  S.busy.add(key);
+  renderInspector();
+  try {
+    await api(`api/${unload ? 'unload' : 'load'}?id=${encodeURIComponent(id)}`, { method: 'POST' });
+    S.api = await api('api/state'); // show the new button now, not at the next poll
+    onState();
+    toast(
+      t(unload ? 'Removed from Litematica' : 'Loaded in Litematica'),
+      unload ? t('Its schematic file stays in your schematics folder.') : t('Find it in game where it was shared.'),
+    );
+  } catch (err) {
+    toast(t(unload ? "Couldn't remove it" : "Couldn't load it in Litematica"), err.message, { error: true });
+  } finally {
+    S.busy.delete(key);
+    renderInspector();
   }
 }
 
@@ -1804,6 +1873,8 @@ $('inspector').addEventListener('click', (e) => {
   }
   const us = t.closest('[data-unshare]');
   if (us) return unshare(us.dataset.unshare, us.dataset.keyOf);
+  const ld = t.closest('[data-load]');
+  if (ld) return loadInGame(ld.dataset.load, 'unload' in ld.dataset);
   const rm = t.closest('[data-remove-player]')?.dataset.removePlayer;
   if (rm) {
     const a = accessTarget();
@@ -1830,6 +1901,11 @@ $('inspector').addEventListener('input', (e) => {
   if (e.target.id === 'mat-filter') {
     S.matQuery = e.target.value;
     S.matFocus = true;
+    renderInspector();
+  }
+  if (e.target.dataset.at) {
+    const pl = S.api.placements.find((p) => p.id === e.target.dataset.for);
+    if (pl) S.at.set(pl.id, Object.assign([...atOf(pl)], { [e.target.dataset.at]: e.target.value }));
     renderInspector();
   }
   if (e.target.id === 'access-add') {
@@ -1937,7 +2013,14 @@ async function sharePlacement(id) {
       : ter?.capture && p
         ? pickedMargin(p)
         : 0;
-    await api(`api/share?id=${encodeURIComponent(id)}&margin=${margin}`, { method: 'POST' });
+    const at =
+      p && movedAt(p)
+        ? `&at=${atOf(p)
+            .map((v) => +v)
+            .join(',')}`
+        : '';
+    await api(`api/share?id=${encodeURIComponent(id)}&margin=${margin}${at}`, { method: 'POST' });
+    S.at.delete(id);
     toast(
       p?.sharedId ? t('Shared copy updated') : t('Shared “{name}”', { name: p?.name ?? t('placement') }),
       t(p?.sharedId ? 'Who can see it stays the same.' : 'Only you can see it so far.'),
@@ -2133,6 +2216,7 @@ function pick() {
     ${props ? `<div class="hc-sub">${esc(props)}</div>` : ''}
     ${e.t ? `<div class="hc-sub">${t('Surroundings, captured {when}', { when: ago(findShared(S.desc.id)?.captured) })}</div>` : ''}
     <div class="hc-pos">${d.origin[0] + hit.x}, ${d.origin[1] + hit.y}, ${d.origin[2] + hit.z}</div>
+    ${itemsHtml(d.contents?.[`${d.origin[0] + hit.x},${d.origin[1] + hit.y},${d.origin[2] + hit.z}`])}
     ${st ? `<div class="hc-status"><span class="sw" style="width:8px;height:8px;border-radius:2px;background:${STATUS[st].color}"></span>${STATUS[st].label}</div>` : ''}`;
   card.hidden = false;
   const r = $('stage').getBoundingClientRect();
@@ -2142,6 +2226,26 @@ function pick() {
     h = card.offsetHeight;
   card.style.left = `${Math.min(r.width - inset - w - 8, x + 16)}px`;
   card.style.top = `${y + 16 + h > r.height ? y - h - 12 : y + 16}px`;
+}
+/** The /tex/ URL of an item's icon sprite ("minecraft:item/redstone"), or '' when it has none. */
+function itemIcon(sprite) {
+  const m = /^([a-z0-9_.-]+):([a-z0-9_./-]+)$/.exec(sprite || '');
+  return m ? `tex/${m[1]}/${m[2]}` : '';
+}
+
+/** What a container in the schematic holds: [[slot, count, name, icon sprite], ...]. */
+function itemsHtml(items) {
+  if (!items?.length) return '';
+  const MAX = 9;
+  return `<div class="hc-items">${items
+    .slice(0, MAX)
+    .map(([, n, name, sprite]) => {
+      const icon = itemIcon(sprite);
+      return `<div><span class="hc-n num">${n}×</span>${icon ? `<i class="hc-icon" style="background-image:url(${icon})"></i>` : ''}${esc(name)}</div>`;
+    })
+    .join(
+      '',
+    )}${items.length > MAX ? `<div class="hc-sub">${t('{n} more', { n: items.length - MAX })}</div>` : ''}</div>`;
 }
 function hideHover() {
   $('hover').hidden = true;

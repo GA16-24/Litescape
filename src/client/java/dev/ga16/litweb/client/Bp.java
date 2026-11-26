@@ -46,7 +46,7 @@ final class Bp {
 			if (uses.get(key) > 1) key += "#" + id;
 			int[] box = BuildprintPlacements.bounds(id);
 			out.add(new Schematics.Placement(key, BuildprintPlacements.name(id), BuildprintPlacements.visible(id), author(id), List.of(box),
-				id + ":" + BuildprintPlacements.version(id), () -> volume(id, box)));
+				id + ":" + BuildprintPlacements.version(id), () -> volume(id, box), null, null));
 		});
 		return out;
 	}

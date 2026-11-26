@@ -424,4 +424,32 @@ export default {
     '「システム」はコンピューターのライト／ダークモードに従います。選択はこのブラウザに保存されます。',
   'Settings sections': '設定のセクション',
   'Close settings': '設定を閉じる',
+  Position: '位置',
+  'Use whole numbers for X, Y and Z.': 'X・Y・Z には整数を入力してください。',
+  'Update copy moves the placement here first.': '「コピーを更新」すると、先に配置をここへ移動します。',
+  'Sharing moves the placement here first.': '共有すると、先に配置をここへ移動します。',
+  "The placement's origin. Change it to share the schematic somewhere else.":
+    '配置の原点です。変更すると別の場所に共有できます。',
+  '{name} needs to update the copy before you can load it in Litematica.':
+    'Litematica に読み込むには、{name} がコピーを更新する必要があります。',
+  'Load in Litematica': 'Litematica に読み込む',
+  'Loading…': '読み込み中…',
+  'Remove from Litematica': 'Litematica から削除',
+  'It shows in game as a Litematica placement. Load it again after the owner updates it.':
+    'ゲーム内に Litematica の配置として表示されます。所有者が更新したら、もう一度読み込んでください。',
+  'Adds it to Litematica at its shared position, with what goes in its chests and hoppers.':
+    '共有された位置に Litematica の配置として追加します。チェストやホッパーの中身も含まれます。',
+  'Loaded in Litematica': 'Litematica に読み込みました',
+  'Find it in game where it was shared.': 'ゲーム内の共有された場所にあります。',
+  'Removed from Litematica': 'Litematica から削除しました',
+  'Its schematic file stays in your schematics folder.': 'ファイルは schematics フォルダーに残ります。',
+  "Couldn't load it in Litematica": 'Litematica に読み込めませんでした',
+  "Couldn't remove it": '削除できませんでした',
+  '{n} more': 'ほか {n} 件',
+  'This schematic was shared without its Litematica placement. Ask its owner to update the copy.':
+    'この設計図は Litematica の配置なしで共有されています。所有者にコピーの更新を頼んでください。',
+  'The placement is locked in Litematica. Unlock it to move it.':
+    'この配置は Litematica でロックされています。移動するにはロックを解除してください。',
+  "Couldn't save the schematic": '設計図を保存できませんでした',
+  "Couldn't read the shared placement": '共有された配置を読み込めませんでした',
 };

@@ -58,6 +58,10 @@ const SERVER = [
   'The server does not run Litescape',
   'Unknown shader pack',
   'Disconnected',
+  'This schematic was shared without its Litematica placement. Ask its owner to update the copy.',
+  'The placement is locked in Litematica. Unlock it to move it.',
+  "Couldn't save the schematic",
+  "Couldn't read the shared placement",
 ];
 
 const KEYS = new Set([...sourceKeys(read('app.js')), ...htmlKeys(read('index.html')), ...SERVER]);

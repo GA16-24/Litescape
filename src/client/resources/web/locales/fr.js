@@ -430,4 +430,33 @@ export default {
     'Système suit le mode clair ou sombre de votre ordinateur. Le choix est enregistré dans ce navigateur.',
   'Settings sections': 'Sections des réglages',
   'Close settings': 'Fermer les réglages',
+  Position: 'Position',
+  'Use whole numbers for X, Y and Z.': 'Utilisez des nombres entiers pour X, Y et Z.',
+  'Update copy moves the placement here first.': '« Mettre à jour la copie » déplace d’abord le placement ici.',
+  'Sharing moves the placement here first.': 'Le partage déplace d’abord le placement ici.',
+  "The placement's origin. Change it to share the schematic somewhere else.":
+    'L’origine du placement. Modifiez-la pour partager la schematic ailleurs.',
+  '{name} needs to update the copy before you can load it in Litematica.':
+    '{name} doit mettre à jour la copie avant que vous puissiez la charger dans Litematica.',
+  'Load in Litematica': 'Charger dans Litematica',
+  'Loading…': 'Chargement…',
+  'Remove from Litematica': 'Retirer de Litematica',
+  'It shows in game as a Litematica placement. Load it again after the owner updates it.':
+    'Elle apparaît en jeu comme un placement Litematica. Rechargez-la quand son propriétaire la met à jour.',
+  'Adds it to Litematica at its shared position, with what goes in its chests and hoppers.':
+    'L’ajoute à Litematica à sa position partagée, avec le contenu prévu pour ses coffres et entonnoirs.',
+  'Loaded in Litematica': 'Chargée dans Litematica',
+  'Find it in game where it was shared.': 'Vous la trouverez en jeu là où elle a été partagée.',
+  'Removed from Litematica': 'Retirée de Litematica',
+  'Its schematic file stays in your schematics folder.':
+    'Le fichier de la schematic reste dans votre dossier schematics.',
+  "Couldn't load it in Litematica": 'Impossible de la charger dans Litematica',
+  "Couldn't remove it": 'Impossible de la retirer',
+  '{n} more': '{n} de plus',
+  'This schematic was shared without its Litematica placement. Ask its owner to update the copy.':
+    'Cette schematic a été partagée sans son placement Litematica. Demandez à son propriétaire de mettre à jour la copie.',
+  'The placement is locked in Litematica. Unlock it to move it.':
+    'Le placement est verrouillé dans Litematica. Déverrouillez-le pour le déplacer.',
+  "Couldn't save the schematic": 'Impossible d’enregistrer la schematic',
+  "Couldn't read the shared placement": 'Impossible de lire le placement partagé',
 };
