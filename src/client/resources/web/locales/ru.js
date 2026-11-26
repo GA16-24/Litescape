@@ -507,4 +507,9 @@ export default {
     'Размещение заблокировано в Litematica. Разблокируйте его, чтобы переместить.',
   "Couldn't save the schematic": 'Не удалось сохранить схематику',
   "Couldn't read the shared placement": 'Не удалось прочитать опубликованное размещение',
+  Notes: 'Заметки',
+  'Rates per hour, build order, how to turn it on': 'Выход в час, порядок постройки, как запустить',
+  'Save notes': 'Сохранить заметки',
+  'Everyone who can see it reads these.': 'Все, кто может её видеть, читают эти заметки.',
+  "Couldn't save the notes": 'Не удалось сохранить заметки',
 };

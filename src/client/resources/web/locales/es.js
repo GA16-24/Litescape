@@ -470,4 +470,9 @@ export default {
     'La colocación está bloqueada en Litematica. Desbloquéala para moverla.',
   "Couldn't save the schematic": 'No se pudo guardar la schematic',
   "Couldn't read the shared placement": 'No se pudo leer la colocación compartida',
+  Notes: 'Notas',
+  'Rates per hour, build order, how to turn it on': 'Tasas por hora, orden de construcción, cómo encenderla',
+  'Save notes': 'Guardar notas',
+  'Everyone who can see it reads these.': 'Todos los que pueden verla leen estas notas.',
+  "Couldn't save the notes": 'No se pudieron guardar las notas',
 };

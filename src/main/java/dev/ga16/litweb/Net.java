@@ -13,7 +13,7 @@ public final class Net {
 	/** Reply.req for unsolicited pushes of the shared-schematic list. */
 	public static final int PUSH_LIST = 0;
 
-	/** op: list | config | region | get | terrain | status | upload | capture | access | answer | delete. */
+	/** op: list | config | region | get | terrain | status | upload | capture | access | notes | answer | delete. */
 	public record Req(int req, String op, String arg, byte[] data) implements CustomPacketPayload {
 		public static final Type<Req> TYPE = new Type<>(Identifier.fromNamespaceAndPath("litweb", "req"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, Req> CODEC = StreamCodec.composite(

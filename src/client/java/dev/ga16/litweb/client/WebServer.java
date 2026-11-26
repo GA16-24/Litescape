@@ -160,6 +160,13 @@ final class WebServer {
 						await(Bridge.request("access", body.toString(), new byte[0]));
 						json(ex, 200, new JsonObject());
 					}
+					case "/api/notes" -> {
+						if (!post) throw new HttpError(405, "Use POST");
+						// {id, notes}; the server checks who may edit them and how long they are.
+						JsonObject body = JsonParser.parseString(new String(ex.getRequestBody().readNBytes(64 << 10), StandardCharsets.UTF_8)).getAsJsonObject();
+						await(Bridge.request("notes", body.toString(), new byte[0]));
+						json(ex, 200, new JsonObject());
+					}
 					case "/api/answer" -> {
 						if (!post) throw new HttpError(405, "Use POST");
 						JsonObject body = new JsonObject();

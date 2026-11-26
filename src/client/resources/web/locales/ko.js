@@ -460,4 +460,9 @@ export default {
     '이 배치는 Litematica에서 잠겨 있습니다. 옮기려면 잠금을 해제하세요.',
   "Couldn't save the schematic": '설계도를 저장하지 못했습니다',
   "Couldn't read the shared placement": '공유된 배치를 읽지 못했습니다',
+  Notes: '메모',
+  'Rates per hour, build order, how to turn it on': '시간당 효율, 건설 순서, 작동 방법',
+  'Save notes': '메모 저장',
+  'Everyone who can see it reads these.': '볼 수 있는 사람은 모두 이 메모를 읽습니다.',
+  "Couldn't save the notes": '메모를 저장하지 못했습니다',
 };
