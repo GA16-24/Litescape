@@ -403,12 +403,16 @@ export default {
     '下にブロックがないと落ちるものがあります。仮ブロックを置いてください。',
   'Torches, doors and other attached blocks': '松明、ドアなど他のブロックに付けるブロック',
   Redstone: 'レッドストーン',
-  'Water and lava': '水とマグマ',
+  "Water goes in once the blocks under and around it are placed, so it doesn't flow over the build.":
+    '水は下と周りのブロックを置いてから入れます。建築の上に流れないようにするためです。',
+  'Lava goes in after the water. Water flowing onto a lava source turns it into obsidian.':
+    'マグマは水の後に置きます。水がマグマの水源に流れると黒曜石になります。',
+  Water: '水',
+  Lava: 'マグマ',
   'Plants that need water': '水が必要な植物',
   'Stage {n} of {total}': '段階 {n} / {total}',
   'Order: previous or next stage': '建築順：前または次の段階',
   'Survival build order, one stage at a time': 'サバイバルの建築順：1段階ずつ',
-  "Water and lava go last, so they don't flow over the build.": '水とマグマは建築の上に流れないよう最後に置きます。',
   'Every block is placed': 'すべてのブロックを設置しました',
   'Working out the build order…': '建築順を計算中…',
   'Layers: survival build order': 'レイヤー：サバイバルの建築順',

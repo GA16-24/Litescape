@@ -1,7 +1,7 @@
 // node --test web-dev/order.test.mjs — checks the survival build order on small hand-made volumes.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ACTIVATES, buildOrder, FALLS, FLOATING, FLUID } from '../src/client/resources/web/order.js';
+import { ACTIVATES, buildOrder, FALLS, FLOATING, FLUID, LAVA } from '../src/client/resources/web/order.js';
 
 /** A volume from a map of "x,y,z" -> [name, props]; everything else is air. */
 function vol(size, cells) {
@@ -135,4 +135,17 @@ test('groups blocks that go down together into stages', () => {
     ['lantern'],
   ]);
   assert.equal(v.rank[v.at(2, 1, 0)], 4);
+});
+
+test('pours water onto its floor, then lava after the water', () => {
+  // A cobblestone generator: lava first in index order, then water two blocks over, a basin under both.
+  const v = vol([3, 2, 1], {
+    '0,1,0': ['lava', 'level=0'],
+    '2,1,0': ['water', 'level=0'],
+    '0,0,0': ['cobblestone'],
+    '1,0,0': ['cobblestone'],
+    '2,0,0': ['cobblestone'],
+  });
+  assert.deepEqual(v.names, ['cobblestone', 'cobblestone', 'cobblestone', 'water', 'lava']);
+  assert.deepEqual([...v.flags].slice(3), [FLUID, LAVA]);
 });

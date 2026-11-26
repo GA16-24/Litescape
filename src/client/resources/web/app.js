@@ -1,6 +1,6 @@
 import { fmt, LANGS, lang, MC_LOCALE, t, translateDom } from './i18n.js';
 import { Iris } from './iris.js';
-import { ACTIVATES, FALLS, FLOATING, FLUID } from './order.js';
+import { ACTIVATES, FALLS, FLOATING, FLUID, LAVA } from './order.js';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import * as THREE from './vendor/three.module.min.js';
 
@@ -1924,7 +1924,8 @@ function renderLayers() {
 
 const WARN = [
   [ACTIVATES, t("These can fire as soon as they're placed. Check what they face first.")],
-  [FLUID, t("Water and lava go last, so they don't flow over the build.")],
+  [FLUID, t("Water goes in once the blocks under and around it are placed, so it doesn't flow over the build.")],
+  [LAVA, t('Lava goes in after the water. Water flowing onto a lava source turns it into obsidian.')],
   [FLOATING, t('Some have nothing to place against yet. Put temporary blocks next to them.')],
   [FALLS, t('Some fall without a block under them. Put temporary ones there.')],
 ];
@@ -1932,8 +1933,9 @@ const WARN = [
 const STAGE_KIND = [
   [t('Blocks'), t('Torches, doors and other attached blocks')],
   [t('Redstone'), t('Redstone')],
-  [t('Water and lava'), t('Water and lava')],
+  [t('Water'), t('Water')],
   [t('Plants that need water'), t('Plants that need water')],
+  [t('Lava'), t('Lava')],
 ];
 
 /** Order mode's card: what the next stage holds, where, and what to watch out for. A box frames its blocks. */

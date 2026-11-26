@@ -400,13 +400,16 @@ export default {
     '아래에 블록이 없으면 떨어지는 것이 있습니다. 임시 블록을 놓으세요.',
   'Torches, doors and other attached blocks': '횃불, 문 등 다른 블록에 붙이는 블록',
   Redstone: '레드스톤',
-  'Water and lava': '물과 용암',
+  "Water goes in once the blocks under and around it are placed, so it doesn't flow over the build.":
+    '물은 아래와 주변 블록을 놓은 뒤에 붓습니다. 건축물 위로 흐르지 않게 하기 위해서입니다.',
+  'Lava goes in after the water. Water flowing onto a lava source turns it into obsidian.':
+    '용암은 물 다음에 놓습니다. 물이 용암 원천 위로 흐르면 흑요석이 됩니다.',
+  Water: '물',
+  Lava: '용암',
   'Plants that need water': '물이 필요한 식물',
   'Stage {n} of {total}': '{total}단계 중 {n}단계',
   'Order: previous or next stage': '순서: 이전 또는 다음 단계',
   'Survival build order, one stage at a time': '서바이벌 건축 순서: 한 단계씩',
-  "Water and lava go last, so they don't flow over the build.":
-    '물과 용암은 건축물 위로 흐르지 않도록 마지막에 놓습니다.',
   'Every block is placed': '모든 블록을 설치했습니다',
   'Working out the build order…': '건축 순서를 계산하는 중…',
   'Layers: survival build order': '레이어: 서바이벌 건축 순서',

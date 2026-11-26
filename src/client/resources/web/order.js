@@ -1,13 +1,15 @@
 // Survival build order: the sequence to place a schematic's blocks in without flying, in stages.
 // Bottom-up, every block after something it can be placed against, attached blocks after the block
-// they hang on, then parts that can fire when placed, then water and lava sources, then plants that need water.
+// they hang on, then parts that can fire when placed, then water sources once the blocks under and around them
+// are in, then plants that need water, then lava last: water flowing onto a lava source turns it into obsidian.
 // A stage is the blocks of one kind at one height, which can go down in one go.
 
 /** Flags per block, for the card that says what to watch out for. */
 export const ACTIVATES = 1; // observers, pistons, redstone: can fire as soon as they're placed
-export const FLUID = 2; // a water or lava source
+export const FLUID = 2; // a water source
 export const FLOATING = 4; // nothing to place it against yet: needs a temporary block
 export const FALLS = 8; // sand, gravel...: nothing under it, so it falls
+export const LAVA = 16; // a lava source
 
 const ACTIVATE =
   /^(observer|piston|sticky_piston|redstone_wire|repeater|comparator|redstone_torch|redstone_wall_torch|redstone_block|dispenser|dropper|tnt|crafter)$/;
@@ -40,7 +42,8 @@ export function rule(e) {
   const n = e.n.replace(/^minecraft:/, '');
   const p = Object.fromEntries((e.p || '').split(',').map((kv) => kv.split('=')));
   if (SKIP.test(n) || p.half === 'upper' || (n.endsWith('_bed') && p.part === 'head')) return { skip: true };
-  if (n === 'water' || n === 'lava') return p.level && p.level !== '0' ? { skip: true } : { phase: 2, host: null };
+  if (n === 'water' || n === 'lava')
+    return p.level && p.level !== '0' ? { skip: true } : { phase: n === 'water' ? 2 : 4, host: null };
   let host = null;
   if (p.face) host = p.face === 'floor' ? BELOW : p.face === 'ceiling' ? ABOVE : neg(FACING[p.facing]);
   else if (n === 'cocoa') host = FACING[p.facing];
@@ -160,6 +163,7 @@ export function buildOrder({ sx, sy, sz, blocks, palette }) {
     const r = rules[blocks[i]];
     if (r.phase === 1) f |= ACTIVATES;
     if (r.phase === 2) f |= FLUID;
+    if (r.phase === 4) f |= LAVA;
     if (r.gravity && host[i] < 0 && i >= sx * sz) f |= FALLS;
     placed[i] = 1;
     rank[i] = s;
@@ -202,7 +206,7 @@ export function buildOrder({ sx, sy, sz, blocks, palette }) {
     stage[i] = value[k] = v;
   }
   // Counting sort by stage, keeping the block order inside each stage.
-  const at0 = new Int32Array(8 * sy + 4);
+  const at0 = new Int32Array(10 * sy + 4); // values reach (5 phases * sy) * 2
   for (const v of value) at0[v + 1]++;
   for (let v = 1; v < at0.length; v++) at0[v] += at0[v - 1];
   const sorted = new Int32Array(len);

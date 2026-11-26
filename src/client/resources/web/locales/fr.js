@@ -408,13 +408,16 @@ export default {
     'Certains tombent sans bloc en dessous. Mettez-en des temporaires.',
   'Torches, doors and other attached blocks': 'Torches, portes et autres blocs accrochés',
   Redstone: 'Redstone',
-  'Water and lava': 'Eau et lave',
+  "Water goes in once the blocks under and around it are placed, so it doesn't flow over the build.":
+    'L’eau vient une fois les blocs en dessous et autour posés, pour ne pas couler sur la construction.',
+  'Lava goes in after the water. Water flowing onto a lava source turns it into obsidian.':
+    'La lave vient après l’eau. De l’eau qui coule sur une source de lave la change en obsidienne.',
+  Water: 'Eau',
+  Lava: 'Lave',
   'Plants that need water': 'Plantes qui ont besoin d’eau',
   'Stage {n} of {total}': 'Étape {n} sur {total}',
   'Order: previous or next stage': 'Ordre : étape précédente ou suivante',
   'Survival build order, one stage at a time': 'Ordre de construction en survie, une étape à la fois',
-  "Water and lava go last, so they don't flow over the build.":
-    'L’eau et la lave viennent en dernier, pour ne pas couler sur la construction.',
   'Every block is placed': 'Tous les blocs sont posés',
   'Working out the build order…': 'Calcul de l’ordre de construction…',
   'Layers: survival build order': 'Couches : ordre de construction en survie',

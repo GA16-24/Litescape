@@ -444,13 +444,16 @@ export default {
     'Некоторые упадут без блока снизу. Поставьте туда временные.',
   'Torches, doors and other attached blocks': 'Факелы, двери и другие прикреплённые блоки',
   Redstone: 'Редстоун',
-  'Water and lava': 'Вода и лава',
+  "Water goes in once the blocks under and around it are placed, so it doesn't flow over the build.":
+    'Воду наливают, когда блоки под ней и вокруг уже стоят, чтобы она не растеклась по постройке.',
+  'Lava goes in after the water. Water flowing onto a lava source turns it into obsidian.':
+    'Лава ставится после воды. Вода, затёкшая на источник лавы, превращает его в обсидиан.',
+  Water: 'Вода',
+  Lava: 'Лава',
   'Plants that need water': 'Растения, которым нужна вода',
   'Stage {n} of {total}': 'Этап {n} из {total}',
   'Order: previous or next stage': 'Порядок: предыдущий или следующий этап',
   'Survival build order, one stage at a time': 'Порядок постройки в выживании, по этапам',
-  "Water and lava go last, so they don't flow over the build.":
-    'Вода и лава ставятся в конце, чтобы не растеклись по постройке.',
   'Every block is placed': 'Все блоки поставлены',
   'Working out the build order…': 'Вычисляется порядок постройки…',
   'Layers: survival build order': 'Слои: порядок постройки в выживании',

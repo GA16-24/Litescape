@@ -392,12 +392,16 @@ export default {
   'Some fall without a block under them. Put temporary ones there.': '有些方塊下方沒有方塊會掉落。在下面放臨時方塊。',
   'Torches, doors and other attached blocks': '火把、門等依附放置的方塊',
   Redstone: '紅石',
-  'Water and lava': '水和岩漿',
+  "Water goes in once the blocks under and around it are placed, so it doesn't flow over the build.":
+    '先放好下方和四周的方塊再倒水，以免水流到建築上。',
+  'Lava goes in after the water. Water flowing onto a lava source turns it into obsidian.':
+    '岩漿在水之後放。水流到岩漿源上會把它變成黑曜石。',
+  Water: '水',
+  Lava: '岩漿',
   'Plants that need water': '需要水的植物',
   'Stage {n} of {total}': '第 {n} 階段，共 {total} 階段',
   'Order: previous or next stage': '順序：上一個或下一個階段',
   'Survival build order, one stage at a time': '生存模式建造順序，一次一個階段',
-  "Water and lava go last, so they don't flow over the build.": '水和岩漿最後放，以免流到建築上。',
   'Every block is placed': '所有方塊都已放置',
   'Working out the build order…': '正在計算建造順序…',
   'Layers: survival build order': '圖層：生存模式建造順序',
