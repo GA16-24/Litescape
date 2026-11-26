@@ -48,7 +48,8 @@ jobs:
     needs: mod
     strategy:
       matrix:
-        os: [macos-15, windows-2025, ubuntu-24.04]
+        # windows-11-arm builds the arm64 installer natively, so each Windows arch gets its own .exe.
+        os: [macos-15, windows-2025, windows-11-arm, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     permissions:
@@ -70,6 +71,9 @@ jobs:
           name: mod-jar
           path: build/libs
       - run: npm ci
+      - name: Install rpmbuild for the .rpm packages
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm
       - name: Tag matches package.json version
         if: startsWith(github.ref, 'refs/tags/')
         shell: bash
@@ -84,6 +88,8 @@ jobs:
             desktop/dist/*.dmg
             desktop/dist/*.exe
             desktop/dist/*.AppImage
+            desktop/dist/*.deb
+            desktop/dist/*.rpm
           if-no-files-found: error
           retention-days: 7
 
