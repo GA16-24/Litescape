@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; img-src 'self'; style-src 'unsafe-inline'">
 <title>Litescape</title>
 <style>
   :root { color-scheme: light dark; --bg: #f6f7f9; --fg: #171a21; --muted: #5d6472; --accent: #4f6ef7; --line: #dde1e8;
@@ -18,10 +18,10 @@
   p { margin: 0; color: var(--muted); }
   header p { max-width: 360px; margin: 0 auto; }
   a { color: var(--accent); }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin: 0 auto;
+  .logo { display: block; width: 64px; height: 64px; margin: 0 auto; image-rendering: pixelated;
     animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: .25; } }
-  @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .logo { animation: none; } }
   ul { list-style: none; margin: 12px 0; padding: 0; border-top: 1px solid var(--line); }
   li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
   li > div { flex: 1; min-width: 0; }
@@ -41,7 +41,7 @@
 <body>
 <main>
   <header>
-    <div class="dot" aria-hidden="true"></div>
+    <img class="logo" src="logo.svg" alt="">
     <h1>Waiting for Minecraft</h1>
     <p>Start Minecraft in an instance with the Litescape mod. The viewer opens here once the game is running.</p>
   </header>
