@@ -401,6 +401,20 @@ public class EndToEndTest implements FabricClientGameTest {
 		rule = json(call(ctx, "GET", "/api/view?type=shared&id=" + overworld)).getAsJsonObject("spawnRule");
 		check(rule.get("id").getAsString().equals("minecraft:zombie") && rule.get("light").getAsInt() == 0, "Overworld spawn rule " + rule);
 
+		// Sharing over your own share folds it in (#75): one entry, its connection moved over, nothing listed twice.
+		String wider = sharePart(ctx, s, "Nether hub, wider", new BlockPos(7, 70, 2), new BlockPos(10, 74, 3), Level.NETHER);
+		st = json(save("state-merged.json", call(ctx, "GET", "/api/state")));
+		check(shared(st, nether) == null && links(st, wider).equals(List.of(overworld)) && links(st, overworld).equals(List.of(wider)),
+			"the covered share folded into the new one, connection kept: " + st.get("shared"));
+		check(shared(st, wider).get("size").toString().equals("[4,5,2]") && shared(st, wider).get("placement").getAsBoolean(), "covering share keeps its placement: " + shared(st, wider));
+		// One that only touches its edge merges too, over the joint box; its placement covers only part, so it isn't offered.
+		String east = sharePart(ctx, s, "Nether hub, east", new BlockPos(10, 70, 2), new BlockPos(12, 74, 2), Level.NETHER);
+		st = json(call(ctx, "GET", "/api/state"));
+		JsonObject joint = shared(st, east);
+		check(shared(st, wider) == null && joint.get("origin").toString().equals("[7,70,2]") && joint.get("size").toString().equals("[6,5,2]")
+			&& !joint.get("placement").getAsBoolean() && links(st, overworld).equals(List.of(east)), "partly overlapping share merged: " + joint);
+		nether = east;
+
 		// Unsharing one part takes it out of the other's list. With the Nether portal gone too, the game would build a new one.
 		call(ctx, "POST", "/api/unshare?id=" + nether);
 		for (int i = 0; i < 40 && !links(st, overworld).isEmpty(); i++, ctx.waitTicks(5)) st = json(call(ctx, "GET", "/api/state"));
@@ -436,6 +450,11 @@ public class EndToEndTest implements FabricClientGameTest {
 		for (int i = 0; i < 40 && !st.contains("\"sharedId\":\"" + shared); i++, ctx.waitTicks(5)) st = call(ctx, "GET", "/api/state");
 		check(st.contains("\"sharedId\":\"" + shared), name + " shared");
 		return shared;
+	}
+
+	private static @org.jspecify.annotations.Nullable JsonObject shared(JsonObject state, String id) {
+		for (JsonElement e : state.getAsJsonArray("shared")) if (e.getAsJsonObject().get("id").getAsString().equals(id)) return e.getAsJsonObject();
+		return null;
 	}
 
 	private static List<String> links(JsonObject state, String id) {

@@ -165,6 +165,21 @@ public final class Volume {
 		return v;
 	}
 
+	/** One volume over the joint box of the parts. Where parts overlap, the later part's block wins unless it has none there. */
+	public static Volume merge(List<Volume> parts) {
+		List<int[]> boxes = new ArrayList<>();
+		for (Volume p : parts) boxes.add(new int[] {p.x0, p.y0, p.z0, p.x0 + p.sx - 1, p.y0 + p.sy - 1, p.z0 + p.sz - 1});
+		Volume m = ofBoxes(boxes);
+		for (Volume p : parts)
+			for (int y = 0, i = 0; y < p.sy; y++)
+				for (int z = 0; z < p.sz; z++)
+					for (int x = 0; x < p.sx; x++, i++) {
+						BlockState b = p.palette.get(p.blocks[i]);
+						if (b != null && !b.isAir()) m.blocks[m.at(x + p.x0 - m.x0, y + p.y0 - m.y0, z + p.z0 - m.z0)] = m.idOf(b);
+					}
+		return m;
+	}
+
 	public byte[] encode() {
 		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
 		try (DataOutputStream out = new DataOutputStream(new DeflaterOutputStream(bytes))) {
