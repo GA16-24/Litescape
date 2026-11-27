@@ -1,0 +1,86 @@
+{
+  "inWorld": true,
+  "servers": [
+    {
+      "key": "world:/saves/litweb-test",
+      "name": "Test World",
+      "address": "Singleplayer",
+      "seen": 1795751546353,
+      "shared": [
+        {
+          "id": "84f2fd63-bd08-305e-a049-e43ba45426ba",
+          "name": "Cottage copy",
+          "owner": "2654e3c3-150d-3857-a426-0b141796a4e0",
+          "ownerName": "Player0",
+          "dim": "minecraft:overworld",
+          "author": "test",
+          "origin": [31, -63, 1],
+          "size": [20, 14, 19],
+          "updated": 1795751544038,
+          "access": "private",
+          "players": {},
+          "contributors": {
+            "2654e3c3-150d-3857-a426-0b141796a4e0": { "name": "Player0", "placed": 1, "last": 1795751545189 }
+          },
+          "margin": 8,
+          "captured": 1795751544845,
+          "chunks": 9,
+          "chunksCaptured": 9,
+          "placement": true,
+          "links": [],
+          "manage": true,
+          "answer": "pending"
+        }
+      ]
+    }
+  ],
+  "server": { "key": "world:/saves/litweb-test", "name": "Test World", "address": "Singleplayer" },
+  "online": [],
+  "player": "Player0",
+  "dim": "minecraft:overworld",
+  "serverMod": true,
+  "litematica": true,
+  "regionRead": "no",
+  "singleplayer": true,
+  "terrain": { "capture": true, "maxMargin": 32, "y": [-64, 319] },
+  "selection": { "name": "Cottage", "boxes": [[1, -63, 1, 20, -50, 19]] },
+  "placements": [
+    {
+      "id": "d3ada708-085e-464b-8148-f4bbfb41612c",
+      "name": "Cottage copy",
+      "enabled": true,
+      "author": "test",
+      "origin": [31, -63, 1],
+      "boxes": [[31, -63, 1, 50, -50, 19]],
+      "sharedId": "84f2fd63-bd08-305e-a049-e43ba45426ba"
+    }
+  ],
+  "shared": [
+    {
+      "id": "84f2fd63-bd08-305e-a049-e43ba45426ba",
+      "name": "Cottage copy",
+      "owner": "2654e3c3-150d-3857-a426-0b141796a4e0",
+      "ownerName": "Player0",
+      "dim": "minecraft:overworld",
+      "author": "test",
+      "origin": [31, -63, 1],
+      "size": [20, 14, 19],
+      "updated": 1795751544038,
+      "access": "private",
+      "players": {},
+      "contributors": {
+        "2654e3c3-150d-3857-a426-0b141796a4e0": { "name": "Player0", "placed": 1, "last": 1795751545189 }
+      },
+      "margin": 8,
+      "captured": 1795751544845,
+      "chunks": 9,
+      "chunksCaptured": 9,
+      "placement": true,
+      "links": [],
+      "manage": true,
+      "answer": "pending",
+      "mine": true,
+      "inGame": false
+    }
+  ]
+}

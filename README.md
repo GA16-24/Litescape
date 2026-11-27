@@ -2,6 +2,8 @@
 
 <p align="center">Litematica, but in a browser tab, and your friends can watch you build.</p>
 
+<p align="center"><a href="https://litescapemc.pages.dev">litescapemc.pages.dev</a> has a live demo of the viewer.</p>
+
 <p align="center">
   <img alt="Minecraft 1.21.1 to 26.3" src="https://img.shields.io/badge/Minecraft-1.21.1%E2%80%9326.3-555?style=flat-square">
   <img alt="Fabric Loader 0.20.1+" src="https://img.shields.io/badge/Fabric_Loader-0.20.1%2B-555?style=flat-square">

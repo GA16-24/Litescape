@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Litescape: Litematica in your browser</title>
+  <meta name="description" content="A Fabric mod that shows your Litematica schematics as live 3D models in a browser tab. See what's left to build, share placements on your server, and preview shader packs.">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#fcfcfc" media="(prefers-color-scheme: light)">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Litescape: Litematica in your browser">
+  <meta property="og:description" content="See your schematic in 3D, with every block you still owe it. Share it and everyone can watch the roof not get built.">
+  <meta property="og:image" content="https://litescapemc.pages.dev/assets/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="28" height="28">Litescape</a>
+      <nav aria-label="Main">
+        <a href="#sharing">Sharing</a>
+        <a href="#install">Install</a>
+        <a href="#servers">Servers</a>
+        <a class="gh" href="https://github.com/GA16-24/Litescape">
+          <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          <span>GitHub</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero wrap">
+      <h1>Litematica, <br>in a browser tab.</h1>
+      <p class="lede">See your schematic in 3D, with every block you still owe it. Share it on your server and everyone can watch the roof not get built.</p>
+      <div class="cta">
+        <a class="btn primary" id="download" href="https://github.com/GA16-24/homebrew-tap/releases/latest">
+          <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10 2a1 1 0 0 1 1 1v8.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.42L9 11.6V3a1 1 0 0 1 1-1ZM4 15a1 1 0 0 1 1 1v1h10v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z"/></svg>
+          <span id="download-label">Get the desktop app</span>
+        </a>
+        <a class="btn" href="https://github.com/GA16-24/Litescape/releases/latest">Get the mod jar</a>
+      </div>
+      <p class="sub">Free and MIT licensed. Version 0.3 is for Minecraft 26.3, and 1.21.1 and up arrive in the next release.</p>
+      <div class="brew" id="brew" hidden>
+        <span id="mac-note" hidden>The Mac app isn't notarized yet. Homebrew sorts that out:</span>
+        <button class="copy" type="button" data-copy="brew install --cask GA16-24/tap/litescape">
+          <span class="prompt" aria-hidden="true">$</span><code>brew install --cask GA16-24/tap/litescape</code><span class="copy-hint" aria-live="polite">Copy</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="wrap demo" aria-label="Live demo">
+      <div class="frame">
+        <div class="frame-bar">
+          <span class="live"><i></i>Live demo</span>
+          <span class="frame-note">The real viewer, on a recorded build. Two players are finishing it as you watch.</span>
+          <a href="/demo/#/shared/84f2fd63-bd08-305e-a049-e43ba45426ba" target="_blank" rel="noopener">Full screen ↗</a>
+        </div>
+        <div class="stage" id="stage">
+          <a class="stage-link" id="stage-link" href="/demo/#/shared/84f2fd63-bd08-305e-a049-e43ba45426ba">
+          <picture>
+            <source media="(max-width: 800px) and (prefers-color-scheme: light)" srcset="/assets/cottage-light.webp">
+            <source media="(max-width: 800px)" srcset="/assets/cottage-dark.webp">
+            <source media="(prefers-color-scheme: light)" srcset="/assets/viewer-light.webp">
+            <img src="/assets/viewer-dark.webp" width="2240" height="1400" alt="A cottage about 80% built in the Litescape viewer. Placed blocks render normally and the unbuilt roof shows as see-through ghost blocks.">
+          </picture>
+          <span class="grab">Open the live demo</span>
+          </a>
+        </div>
+      </div>
+      <ul class="legend" aria-label="What the colors mean">
+        <li><span class="blk ok"></span>Placed</li>
+        <li><span class="blk missing"></span>Still missing, shown as a ghost</li>
+        <li><span class="blk wrong"></span>Wrong block</li>
+        <li><span class="blk state"></span>Facing the wrong way</li>
+        <li><span class="blk redstone"></span>Redstone set up wrong</li>
+      </ul>
+      <p class="legend-note">Progress updates every 2 seconds. Redstone gets its own color so a backwards observer doesn't hide among cosmetic mistakes. The Shaders tab needs the game running, so it's empty here.</p>
+    </section>
+
+    <section class="wrap row" id="sharing">
+      <div class="row-text">
+        <h2>Share it with the server. Or just with Alice.</h2>
+        <p>Click Share on a placement and players with the mod can follow along. Choose everyone, a list of players, or only you, and the server enforces it.</p>
+        <p>When someone shares with you, you get a request. Accept it or don't; the server remembers either way. Only the owner or an op can unshare.</p>
+      </div>
+      <figure class="shots">
+        <picture><source media="(prefers-color-scheme: light)" srcset="/assets/request-light.webp"><img src="/assets/request-dark.webp" width="754" height="364" alt="A share request for Harbor Lighthouse from Alice_Mines with Accept and Deny buttons."></picture>
+        <picture><source media="(prefers-color-scheme: light)" srcset="/assets/access-light.webp"><img src="/assets/access-dark.webp" width="875" height="1038" alt="The Access panel set to only people you choose, with Alice_Mines and bob on the list."></picture>
+      </figure>
+    </section>
+
+    <section class="wrap row flip">
+      <div class="row-text">
+        <h2>Build it in survival order.</h2>
+        <p>Order mode walks the schematic one stage at a time, with the materials for each stage. Water waits for whatever holds it, and lava goes last so nobody makes obsidian by accident.</p>
+        <p class="note">It doesn't plan scaffolding or walking routes. You're on your own up there.</p>
+      </div>
+      <figure class="shots wide">
+        <picture><source media="(prefers-color-scheme: light)" srcset="/assets/order-light.webp"><img src="/assets/order-dark.webp" width="1520" height="1172" alt="Order mode at stage 9 of 18: the walls are going up, and the stage list asks for 77 oak planks and 5 oak logs."></picture>
+      </figure>
+    </section>
+
+    <section class="wrap row">
+      <div class="row-text">
+        <h2>Find out who actually built it.</h2>
+        <p>Contributors lists who placed how many matching blocks, with their Minecraft face. Buckets, pistons and <code>/fill</code> don't count. We checked for cheaters.</p>
+      </div>
+      <figure class="shots">
+        <picture><source media="(prefers-color-scheme: light)" srcset="/assets/contributors-light.webp"><img src="/assets/contributors-dark.webp" width="875" height="789" alt="Contributors: Alice_Mines placed most of the blocks, bob about a third, and Player0, marked as you, placed one."></picture>
+        <figcaption>Player0 is you. One block, five hours ago.</figcaption>
+      </figure>
+    </section>
+
+    <section class="wrap more">
+      <h2>The rest of the inventory</h2>
+      <dl>
+        <div><dt>Load in Litematica</dt><dd>One click drops a shared schematic into your game at its coordinates, chests and hoppers included.</dd></div>
+        <div><dt>Surroundings</dt><dd>Snapshot 8, 16 or 32 blocks of land around the build so it doesn't float in the void.</dd></div>
+        <div><dt>Mob spawning</dt><dd>Marks every block in view a zombie could spawn on at night. Spawnproof the farm before the zombies find it.</dd></div>
+        <div><dt>Shader packs</dt><dd>Your Iris packs, compiled by the mod and run in WebGL&nbsp;2. A browser isn't a GPU, so it's terrain only. Complementary, BSL, Sildur's and Solas work; Photon runs, but its sky comes out black.</dd></div>
+        <div><dt>Your textures</dt><dd>The model uses your resource pack, so the cottage looks like your cottage.</dd></div>
+        <div><dt>The small stuff</dt><dd>Layer slicing, click to isolate a material, screenshots, a command palette, a switcher that remembers every server you've joined, light and dark, and 10 languages.</dd></div>
+      </dl>
+    </section>
+
+    <section class="wrap section" id="install">
+      <h2>Install it without opening <code>mods/</code>.</h2>
+      <ol class="steps">
+        <li>
+          <h3><a href="https://github.com/GA16-24/homebrew-tap/releases/latest" data-download>Get the app</a></h3>
+          <p>It finds your Minecraft Launcher, Prism, Modrinth App and CurseForge instances.</p>
+          <p id="mac-step" hidden>On a Mac, <code>brew install --cask GA16-24/tap/litescape</code> skips the notarization fuss.</p>
+        </li>
+        <li>
+          <h3>Click Install</h3>
+          <p>It adds the mod, plus Fabric API, MaLiLib and Litematica if they're missing.</p>
+        </li>
+        <li>
+          <h3>Type <code>/litweb</code></h3>
+          <p>Or click the link in chat. The viewer opens at <code>127.0.0.1:8723</code>.</p>
+        </li>
+      </ol>
+      <details class="manual">
+        <summary>Rather drop the jar in yourself?</summary>
+        <p>You need Fabric Loader 0.20.1+, Fabric API, and Litematica with MaLiLib (or BuildPrint 0.1.46). Version 0.3 has one jar, for Minecraft 26.3. From the next release there's one jar per Litematica line:</p>
+        <table>
+          <thead><tr><th>Jar ends in</th><th>Minecraft</th></tr></thead>
+          <tbody>
+            <tr><td><code>+1.21.1</code></td><td>1.21.1</td></tr>
+            <tr><td><code>+1.21.2</code></td><td>1.21.2, 1.21.3</td></tr>
+            <tr><td><code>+1.21.4</code></td><td>1.21.4</td></tr>
+            <tr><td><code>+1.21.5</code></td><td>1.21.5</td></tr>
+            <tr><td><code>+1.21.6</code></td><td>1.21.6, 1.21.7, 1.21.8</td></tr>
+            <tr><td><code>+1.21.9</code></td><td>1.21.9, 1.21.10</td></tr>
+            <tr><td><code>+1.21.11</code></td><td>1.21.11</td></tr>
+            <tr><td><code>+26.1</code></td><td>26.1, 26.1.1, 26.1.2</td></tr>
+            <tr><td><code>+26.2</code></td><td>26.2</td></tr>
+            <tr><td><code>+26.3</code></td><td>26.3</td></tr>
+          </tbody>
+        </table>
+        <p><a href="https://github.com/GA16-24/Litescape/releases/latest">Jars are on GitHub releases →</a></p>
+      </details>
+    </section>
+
+    <section class="wrap row" id="servers">
+      <div class="row-text">
+        <h2>Server owners: it's optional, and suspicious by default.</h2>
+        <p>Without the mod on the server, players see whatever chunks they have loaded. Add the same jar and Fabric API to the server's <code>mods/</code> and shares sync. The server only reads loaded chunks, so nobody can stall it with a far-away selection. Set <code>shared-progress=ops</code> if you worry about scouting.</p>
+        <p class="note">The viewer listens on <code>127.0.0.1</code> and rejects any other origin, so other websites can't read your world.</p>
+      </div>
+      <figure class="code-wrap">
+        <figcaption>config/litweb-server.properties</figcaption>
+        <pre class="code"><i>region-read=</i><b>ops</b>
+<i>shared-progress=</i><b>everyone</b>
+<i>max-shared-per-player=</i><b>20</b>
+<i>terrain-capture=</i><b>ops</b>
+<i>terrain-max-margin=</i><b>32</b></pre>
+      </figure>
+    </section>
+
+    <section class="wrap final">
+      <div class="bar" role="img" aria-label="Build progress: 80.9% placed">
+        <div class="bar-head"><b>80.9%</b> placed<span>1,299 / 1,605</span></div>
+        <div class="bar-track"><i class="ok" style="width:80.9%"></i><i class="wrong" style="width:0.2%"></i></div>
+      </div>
+      <h2>Go finish the roof.</h2>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/GA16-24/homebrew-tap/releases/latest" data-download>Download Litescape</a>
+        <a class="btn" href="https://github.com/GA16-24/Litescape">Read the source</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    <span>MIT licensed. Not affiliated with Mojang, Microsoft or the Litematica authors. The look is borrowed from <a href="https://github.com/pingdotgg/t3code">T3 Code</a>; we copied their homework and they know it.</span>
+    <span><a href="https://github.com/GA16-24/Litescape">GitHub</a> · <a href="https://github.com/GA16-24/Litescape/issues">Issues</a> · <a href="https://github.com/GA16-24/homebrew-tap/releases">Releases</a></span>
+  </footer>
+
+  <script src="/main.js" defer></script>
+</body>
+</html>
