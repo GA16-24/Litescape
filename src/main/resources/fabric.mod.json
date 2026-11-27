@@ -5,6 +5,7 @@
   "name": "Litescape",
   "description": "View your Litematica or BuildPrint area selection and placements as live 3D models in your browser. Install on the server too for full-range data in multiplayer.",
   "license": "MIT",
+  "icon": "assets/litweb/icon.png",
   "environment": "*",
   "entrypoints": {
     "main": ["dev.ga16.litweb.LitWeb"],
