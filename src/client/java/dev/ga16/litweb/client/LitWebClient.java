@@ -40,6 +40,9 @@ public final class LitWebClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		//? if >=26.3 {
+		BlockTable.init(); // for the desktop app, which needs it with or without Litematica
+		//?}
 		if (!Schematics.LITEMATICA && !Schematics.BUILDPRINT) {
 			LitWeb.LOG.warn("Neither Litematica nor BuildPrint is installed; the web viewer is disabled on this client");
 			return;

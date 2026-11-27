@@ -123,7 +123,15 @@ public final class LitWeb implements ModInitializer {
 		*///?}
 		instance = this;
 		ServerLifecycleEvents.SERVER_STARTED.register(this::load);
-		ServerLifecycleEvents.SERVER_STOPPING.register(s -> flushContributors());
+		//? if >=26.3 {
+		Farm.init();
+		ServerLifecycleEvents.SERVER_STOPPING.register(s -> {
+			flushContributors();
+			Farm.stop();
+		});
+		//?} else {
+		/*ServerLifecycleEvents.SERVER_STOPPING.register(s -> flushContributors());
+		*///?}
 		// Contribution counts change on every placed block; save and push them at most every 5 seconds.
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(s -> {
 			if (s.getTickCount() % 100 == 0) flushContributors();

@@ -554,4 +554,73 @@ export default {
   'Not built or not loaded': 'Pas construit ou pas chargé',
   'None loaded within {r} blocks': 'Aucun chargé à moins de {r} blocs',
   '{when}. {fix}': '{when}. {fix}',
+  'Farm test': 'Test de ferme',
+  'Run test': 'Lancer le test',
+  'Stop test': 'Arrêter le test',
+  'The farm test stopped: {error}': "Le test de ferme s'est arrêté : {error}",
+  'Building the copy… {pct}%': 'Construction de la copie… {pct} %',
+  'selected items an hour': 'objets sélectionnés par heure',
+  'Select the items you farm to add up their rate.':
+    'Sélectionne les objets que tu farmes pour additionner leur débit.',
+  'Nothing has reached its containers yet.': "Rien n'est encore arrivé dans ses conteneurs.",
+  '<b class="num">{n}</b> an hour': '<b class="num">{n}</b> par heure',
+  'Schematic files': 'Fichiers de schématiques',
+  'Open file…': 'Ouvrir un fichier…',
+  'No schematic files yet': 'Aucun fichier de schématique pour le moment',
+  "Schematics in Litematica's folder in each of your Minecraft instances show up here, and so does any .litematic file you open.":
+    "Les schématiques du dossier Litematica de chacune de tes instances Minecraft s'affichent ici, tout comme chaque fichier .litematic que tu ouvres.",
+  "Couldn't open the file": "Impossible d'ouvrir le fichier",
+  'Unknown blocks': 'Blocs inconnus',
+  'Not set, so no mobs spawn.': "Non défini, donc aucune créature n'apparaît.",
+  'AFK spot': 'Point AFK',
+  'Click the block to stand on.': 'Clique sur le bloc où te tenir.',
+  'Levers and buttons to use': 'Leviers et boutons à utiliser',
+  Done: 'Terminé',
+  'Choose in 3D': 'Choisir en 3D',
+  'Run for': 'Durée',
+  Biome: 'Biome',
+  'I agree to the <a href="https://aka.ms/MinecraftEULA" target="_blank">Minecraft EULA</a>':
+    'J\'accepte le <a href="https://aka.ms/MinecraftEULA" target="_blank">CLUF de Minecraft</a>',
+  'Starting the test server…': 'Démarrage du serveur de test…',
+  'Getting ready…': 'Préparation…',
+  '{time} of {total} farm time, {speed}× game speed': '{time} sur {total} de temps de ferme, vitesse de jeu ×{speed}',
+  '{n} mobs around the farm': { one: '{n} créature autour de la ferme', other: '{n} créatures autour de la ferme' },
+  'Server cost': 'Coût pour le serveur',
+  'ms per tick': 'ms par tick',
+  'This farm adds {ms} ms to every tick, {pct}% of the 50 ms a tick may take.':
+    'Cette ferme ajoute {ms} ms à chaque tick, soit {pct} % des 50 ms que peut durer un tick.',
+  'That is more than a whole tick, so any server running it lags.':
+    "C'est plus qu'un tick entier, donc tout serveur qui la fait tourner lague.",
+  'A server whose ticks already take more than {ms} ms would start to lag with it.':
+    'Un serveur dont les ticks durent déjà plus de {ms} ms commencerait à laguer avec elle.',
+  'That schematic file is gone': "Ce fichier de schématique n'existe plus",
+  'Start Minecraft with Litescape once, so the app learns how blocks look':
+    "Lance Minecraft une fois avec Litescape pour que l'app apprenne à quoi ressemblent les blocs",
+  'Agree to the Minecraft EULA first': "Accepte d'abord le CLUF de Minecraft",
+  'Containers to keep full': 'Conteneurs gardés pleins',
+  'Click chests, barrels and hoppers in the view to keep them full of an item, like raw iron and coal for furnaces.':
+    'Clique sur les coffres, tonneaux et entonnoirs dans la vue pour les garder pleins d’un objet, comme du fer brut et du charbon pour des fourneaux.',
+  Smelting: 'Cuisson',
+  'items smelted an hour': 'objets cuits par heure',
+  '{n} furnaces, {pct}% of their top speed of {top} an hour.': {
+    one: '{n} fourneau, {pct} % de sa vitesse maximale de {top} par heure.',
+    other: '{n} fourneaux, {pct} % de leur vitesse maximale de {top} par heure.',
+  },
+  Cancel: 'Annuler',
+  'On {block}': 'Sur {block}',
+  '{block} is in the way, marked red in the view. Click a block with two free blocks above it.':
+    '{block} gêne ; il est marqué en rouge dans la vue. Clique sur un bloc avec deux blocs libres au-dessus.',
+  'Runs this farm on a test server in the background and counts what its chests and hoppers collect. Mobs and minecarts in the schematic are left out.':
+    'Teste cette ferme sur un serveur de test en arrière-plan et compte ce que ses coffres et entonnoirs récoltent. Les créatures et wagonnets du schéma sont laissés de côté.',
+  'Click the levers and buttons the test should pull or press once the farm is built.':
+    'Clique sur les leviers et boutons que le test doit actionner une fois la ferme construite.',
+  'None, so the farm runs as built.': 'Aucun, la ferme tourne telle quelle.',
+  'None, so every container starts empty.': 'Aucun, tous les conteneurs démarrent vides.',
+  "{block} can't be picked here.": '{block} ne peut pas être choisi ici.',
+  "{items} go into the farm, so they aren't counted.": '{items} vont dans la ferme, ils ne sont donc pas comptés.',
+  "There's nothing to stand on at the {block}.": 'Impossible de se tenir sur {block}.',
+  'Furnaces fill from the hoppers above and behind them. Pick the chest or hopper that feeds those.':
+    'Les fourneaux se remplissent par les entonnoirs au-dessus et derrière eux. Choisis le coffre ou l’entonnoir qui les alimente.',
+  'Keep {name} full of': 'Garder {name} plein de',
+  'Remove {block}': 'Retirer {block}',
 };

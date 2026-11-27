@@ -64,6 +64,10 @@ const SERVER = [
   "Couldn't read the shared placement",
   "A schematic can't be connected to itself",
   'Only the owner of both schematics or an operator can connect them',
+  // the desktop app's farm test window
+  'That schematic file is gone',
+  'Start Minecraft with Litescape once, so the app learns how blocks look',
+  'Agree to the Minecraft EULA first',
 ];
 
 const KEYS = new Set([...sourceKeys(read('app.js')), ...htmlKeys(read('index.html')), ...SERVER]);

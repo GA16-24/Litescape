@@ -76,6 +76,11 @@ const EN = {
     other: '{n} views are hidden from the sidebar, across your servers.',
   },
   '{n} effects unavailable': { one: '{n} effect unavailable', other: '{n} effects unavailable' },
+  '{n} mobs around the farm': { one: '{n} mob around the farm', other: '{n} mobs around the farm' },
+  '{n} furnaces, {pct}% of their top speed of {top} an hour.': {
+    one: '{n} furnace, {pct}% of its top speed of {top} an hour.',
+    other: '{n} furnaces, {pct}% of their top speed of {top} an hour.',
+  },
   "{n} chunks weren't loaded on the server, so they show empty. Go near them in game and recapture.": {
     one: "{n} chunk wasn't loaded on the server, so it shows empty. Go near it in game and recapture.",
     other: "{n} chunks weren't loaded on the server, so they show empty. Go near them in game and recapture.",

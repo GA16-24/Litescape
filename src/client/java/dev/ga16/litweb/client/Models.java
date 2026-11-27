@@ -131,7 +131,12 @@ final class Models {
 		out.add("spawnRule", rule);
 	}
 
-	private JsonObject block(BlockState state) {
+	/** The textures used so far, as indexed by the quads. */
+	JsonArray tex() {
+		return tex;
+	}
+
+	JsonObject block(BlockState state) {
 		JsonObject o = new JsonObject();
 		o.addProperty("n", BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString());
 		StringBuilder props = new StringBuilder();
@@ -156,6 +161,8 @@ final class Models {
 			&& state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).isEmpty());
 		// Above the two cells it stands in, a tall mob (an enderman) only needs no collision and no liquid (Mob.checkSpawnObstruction).
 		o.addProperty("open", state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).isEmpty() && state.getFluidState().isEmpty());
+		// Whether a player can't stand inside it, for the farm test's AFK spot.
+		o.addProperty("collides", !state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).isEmpty());
 
 		JsonArray quads = new JsonArray();
 		//? if >=26.1 {

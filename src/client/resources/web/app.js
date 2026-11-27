@@ -117,6 +117,22 @@ const S = {
   portals: new Map(), // shared id -> {list} or {err} from the server's portal check, or {busy}
   linkPick: '', // the schematic picked in Connected parts to connect next
   focus: null, // {key, at}: the block a portal row's link asked the next view to look at
+  farm: {}, // the farm test's last status, from the Litescape app's test server
+  farmFor: '', // the view the farm settings below belong to
+  farmFlip: new Set(), // "x,y,z" of levers and buttons the next farm test uses
+  farmTargets: new Set(), // item ids picked as what the farm is for
+  farmAfk: null, // "x,y,z" where a stand-in player waits during the test, so mobs spawn
+  farmAfkOn: '', // the block the AFK spot stands on
+  farmAfkBlocked: null, // { block, at } in the way of the last clicked AFK spot
+  farmHot: null, // "x,y,z" of the picked block whose row the pointer or focus is on
+  farmRefused: '', // the block the last click in the view couldn't pick
+  farmFeed: new Map(), // "x,y,z" of a container -> item id the test keeps it full of
+  farmPick: null, // 'afk', 'flip' or 'feed' while choosing them in the view
+  farmTicks: 72000,
+  farmBiome: 'minecraft:plains',
+  farmDim: 'minecraft:overworld',
+  farmAgree: false,
+  farmError: '', // why the last Run didn't start
 };
 
 // ---------------------------------------------------------------- three.js
@@ -242,6 +258,7 @@ function frame(now) {
   controls.update();
   const shaded = shaderOn();
   if ($('gl-iris').hidden === shaded) syncShaderView(); // e.g. the loading overlay just went away
+  farmTagLayer.hidden = shaded; // the marks are drawn in the plain view only
   if (shaded) {
     renderIris(now);
     return;
@@ -249,6 +266,7 @@ function frame(now) {
   if (!needsRender) return;
   needsRender = false;
   renderer.render(scene, camera);
+  placeFarmTags();
   const az = controls.getAzimuthalAngle();
   $('compass').firstElementChild.style.transform = `translateX(-50%) rotate(${az}rad)`;
 }
@@ -506,6 +524,11 @@ async function open(desc, { force = false } = {}) {
   if (location.hash !== hash) history.replaceState(null, '', hash);
   if (!force && !changedView && S.data) return focusBlock();
   if (changedView) {
+    // Picking in the view belongs to the view it started in
+    S.farmPick = null;
+    S.farmAfkBlocked = null;
+    S.farmRefused = '';
+    S.farmHot = null;
     S.status = null;
     S.counts = null;
     S.statusSig = '';
@@ -534,7 +557,7 @@ async function open(desc, { force = false } = {}) {
     if (S.loadingKey !== token) return;
     setLoadingText(t('Building mesh…'));
     prepare(data, atlas, changedView || !S.data || String(S.data.size) !== String(data.size));
-    if (desc.type !== 'selection') pollStatus(true);
+    if (desc.type !== 'selection' && desc.type !== 'file') pollStatus(true);
   } catch (err) {
     if (S.loadingKey !== token) return;
     showError(desc, err.message);
@@ -611,12 +634,14 @@ function prepare(data, atlas, refit) {
   if (refit) S.pendingFit = true;
   remesh();
   renderAll();
+  renderFarmMarks();
 }
 
 function viewSig(desc) {
   const a = S.api;
   if (!a || !desc) return null;
   if (desc.type === 'selection') return a.selection ? a.selection.name + JSON.stringify(a.selection.boxes) : null;
+  if (desc.type === 'file') return String(a.files?.find((f) => f.id === desc.id)?.modified ?? ''); // saved again in Litematica
   if (desc.type === 'placement') {
     const p = (a.placements || []).find((x) => x.id === desc.id);
     return p ? JSON.stringify(p.boxes) : null;
@@ -933,7 +958,7 @@ function onState() {
   if (live && S.liveKey !== undefined && live !== S.liveKey && live !== S.viewing) resetView(null);
   S.liveKey = live;
   // Your selection and placements left with the world; show the saved copy of the server instead.
-  if (S.desc && S.desc.type !== 'shared' && !isLive()) resetView(S.server);
+  if (S.desc && S.desc.type !== 'shared' && S.desc.type !== 'file' && !isLive()) resetView(S.server);
   S.viewing = viewServer();
   if (S.access) {
     const sh = findShared(S.access.id);
@@ -943,7 +968,16 @@ function onState() {
   renderConn();
   renderNav();
   renderFoot();
-  if (!a.inWorld && !a.servers?.length) {
+  if (a.app && !a.files.length) {
+    S.desc = null;
+    S.data = null;
+    S.loadingKey = null;
+    clearScene();
+    renderAll();
+    showOverlay(emptyHtml('files'));
+    return;
+  }
+  if (!a.app && !a.inWorld && !a.servers?.length) {
     S.desc = null;
     S.data = null;
     S.loadingKey = null;
@@ -957,13 +991,15 @@ function onState() {
     const first =
       fromHash && exists(fromHash)
         ? fromHash
-        : isLive() && a.selection
-          ? { type: 'selection' }
-          : isLive() && a.placements?.[0]
-            ? { type: 'placement', id: a.placements[0].id }
-            : sharedList().find((s) => !isHidden(s) && !isPending(s))
-              ? { type: 'shared', id: sharedList().find((s) => !isHidden(s) && !isPending(s)).id }
-              : null;
+        : a.app
+          ? { type: 'file', id: a.files[0].id }
+          : isLive() && a.selection
+            ? { type: 'selection' }
+            : isLive() && a.placements?.[0]
+              ? { type: 'placement', id: a.placements[0].id }
+              : sharedList().find((s) => !isHidden(s) && !isPending(s))
+                ? { type: 'shared', id: sharedList().find((s) => !isHidden(s) && !isPending(s)).id }
+                : null;
     if (first) open(first);
     else {
       showOverlay(emptyHtml(isLive() ? 'selection' : a.inWorld ? 'nothing-shared' : 'world'));
@@ -996,6 +1032,7 @@ function onState() {
 
 function exists(d) {
   const a = S.api;
+  if (d.type === 'file') return !!a.files?.some((f) => f.id === d.id);
   if (d.type === 'shared') return !!findShared(d.id);
   if (!isLive()) return false; // your selection and placements belong to the world you're in
   if (d.type === 'selection') return !!a.selection;
@@ -1006,7 +1043,7 @@ function exists(d) {
 function parseHash() {
   const [, type, id, pos] = location.hash.split('/');
   const at = pos?.split(',').map(Number);
-  if (!['selection', 'placement', 'shared'].includes(type)) return null;
+  if (!['selection', 'placement', 'shared', 'file'].includes(type)) return null;
   return { type, id: id || undefined, ...(at?.length === 3 && at.every(Number.isFinite) && { at }) };
 }
 
@@ -1016,6 +1053,7 @@ function clearScene() {
     m.geometry.dispose();
   });
   meshes.length = 0;
+  clearFarmMarks();
   cursor.visible = false;
   needsRender = true;
 }
@@ -1031,6 +1069,7 @@ function showOverlay(html, translucent = false) {
   for (const b of o.querySelectorAll('[data-go]'))
     b.addEventListener('click', () => open(JSON.parse(b.dataset.go), { force: true }));
   for (const b of o.querySelectorAll('[data-palette]')) b.addEventListener('click', () => openPalette(''));
+  for (const b of o.querySelectorAll('[data-open-file]')) b.addEventListener('click', openFile);
 }
 function hideOverlayIfLoaded() {
   if (!S.data) return;
@@ -1083,6 +1122,12 @@ function showError(desc, msg) {
     <div class="btn-row"><button class="btn" data-go='${esc(JSON.stringify(desc))}'>${ICON.retry}${t('Try again')}</button></div></div>`);
 }
 function emptyHtml(kind) {
+  if (kind === 'files')
+    return `<div class="empty">
+    <div class="empty-icon">${ICON.placement}</div>
+    <h2>${t('No schematic files yet')}</h2>
+    <p>${t("Schematics in Litematica's folder in each of your Minecraft instances show up here, and so does any .litematic file you open.")}</p>
+    <div class="btn-row"><button class="btn primary" data-open-file>${t('Open file…')}</button></div></div>`;
   if (kind === 'world')
     return `<div class="empty">
     <div class="empty-icon">${ICON.globe}</div>
@@ -1127,11 +1172,13 @@ function renderConn() {
   el.querySelector('.conn-text').textContent = t(
     S.connected === false ? 'Offline' : S.connected ? 'Live' : 'Connecting…',
   );
-  el.title = S.connected
-    ? t('Connected to Minecraft')
-    : S.connected === false
-      ? t('Minecraft is not reachable. Retrying.')
-      : '';
+  el.title = S.api?.app
+    ? ''
+    : S.connected
+      ? t('Connected to Minecraft')
+      : S.connected === false
+        ? t('Minecraft is not reachable. Retrying.')
+        : '';
 }
 
 function rowHtml({ desc, icon, title, sub, meta = '', action = '', pct }) {
@@ -1148,18 +1195,48 @@ function renderNav() {
   const a = S.api;
   const nav = $('nav');
   renderServer();
-  if (!a?.inWorld && !a?.servers?.length) {
+  if (!a?.app && !a?.inWorld && !a?.servers?.length) {
     nav.innerHTML = '';
     lastNav = null;
     return;
   }
   $('toggle-sidebar').classList.toggle('dot', isLive() && sharedList().some(isPending)); // shows while the sidebar is closed
-  const h = isLive() ? requestsNavHtml() + liveNavHtml(a) + sharedNavHtml() : savedNoteHtml() + sharedNavHtml();
+  const h = a.app
+    ? filesNavHtml(a)
+    : isLive()
+      ? requestsNavHtml() + liveNavHtml(a) + sharedNavHtml()
+      : savedNoteHtml() + sharedNavHtml();
   if (h !== lastNav) {
     // re-rendering every poll would drop keyboard focus
     const focused = document.activeElement?.closest?.('#nav [data-desc]')?.dataset.desc;
     nav.innerHTML = lastNav = h;
     if (focused) [...nav.querySelectorAll('[data-desc]')].find((r) => r.dataset.desc === focused)?.focus();
+  }
+}
+
+/** The Litescape app's schematic files, newest first. */
+function filesNavHtml(a) {
+  let h = `<div class="nav-section"><div class="nav-head">${t('Schematic files')}<button class="link" id="open-file">${t('Open file…')}</button></div>`;
+  for (const f of a.files)
+    h += rowHtml({
+      desc: { type: 'file', id: f.id },
+      icon: ICON.placement,
+      title: f.name,
+      sub: new Date(f.modified).toLocaleDateString(lang, { dateStyle: 'medium' }),
+    });
+  return `${h}</div>`;
+}
+
+async function openFile() {
+  try {
+    const { id } = await api('api/app/open', { method: 'POST' });
+    if (id) {
+      S.api = await api('api/state');
+      onState();
+      open({ type: 'file', id });
+    }
+  } catch (err) {
+    toast(t("Couldn't open the file"), err.message);
   }
 }
 
@@ -1421,6 +1498,10 @@ document.addEventListener('mousedown', (e) => {
 
 function renderFoot() {
   const a = S.api;
+  if (a?.app) {
+    $('foot').innerHTML = '';
+    return;
+  }
   if (!a?.inWorld) {
     $('foot').innerHTML = S.connected ? `<div class="foot-line">${t('Not in a world')}</div>` : '';
     return;
@@ -1443,13 +1524,15 @@ function renderTop() {
     const group =
       d.type === 'shared'
         ? esc(serverInfo()?.name || t('Shared'))
-        : t({ selection: 'Selection', placement: 'Your placements' }[d.type]);
+        : t({ selection: 'Selection', placement: 'Your placements', file: 'Schematic files' }[d.type]);
     const name =
       d.type === 'selection'
         ? a.selection?.name
         : d.type === 'placement'
           ? a.placements?.find((p) => p.id === d.id)?.name
-          : findShared(d.id)?.name;
+          : d.type === 'file'
+            ? a.files?.find((f) => f.id === d.id)?.name
+            : findShared(d.id)?.name;
     crumbs = `<span class="muted">${group}</span>${name ? `<span class="sep">/</span><strong>${esc(name)}</strong>` : ''}`;
   }
   $('crumbs').innerHTML = crumbs;
@@ -1466,7 +1549,7 @@ function renderTop() {
             : 'Your client only knows nearby chunks. Install the mod on the server for wider reads.',
       );
       chips += `<span class="chip warn" data-tip="${esc(why)}">${t('{pct}% loaded', { pct })}</span>`;
-    } else if (data.source !== 'placement' && data.source !== 'shared') {
+    } else if (data.source !== 'placement' && data.source !== 'shared' && data.source !== 'file') {
       chips += `<span class="chip" data-tip="${t(data.source === 'server' ? 'Read from the server' : 'Read from chunks your client has loaded')}">${t(data.source === 'server' ? 'From server' : 'Loaded chunks')}</span>`;
     }
     const asked = d.type === 'shared' && isLive() && findShared(d.id);
@@ -1576,7 +1659,7 @@ function renderInspector() {
       <div class="sh-field"><span>${t('Show missing blocks as ghosts')}</span><button type="button" class="switch" role="switch" id="ghosts" aria-checked="${S.ghosts}" aria-label="${t('Show missing blocks as ghosts')}" data-tip="${t('Ghosts')}" data-key="G"></button></div>
       <div class="updated" id="updated-at">${S.statusErr ? `<span style="color:var(--danger)">${esc(S.statusErr)}</span>` : updatedText(ago)}</div>
     </section>`;
-  } else if (d.type !== 'selection') {
+  } else if (d.type !== 'selection' && d.type !== 'file') {
     const why = !isLive()
       ? t("Build progress shows while you're on {server}.", { server: esc(serverInfo()?.name || t('its server')) })
       : S.statusErr
@@ -1597,7 +1680,7 @@ function renderInspector() {
     [t('Y levels'), t('{min} to {max}', { min: origin[1], max: origin[1] + height })],
   ];
   // For portal linking: Nether X and Z are the Overworld's ÷ 8, Y is the same. Placements and selections are in the player's dimension.
-  const dim = sh ? sh.dim : a.dim;
+  const dim = sh ? sh.dim : a.app ? null : a.dim;
   if (dim === 'minecraft:overworld')
     facts.push([t('In the Nether'), [Math.floor(origin[0] / 8), origin[1], Math.floor(origin[2] / 8)].join(', ')]);
   else if (dim === 'minecraft:the_nether')
@@ -1615,7 +1698,8 @@ function renderInspector() {
     if (!sh.manage || !isLive()) facts.push([t('Visible to'), accessText(sh)]);
     facts.push([t('Dimension'), sh.dim.replace('minecraft:', '')]);
     facts.push([t('Shared'), new Date(sh.updated).toLocaleString(lang, { dateStyle: 'medium', timeStyle: 'short' })]);
-  } else facts.push([t('Dimension'), a.dim.replace('minecraft:', '')]); // selections and placements are in the player's
+  } else if (!a.app) facts.push([t('Dimension'), a.dim.replace('minecraft:', '')]); // selections and placements are in the player's
+  if (data.unknown?.length) facts.push([t('Unknown blocks'), data.unknown.map(pretty).join(', ')]);
   h += `<section class="panel"><div class="panel-head"><h3>${t('Overview')}</h3></div><dl class="facts">${facts.map(([k, v]) => `<dt>${k}</dt><dd title="${esc(v)}">${esc(v)}</dd>`).join('')}</dl>`;
   if (pl) {
     const busy = S.busy.has(pl.id) || !validAt(pl);
@@ -1636,6 +1720,7 @@ function renderInspector() {
   if (shared) h += partsHtml(shared);
   if (shared) h += surroundingsHtml(shared);
   h += spawnHtml(shared);
+  if (d.type === 'file') h += farmHtml(d, data);
   if (shared?.manage && isLive()) h += accessHtml(shared);
   if (shared) h += contributorsHtml(shared, a.player);
 
@@ -1671,6 +1756,7 @@ function renderInspector() {
   const atFocus = document.activeElement?.dataset?.at
     ? [document.activeElement.id, document.activeElement.selectionStart]
     : null;
+  const farmFocus = farmFocusOf(document.activeElement);
   if (h !== lastInspector) {
     el.innerHTML = lastInspector = h;
     el.scrollTop = scrollTop;
@@ -1693,6 +1779,7 @@ function renderInspector() {
     $(atFocus[0]).focus(); // the 2 s progress re-render would otherwise drop the caret mid-number
     $(atFocus[0]).setSelectionRange(atFocus[1], atFocus[1]);
   }
+  if (farmFocus && document.activeElement === document.body) el.querySelector(farmFocus)?.focus();
   const f = $('mat-filter');
   if (f && document.activeElement?.id !== 'mat-filter' && S.matFocus) {
     f.focus();
@@ -2050,6 +2137,512 @@ function spawnText(rule) {
   return `<span><span class="text">${esc(mob)}</span> · ${t('{when}. {fix}', { when, fix })}</span>`;
 }
 
+/** Blocks in the build whose id matches `re`, as ["x,y,z", block id], found once per view. */
+function farmFind(d, key, re) {
+  d.found ??= {};
+  if (d.found[key]) return d.found[key];
+  const out = [];
+  d.found[key] = out;
+  const [sx, , sz] = d.size;
+  for (let i = 0; i < d.blocks16.length; i++) {
+    const e = d.palette[d.blocks16[i]];
+    if (!e || e.t || !re.test(e.n)) continue;
+    const at = [
+      d.origin[0] + (i % sx),
+      d.origin[1] + Math.floor(i / (sx * sz)),
+      d.origin[2] + (Math.floor(i / sx) % sz),
+    ];
+    out.push([at.join(','), e.n]);
+  }
+  return out;
+}
+const farmTriggers = (d) => farmFind(d, 'triggers', /^minecraft:(lever|\w+_button)$/);
+// Furnaces aren't here: each of their slots has a job, so they're fed through hoppers like in a real build.
+const farmContainers = (d) =>
+  farmFind(d, 'containers', /^minecraft:(chest|trapped_chest|barrel|hopper|dropper|dispenser|(\w+_)?shulker_box)$/);
+/**
+ * Where keyboard focus in the farm panel goes after the panel is rebuilt: the same control, or after a remove button
+ * goes, its picker's Choose in 3D.
+ */
+function farmFocusOf(el) {
+  if (!el?.closest?.('#farm')) return null;
+  const d = el.dataset;
+  if (d.farmFeed) return `[data-farm-feed="${d.farmFeed}"]`;
+  if (d.farmUnfeed) return '#farm-pick-feed';
+  if (d.farmFlip) return '#farm-pick-flip';
+  if (el.id === 'farm-clear-afk') return '#farm-pick-afk';
+  if (d.farmTicks) return `[data-farm-ticks="${d.farmTicks}"]`;
+  if (d.farmItem) return `[data-farm-item="${d.farmItem}"]`;
+  return el.id ? `#${el.id}` : null;
+}
+
+/** The picked blocks (`picked` is a Set or Map keyed "x,y,z") as ["x,y,z", block id], numbered in the order they were picked. */
+function farmPicked(d, find, picked) {
+  const names = new Map(find(d));
+  return [...picked.keys()].filter((at) => names.has(at)).map((at) => [at, names.get(at)]);
+}
+/** What a container can be kept full of: things to smelt, and fuel. */
+const FEED_ITEMS = [
+  'raw_iron',
+  'raw_gold',
+  'raw_copper',
+  'cobblestone',
+  'sand',
+  'kelp',
+  'cactus',
+  'oak_log',
+  'potato',
+  'beef',
+  'coal',
+  'charcoal',
+  'coal_block',
+  'blaze_rod',
+  'dried_kelp_block',
+  'bamboo',
+];
+
+/** The palette entry at world x, y, z in the view, or null outside it. */
+function blockAtWorld(d, [x, y, z]) {
+  const [sx, sy, sz] = d.size;
+  const [lx, ly, lz] = [x - d.origin[0], y - d.origin[1], z - d.origin[2]];
+  if (lx < 0 || ly < 0 || lz < 0 || lx >= sx || ly >= sy || lz >= sz) return null;
+  return d.palette[d.blocks16[(ly * sz + lz) * sx + lx]];
+}
+
+const farmLive = (f) => ['server', 'sent', 'clearing', 'baseline', 'pasting', 'loading', 'running'].includes(f.state);
+// A void test world gets one biome around the farm; these are the ones farms are usually built for.
+const BIOMES = {
+  'minecraft:overworld': [
+    'plains',
+    'desert',
+    'swamp',
+    'mangrove_swamp',
+    'forest',
+    'dark_forest',
+    'taiga',
+    'snowy_plains',
+    'ocean',
+    'river',
+    'beach',
+    'jungle',
+    'badlands',
+    'savanna',
+    'mushroom_fields',
+    'deep_dark',
+  ],
+  'minecraft:the_nether': ['nether_wastes', 'soul_sand_valley', 'crimson_forest', 'warped_forest', 'basalt_deltas'],
+  'minecraft:the_end': ['the_end', 'end_highlands', 'end_midlands', 'small_end_islands', 'end_barrens'],
+};
+
+/** Farm time as minutes, or hours once it passes one. */
+function farmTime(ticks) {
+  const [unit, n] = ticks < 72000 ? ['minute', ticks / 1200] : ['hour', ticks / 72000];
+  return new Intl.NumberFormat(lang, { style: 'unit', unit, maximumFractionDigits: unit === 'hour' ? 1 : 0 }).format(n);
+}
+const ms = (n) => new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(n);
+
+/**
+ * The farm test, in the Litescape app: the AFK spot and the levers and buttons, chosen in the view, then a run on the
+ * app's test server, and what the build's containers gained and what the farm costs a server per tick.
+ */
+function farmHtml(d, data) {
+  const key = keyOf(d);
+  if (S.farmFor !== key) {
+    S.farmFor = key;
+    S.farmFlip.clear();
+    S.farmFeed.clear();
+    S.farmAfk = null;
+    S.farmAfkBlocked = null;
+    S.farmHot = null;
+    S.farmRefused = '';
+    S.farmPick = null;
+    S.farmError = '';
+  }
+  const f = S.farm.id === d.id && S.farm.modified === d.modified ? S.farm : {};
+  const live = farmLive(f);
+  const off = live ? 'disabled' : '';
+  let h = `<section class="panel" id="farm"><div class="panel-head"><h3>${t('Farm test')}</h3></div>
+    <p class="updated" style="margin:0 0 8px">${t('Runs this farm on a test server in the background and counts what its chests and hoppers collect. Mobs and minecarts in the schematic are left out.')}</p>`;
+
+  // Three pickers that work alike: a heading with Choose in 3D, a hint while picking, then one row per picked block with
+  // the numbered badge its label in the view carries, so nobody has to read coordinates.
+  if (shaderOn() && (S.farmPick || S.farmAfk || S.farmFlip.size || S.farmFeed.size))
+    h += `<p class="updated farm-hint">${t("The marks don't show while a shader pack is on.")}</p>`;
+  const picker = (kind, title, hint) => {
+    const on = S.farmPick === kind;
+    const label = on ? (kind === 'afk' ? t('Cancel') : t('Done')) : t('Choose in 3D');
+    const refused = on && S.farmRefused;
+    return `<div class="sh-field farm-head"><span>${title}</span><button class="link" id="farm-pick-${kind}" aria-pressed="${on}" ${off}>${label}</button></div>${
+      on ? `<p class="updated farm-hint">${hint}</p>` : ''
+    }${refused ? `<p class="updated farm-hint" style="color:var(--danger)">${esc(S.farmRefused)}</p>` : ''}`;
+  };
+  const remove = (attr, name) =>
+    `<button type="button" class="icon-btn sm" ${attr} aria-label="${esc(t('Remove {block}', { block: name }))}" data-tip="${t('Remove')}" ${off}>${ICON.x}</button>`;
+  const none = (text) => `<p class="updated farm-hint">${text}</p>`;
+  const row = (kind, at, n, name, control) =>
+    `<div class="farm-row${S.farmHot === at ? ' hot' : ''}" data-farm-mark="${at}"><span class="farm-badge" data-kind="${kind}">${n}</span><span class="farm-name">${esc(name)}</span>${control}</div>`;
+
+  h += picker('afk', t('AFK spot'), t('Click the block to stand on.'));
+  if (S.farmAfkBlocked)
+    h += `<p class="updated farm-hint" style="color:var(--danger)">${esc(t('{block} is in the way, marked red in the view. Click a block with two free blocks above it.', S.farmAfkBlocked))}</p>`;
+  if (S.farmAfk)
+    h += row(
+      'afk',
+      S.farmAfk,
+      '',
+      t('On {block}', { block: S.farmAfkOn }),
+      remove('id="farm-clear-afk"', t('AFK spot')),
+    );
+  else if (S.farmPick !== 'afk') h += none(t('Not set, so no mobs spawn.'));
+
+  if (farmTriggers(data).length) {
+    h += picker(
+      'flip',
+      t('Levers and buttons to use'),
+      t('Click the levers and buttons the test should pull or press once the farm is built.'),
+    );
+    const flipped = farmPicked(data, farmTriggers, S.farmFlip);
+    flipped.forEach(([at, n], i) => {
+      h += row('flip', at, i + 1, pretty(n), remove(`data-farm-flip="${at}"`, `${pretty(n)} ${i + 1}`));
+    });
+    if (!flipped.length && S.farmPick !== 'flip') h += none(t('None, so the farm runs as built.'));
+  }
+
+  const containers = farmContainers(data);
+  if (containers.length) {
+    h += picker(
+      'feed',
+      t('Containers to keep full'),
+      t(
+        'Click chests, barrels and hoppers in the view to keep them full of an item, like raw iron and coal for furnaces.',
+      ),
+    );
+    const fed = farmPicked(data, farmContainers, S.farmFeed);
+    if (!fed.length && S.farmPick !== 'feed') h += none(t('None, so every container starts empty.'));
+    fed.forEach(([at, n], i) => {
+      const name = `${pretty(n)} ${i + 1}`;
+      const items = FEED_ITEMS.map(
+        (it) =>
+          `<option value="minecraft:${it}" ${S.farmFeed.get(at) === `minecraft:${it}` ? 'selected' : ''}>${esc(pretty(it))}</option>`,
+      ).join('');
+      h += row(
+        'feed',
+        at,
+        i + 1,
+        pretty(n),
+        `<select class="opt-select" data-farm-feed="${at}" aria-label="${esc(t('Keep {name} full of', { name }))}" ${off}>${items}</select>${remove(`data-farm-unfeed="${at}"`, name)}`,
+      );
+    });
+  }
+
+  const runFor = [
+    [12000, farmTime(12000)],
+    [72000, farmTime(72000)],
+    [24 * 72000, farmTime(24 * 72000)],
+  ];
+  h += `<div class="sh-field"><span>${t('Run for')}</span></div><div class="seg" role="radiogroup" aria-label="${t('Run for')}" style="margin:0 0 8px">${runFor
+    .map(
+      ([n, l]) =>
+        `<button type="button" role="radio" aria-checked="${S.farmTicks === n}" data-farm-ticks="${n}" ${off}>${esc(l)}</button>`,
+    )
+    .join('')}</div>`;
+  const dims = Object.keys(BIOMES);
+  h += `<div class="sh-field"><span>${t('Dimension')}</span><select class="opt-select" id="farm-dim" aria-label="${t('Dimension')}" ${off}>${dims
+    .map((k) => `<option value="${k}" ${S.farmDim === k ? 'selected' : ''}>${esc(pretty(k))}</option>`)
+    .join('')}</select></div>
+    <div class="sh-field"><span>${t('Biome')}</span><select class="opt-select" id="farm-biome" aria-label="${t('Biome')}" ${off}>${BIOMES[
+      S.farmDim
+    ]
+      .map(
+        (b) =>
+          `<option value="minecraft:${b}" ${S.farmBiome === `minecraft:${b}` ? 'selected' : ''}>${esc(pretty(b))}</option>`,
+      )
+      .join('')}</select></div>`;
+  if (!f.eula && !S.farm.eula)
+    h += `<label class="sh-field"><span>${t('I agree to the <a href="https://aka.ms/MinecraftEULA" target="_blank">Minecraft EULA</a>')}</span><input type="checkbox" id="farm-agree" ${S.farmAgree ? 'checked' : ''}></label>`;
+  h += `<div class="btn-row" style="margin:4px 0 8px">${
+    live
+      ? `<button class="btn" id="farm-stop">${ICON.stop}${t('Stop test')}</button>`
+      : `<button class="btn primary" id="farm-run" ${!S.farm.eula && !S.farmAgree ? 'disabled' : ''}>${ICON.retry}${t('Run test')}</button>`
+  }</div>`;
+
+  const note = (text, danger) =>
+    `<p class="updated" style="margin:0 0 8px${danger ? ';color:var(--danger)' : ''}">${text}</p>`;
+  const error = S.farmError || (f.state === 'error' && f.error);
+  if (error) h += note(esc(t('The farm test stopped: {error}', { error: t(error) })), true);
+  if (f.state === 'server' || f.state === 'sent') h += note(t('Starting the test server…'));
+  if (f.state === 'clearing' || f.state === 'baseline' || f.state === 'loading') h += note(t('Getting ready…'));
+  if (f.state === 'pasting') h += note(t('Building the copy… {pct}%', { pct: Math.floor(100 * f.progress) }));
+  if (!f.ticks) return `${h}</section>`;
+
+  const hours = f.ticks / 72000;
+  const speed = f.seconds ? Math.round(f.ticks / 20 / f.seconds) : 0;
+  h += note(
+    t('{time} of {total} farm time, {speed}× game speed', {
+      time: farmTime(f.ticks),
+      total: farmTime(f.target),
+      speed: fmt.format(speed),
+    }),
+  );
+  if (f.afk || f.mobs) h += note(t('{n} mobs around the farm', { n: f.mobs }));
+  const rate = (n) => fmt.format(hours ? Math.round((10 * n) / hours) / 10 : 0); // one decimal, so a slow farm doesn't read 0
+  const picked = f.items.filter(([id]) => S.farmTargets.has(id));
+  if (picked.length)
+    h += `<div class="big-pct"><strong class="num">${rate(picked.reduce((sum, [, , n]) => sum + n, 0))}</strong><span>${t('selected items an hour')}</span></div>`;
+  else if (f.items.length) h += note(t('Select the items you farm to add up their rate.'));
+  else h += note(t('Nothing has reached its containers yet.'));
+  // What this run was fed, from the server, so changing the rows afterwards doesn't change the results
+  if (f.fed?.length)
+    h += note(
+      esc(t("{items} go into the farm, so they aren't counted.", { items: new Intl.ListFormat(lang).format(f.fed) })),
+    );
+  h += `<div class="mats" style="margin-bottom:12px">${f.items
+    .map(([id, name, n]) => {
+      const on = S.farmTargets.has(id);
+      return `<button type="button" class="mat" data-farm-item="${esc(id)}" aria-pressed="${on}"><span>${on ? ICON.check : ''}</span><span class="m-name">${esc(name)}<span class="m-sub num">${fmt.format(n)}</span></span><span class="m-count">${t('<b class="num">{n}</b> an hour', { n: rate(n) })}</span></button>`;
+    })
+    .join('')}</div>`;
+
+  // Furnaces, smokers and blast furnaces against their top speed, which depends on the recipe, the block and its fuel.
+  if (f.smelting) {
+    const { furnaces, smelted, top } = f.smelting;
+    const pct = hours ? Math.min(100, Math.round((100 * smelted) / hours / top)) : 0; // the top assumes a furnace's 10 s until one cooks
+    h += `<div class="panel-head"><h3>${t('Smelting')}</h3></div>
+      <div class="big-pct"><strong class="num">${rate(smelted)}</strong><span>${t('items smelted an hour')}</span></div>
+      <div class="stack"><i style="width:${pct}%;background:var(--accent)"></i></div>
+      ${note(t('{n} furnaces, {pct}% of their top speed of {top} an hour.', { n: furnaces, pct, top: fmt.format(top) }))}`;
+  }
+
+  // What the farm adds to every tick, measured against the same server without it. A tick may take 50 ms before a server lags.
+  if (f.msTick != null && f.msBase != null) {
+    const cost = Math.max(0, Math.round(10 * (f.msTick - f.msBase)) / 10); // one decimal, so every figure below agrees
+    h += `<div class="panel-head"><h3>${t('Server cost')}</h3></div>
+      <div class="big-pct"><strong class="num">${ms(cost)}</strong><span>${t('ms per tick')}</span></div>
+      <div class="stack"><i style="width:${Math.min(100, cost * 2)}%;background:var(--accent)"></i></div>
+      ${note(t('This farm adds {ms} ms to every tick, {pct}% of the 50 ms a tick may take.', { ms: ms(cost), pct: ms(cost * 2) }))}
+      ${
+        cost === 0 // nothing to warn about
+          ? ''
+          : note(
+              cost >= 50
+                ? t('That is more than a whole tick, so any server running it lags.')
+                : t('A server whose ticks already take more than {ms} ms would start to lag with it.', {
+                    ms: ms(50 - cost),
+                  }),
+            )
+      }`;
+  }
+  return `${h}</section>`;
+}
+
+/** The AFK spot and the chosen levers and buttons, drawn in the view. */
+const farmMarks = new THREE.Group();
+farmMarks.renderOrder = 11;
+scene.add(farmMarks);
+// Labels over the marked blocks, in the colours of their rows' badges; placed again whenever the view renders.
+const farmTagLayer = document.createElement('div');
+farmTagLayer.className = 'farm-tags';
+$('stage').append(farmTagLayer);
+let farmTags = []; // { el, p: THREE.Vector3, hot } in the marks' coordinates
+const tagAt = new THREE.Vector3();
+function placeFarmTags() {
+  if (!farmTags.length) return;
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  for (const { el, p, hot } of farmTags) {
+    tagAt.copy(p).project(camera);
+    el.hidden = tagAt.z > 1 || Math.abs(tagAt.x) > 1 || Math.abs(tagAt.y) > 1;
+    // Grows from its bottom edge, so it stays over its block
+    el.style.transform = `translate(${((tagAt.x + 1) / 2) * w}px, ${((1 - tagAt.y) / 2) * h}px) translate(-50%, -100%)${hot ? ' scale(1.15)' : ''}`;
+  }
+}
+function clearFarmMarks() {
+  for (const m of farmMarks.children) {
+    m.geometry.dispose();
+    m.material.dispose();
+  }
+  farmMarks.clear();
+  farmTagLayer.replaceChildren();
+  farmTags = [];
+  canvas.style.cursor = '';
+}
+// One box's edges; the candidates while picking share one object, since a storage build can have thousands of hoppers.
+const EDGES = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.04, 1.04, 1.04)).attributes.position.array;
+
+function renderFarmMarks() {
+  clearFarmMarks();
+  needsRender = true;
+  if (S.farmPick) canvas.style.cursor = 'crosshair';
+  const d = S.data;
+  if (!d || S.desc?.type !== 'file') return;
+  const local = (at, dy) => {
+    const [x, y, z] = at.split(',').map(Number);
+    return new THREE.Vector3(x - d.origin[0] + 0.5, y - d.origin[1] + dy, z - d.origin[2] + 0.5);
+  };
+  // The marks take the colours of the badges, from the theme
+  const css = getComputedStyle(document.documentElement);
+  const color = (token) => new THREE.Color(css.getPropertyValue(token).trim());
+  const mark = (at, w, hgt, kind, label) => {
+    const c = color(`--farm-${kind}`);
+    const box = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(w, hgt, w)),
+      new THREE.LineBasicMaterial({ color: c, depthTest: false, transparent: true, opacity: 0.95 }),
+    );
+    box.position.copy(local(at, hgt / 2));
+    farmMarks.add(box);
+    const hot = S.farmHot === at;
+    if (hot) {
+      const fill = new THREE.Mesh(
+        new THREE.BoxGeometry(w, hgt, w),
+        new THREE.MeshBasicMaterial({ color: c, depthTest: false, transparent: true, opacity: 0.3 }),
+      );
+      fill.position.copy(box.position);
+      farmMarks.add(fill);
+    }
+    const el = document.createElement('div');
+    el.className = 'farm-tag';
+    el.dataset.kind = kind;
+    el.innerHTML = label;
+    el.classList.toggle('compact', el.childNodes.length === 1 && el.firstChild.nodeType === 1); // just its number badge
+    if (hot) el.style.zIndex = '1'; // over its neighbours' labels
+    farmTagLayer.append(el);
+    farmTags.push({ el, p: local(at, hgt + 0.1), hot });
+  };
+  // With many picks the labels shrink to their numbers, apart from the one being pointed at
+  const many = S.farmFlip.size + S.farmFeed.size > 6;
+  const num = (n, text, at) => `<span class="farm-badge">${n}</span>${many && S.farmHot !== at ? '' : esc(text)}`;
+  const candidates = (list, picked) => {
+    const free = list.filter(([at]) => !picked.has(at));
+    if (!free.length) return;
+    const pos = new Float32Array(free.length * EDGES.length);
+    free.forEach(([at], i) => {
+      const o = local(at, 0.5);
+      for (let k = 0; k < EDGES.length; k += 3) {
+        pos[i * EDGES.length + k] = EDGES[k] + o.x;
+        pos[i * EDGES.length + k + 1] = EDGES[k + 1] + o.y;
+        pos[i * EDGES.length + k + 2] = EDGES[k + 2] + o.z;
+      }
+    });
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    farmMarks.add(
+      new THREE.LineSegments(
+        g,
+        new THREE.LineBasicMaterial({ color: color('--farm-off'), depthTest: false, transparent: true, opacity: 0.4 }),
+      ),
+    );
+  };
+  if (S.farmAfk) mark(S.farmAfk, 0.6, 1.8, 'afk', esc(t('AFK spot'))); // a player's size
+  if (S.farmAfkBlocked) mark(S.farmAfkBlocked.at, 1.04, 1.04, 'blocked', esc(S.farmAfkBlocked.block));
+  for (const [i, [at, n]] of farmPicked(d, farmTriggers, S.farmFlip).entries())
+    mark(at, 1.04, 1.04, 'flip', num(i + 1, pretty(n), at));
+  for (const [i, [at]] of farmPicked(d, farmContainers, S.farmFeed).entries())
+    mark(at, 1.04, 1.04, 'feed', num(i + 1, pretty(S.farmFeed.get(at)), at));
+  if (S.farmPick === 'flip') candidates(farmTriggers(d), S.farmFlip);
+  if (S.farmPick === 'feed') candidates(farmContainers(d), S.farmFeed);
+}
+
+/** A click in the view while choosing the AFK spot or the levers. Returns whether it was used. */
+function farmClick(hit) {
+  if (!S.farmPick || !hit) return false;
+  const d = S.data;
+  const at = [d.origin[0] + hit.x, d.origin[1] + hit.y, d.origin[2] + hit.z];
+  const block = blockAtWorld(d, at);
+  const clicked = pretty(block.n);
+  const refuse = t("{block} can't be picked here.", { block: clicked });
+  S.farmRefused = '';
+  if (S.farmPick === 'afk') {
+    // Standing on top of the clicked block, with room for a player's feet and head.
+    const feet = [at[0], at[1] + 1, at[2]];
+    if (!block.collides) {
+      S.farmRefused = t("There's nothing to stand on at the {block}.", { block: clicked });
+      S.farmAfkBlocked = null;
+      renderFarmMarks();
+      renderInspector();
+      return true;
+    }
+    const blocked = [feet, [at[0], at[1] + 2, at[2]]].find((p) => blockAtWorld(d, p)?.collides);
+    S.farmAfkBlocked = blocked && { block: pretty(blockAtWorld(d, blocked).n), at: blocked.join(',') };
+    if (!blocked) {
+      S.farmAfk = feet.join(',');
+      S.farmAfkOn = clicked;
+      S.farmPick = null;
+    }
+  } else if (S.farmPick === 'feed') {
+    const key = at.join(',');
+    if (!farmContainers(d).some(([k]) => k === key))
+      S.farmRefused = /^minecraft:(furnace|smoker|blast_furnace)$/.test(block.n)
+        ? t('Furnaces fill from the hoppers above and behind them. Pick the chest or hopper that feeds those.')
+        : refuse;
+    else if (S.farmFeed.has(key)) S.farmFeed.delete(key);
+    // Usually one holds what to smelt and the next the fuel
+    else
+      S.farmFeed.set(
+        key,
+        [...S.farmFeed.values()].includes('minecraft:raw_iron') ? 'minecraft:coal' : 'minecraft:raw_iron',
+      );
+  } else {
+    const key = at.join(',');
+    if (!farmTriggers(d).some(([k]) => k === key)) S.farmRefused = refuse;
+    else if (S.farmFlip.has(key)) S.farmFlip.delete(key);
+    else S.farmFlip.add(key);
+  }
+  renderFarmMarks();
+  renderInspector();
+  return true;
+}
+
+let farmTimer;
+async function pollFarm() {
+  clearTimeout(farmTimer);
+  try {
+    S.farm = await api('api/farm');
+  } catch {
+    return; // only the Litescape app runs farm tests
+  }
+  if (!pressing()) renderInspector();
+  farmTimer = setTimeout(pollFarm, farmLive(S.farm) ? 500 : 3000);
+}
+
+async function farmRun() {
+  const d = S.desc;
+  const q = new URLSearchParams({
+    id: d.id,
+    ticks: S.farmTicks,
+    dim: S.farmDim,
+    biome: S.farmBiome,
+    flip: farmPicked(S.data, farmTriggers, S.farmFlip)
+      .map(([at]) => at)
+      .join(';'),
+    feed: farmPicked(S.data, farmContainers, S.farmFeed)
+      .map(([at]) => `${at},${S.farmFeed.get(at)}`)
+      .join(';'),
+  });
+  if (S.farmAfk) q.set('afk', S.farmAfk);
+  if (S.farmAgree) q.set('agree', '1');
+  S.farmPick = null;
+  S.farmAfkBlocked = null;
+  S.farmRefused = '';
+  S.farmError = '';
+  renderFarmMarks();
+  try {
+    S.farm = await api(`api/farm?${q}`, { method: 'POST' });
+  } catch (err) {
+    S.farmError = err.message;
+  }
+  renderInspector();
+  pollFarm();
+}
+
+async function farmStop() {
+  try {
+    S.farm = await api('api/farm/stop', { method: 'POST' });
+  } catch (err) {
+    S.farmError = err.message;
+  }
+  renderInspector();
+}
+
 function toggleSpawn() {
   S.spawn = !S.spawn;
   renderInspector();
@@ -2365,6 +2958,7 @@ $('nav').addEventListener('click', (e) => {
     else sharePlacement(share.dataset.share);
     return;
   }
+  if (e.target.closest('#open-file')) return openFile();
   const row = e.target.closest('[data-desc]');
   if (row) {
     open(JSON.parse(row.dataset.desc));
@@ -2438,12 +3032,89 @@ $('inspector').addEventListener('click', (e) => {
   if (t.closest('#copy-mats')) return copyMaterials();
   if (t.closest('#ghosts')) return toggleGhosts();
   if (t.closest('#spawn-marks')) return toggleSpawn();
+  if (t.closest('#farm-run')) return farmRun();
+  if (t.closest('#farm-stop')) return farmStop();
+  const pickAs = t.closest('#farm-pick-afk')
+    ? 'afk'
+    : t.closest('#farm-pick-flip')
+      ? 'flip'
+      : t.closest('#farm-pick-feed')
+        ? 'feed'
+        : null;
+  if (pickAs) {
+    S.farmPick = S.farmPick === pickAs ? null : pickAs;
+    S.farmAfkBlocked = null;
+    S.farmRefused = '';
+    renderFarmMarks();
+    return renderInspector();
+  }
+  const unfeed = t.closest('[data-farm-unfeed]')?.dataset.farmUnfeed;
+  if (unfeed) {
+    S.farmFeed.delete(unfeed);
+    renderFarmMarks();
+    return renderInspector();
+  }
+  if (t.closest('#farm-clear-afk')) {
+    S.farmAfk = null;
+    S.farmAfkBlocked = null;
+    renderFarmMarks();
+    return renderInspector();
+  }
+  const ticks = t.closest('[data-farm-ticks]')?.dataset.farmTicks;
+  if (ticks) {
+    S.farmTicks = Number(ticks);
+    return renderInspector();
+  }
+  const ff = t.closest('[data-farm-flip]')?.dataset.farmFlip;
+  if (ff) {
+    S.farmFlip.delete(ff); // its row's remove button
+    renderFarmMarks();
+    return renderInspector();
+  }
+  const fi = t.closest('[data-farm-item]')?.dataset.farmItem;
+  if (fi) {
+    S.farmTargets.has(fi) ? S.farmTargets.delete(fi) : S.farmTargets.add(fi);
+    return renderInspector();
+  }
 });
+// Pointing at a picked block's row lights it up in the view.
+// One row at a time is lit, with its block: whichever the pointer or keyboard focus reached last.
+const farmRowAt = (el) => el?.closest?.('[data-farm-mark]')?.dataset.farmMark ?? null;
+const farmHotAt = (at) => {
+  if (at === S.farmHot) return;
+  S.farmHot = at;
+  for (const r of document.querySelectorAll('.farm-row')) r.classList.toggle('hot', r.dataset.farmMark === at);
+  renderFarmMarks();
+};
+$('inspector').addEventListener('mouseover', (e) =>
+  farmHotAt(farmRowAt(e.target) ?? farmRowAt(document.activeElement)),
+);
+$('inspector').addEventListener('mouseleave', () => farmHotAt(farmRowAt(document.activeElement)));
+$('inspector').addEventListener('focusin', (e) => farmHotAt(farmRowAt(e.target)));
+$('inspector').addEventListener('focusout', (e) =>
+  farmHotAt(farmRowAt(e.relatedTarget) ?? farmRowAt($('inspector').querySelector('.farm-row:hover'))),
+);
 $('inspector').addEventListener('mousedown', (e) => {
   if (e.target.closest('[data-add-player]')) e.preventDefault(); // keep focus in the field so the list stays open
 });
 $('inspector').addEventListener('change', (e) => {
   if (e.target.id === 'link-pick') S.linkPick = e.target.value;
+  if (e.target.id === 'farm-dim') {
+    S.farmDim = e.target.value;
+    S.farmBiome = `minecraft:${BIOMES[S.farmDim][0]}`;
+    return renderInspector();
+  }
+  if (e.target.id === 'farm-biome') S.farmBiome = e.target.value;
+  const feedAt = e.target.dataset?.farmFeed;
+  if (feedAt) {
+    S.farmFeed.set(feedAt, e.target.value);
+    renderFarmMarks();
+    return renderInspector();
+  }
+  if (e.target.id === 'farm-agree') {
+    S.farmAgree = e.target.checked;
+    return renderInspector();
+  }
   if (e.target.name === 'access') {
     const a = accessTarget();
     setAccess(a.id, e.target.value, a.players);
@@ -2699,6 +3370,7 @@ canvas.addEventListener('pointerdown', (e) => {
 canvas.addEventListener('pointerup', (e) => {
   if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 4 || e.button !== 0) return;
   const hit = voxelAt(e);
+  if (farmClick(hit)) return;
   const block = hit && S.data.palette[S.data.blocks16[hit.i]];
   if (block && !block.t) isolate(block.mid);
   else if (S.iso >= 0) isolate(S.iso); // empty space or the surroundings: show everything again
@@ -2773,9 +3445,9 @@ function pick() {
         .join('  ')
     : '';
   card.innerHTML = `<div class="hc-title"><img alt="" src="${matIcon((e.t ? d.tmats : d.mats)[e.mid])}" width="16" height="16" style="image-rendering:pixelated">${esc(pretty(e.n))}</div>
-    ${props ? `<div class="hc-sub">${esc(props)}</div>` : ''}
+    ${props && !S.farmPick ? `<div class="hc-sub">${esc(props)}</div>` : ''}
     ${e.t ? `<div class="hc-sub">${t('Surroundings, captured {when}', { when: ago(findShared(S.desc.id)?.captured) })}</div>` : ''}
-    <div class="hc-pos">${d.origin[0] + hit.x}, ${d.origin[1] + hit.y}, ${d.origin[2] + hit.z}</div>
+    ${S.farmPick ? '' : `<div class="hc-pos">${d.origin[0] + hit.x}, ${d.origin[1] + hit.y}, ${d.origin[2] + hit.z}</div>`}
     ${itemsHtml(d.contents?.[`${d.origin[0] + hit.x},${d.origin[1] + hit.y},${d.origin[2] + hit.z}`])}
     ${st ? `<div class="hc-status"><span class="sw" style="width:8px;height:8px;border-radius:2px;background:${STATUS[st].color}"></span>${STATUS[st].label}</div>` : ''}`;
   card.hidden = false;
@@ -3928,6 +4600,14 @@ document.addEventListener('keydown', (e) => {
       e.target.blur();
       return;
     }
+    if (S.farmPick) {
+      S.farmPick = null;
+      S.farmAfkBlocked = null;
+      S.farmRefused = '';
+      renderFarmMarks();
+      renderInspector();
+      return;
+    }
     if (S.iso >= 0) {
       S.iso = -1;
       renderInspector();
@@ -4048,4 +4728,5 @@ applyTheme();
 resize();
 requestAnimationFrame(frame);
 pollState();
+pollFarm();
 loadShaderIndex();
