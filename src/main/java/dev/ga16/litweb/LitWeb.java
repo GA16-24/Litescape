@@ -430,17 +430,24 @@ public final class LitWeb implements ModInitializer {
 			}
 			if (old != null) moveCredited(old, merged, done);
 			for (Shared o : over) {
-				moveCredited(o, merged, done);
+				java.util.BitSet theirs = new java.util.BitSet();
+				moveCredited(o, merged, theirs);
+				java.util.BitSet both = (java.util.BitSet) theirs.clone();
+				both.and(done);
+				done.or(theirs);
 				gone.add(o.id);
 				if (o == keep) continue;
+				// A block placed where both shares lie was credited in each; take those back from players in both, in turn.
+				int twice = both.cardinality();
 				for (var e : o.contributors.entrySet()) {
-					s.contributors.merge(e.getKey(), e.getValue(), (a, b) -> {
-						Contributor c = new Contributor();
-						c.name = a.last >= b.last ? a.name : b.name;
-						c.placed = a.placed + b.placed;
-						c.last = Math.max(a.last, b.last);
-						return c;
-					});
+					Contributor a = s.contributors.get(e.getKey()), b = e.getValue();
+					Contributor c = new Contributor();
+					c.name = a != null && a.last >= b.last ? a.name : b.name;
+					c.last = a != null ? Math.max(a.last, b.last) : b.last;
+					int cut = a != null ? Math.min(twice, Math.min(a.placed, b.placed)) : 0;
+					twice -= cut;
+					c.placed = (a != null ? a.placed : 0) + b.placed - cut;
+					s.contributors.put(e.getKey(), c);
 				}
 				for (String l : o.links) if (!s.links.contains(l)) s.links.add(l);
 			}
