@@ -537,4 +537,10 @@ export default {
     '{mob}：它可以在 {n} 个方块上生成，有容纳它 {h} 格高的空间，且没有火把或灯的光照。照亮、盖住或挖掉它们。',
   "A schematic can't be connected to itself": '投影不能关联到自身',
   'Only the owner of both schematics or an operator can connect them': '只有两个投影的所有者或管理员才能关联它们',
+  'That spot is in {part}, and making room for the new portal can break its blocks.':
+    '那个位置在 {part} 里，为新传送门腾出空间可能会破坏它的方块。',
+  'Only portals in loaded chunks were checked. On this server, only operators can check the rest.':
+    '只检查了已加载区块里的传送门。在这个服务器上，只有管理员能检查其余部分。',
+  'Magma cubes still spawn on nether wart blocks in the nether wastes.':
+    '在下界荒地，岩浆怪仍会在下界疣块上生成。',
 };

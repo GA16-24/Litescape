@@ -21,6 +21,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiRecord;
 import net.minecraft.world.entity.ai.village.poi.PoiTypes;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -41,26 +42,37 @@ import org.jspecify.annotations.Nullable;
 final class Portals {
 	/** More portal blocks than this in one schematic and the rest are left out. */
 	private static final int MAX_BLOCKS = 4096;
+	/** Portals answered per request: each one searches the portal index, which can read from disk. */
+	private static final int MAX_PORTALS = 32;
+	/** Where in a portal block an entity can stand when it goes through, as fractions of the block. */
+	private static final double[] EDGES = {0.05, 0.95};
 
 	/** Portal blocks of one kind that touch: one portal, in one part. */
 	private record Portal(Shared part, boolean end, List<BlockPos> blocks) {}
 
 	private Portals() {}
 
-	/** One entry per portal in the parts, in part order. Server thread. */
-	static JsonArray check(MinecraftServer server, List<Shared> parts, Map<String, Volume> volumes) {
+	/**
+	 * One entry per portal in the parts, in part order, at most MAX_PORTALS. Server thread. Without everywhere, the
+	 * world's portals only count in loaded chunks, like the build progress: the index on disk would show anyone where
+	 * other players' portals are.
+	 */
+	static JsonArray check(MinecraftServer server, List<Shared> parts, Map<String, Volume> volumes, boolean everywhere) {
 		Map<String, List<Portal>> portals = new HashMap<>(); // each part scanned once: a schematic can hold millions of blocks
 		for (Shared p : parts) portals.put(p.id, find(p, volumes.get(p.id)));
 		JsonArray out = new JsonArray();
 		for (Shared p : parts) {
 			ServerLevel from = level(server, p.dim);
 			if (from == null) continue;
-			for (Portal portal : portals.get(p.id)) out.add(portal.end ? end(server, from, portal, parts) : nether(server, from, portal, parts, portals));
+			for (Portal portal : portals.get(p.id)) {
+				if (out.size() >= MAX_PORTALS) return out;
+				out.add(portal.end ? end(server, from, portal, parts) : nether(server, from, portal, parts, portals, everywhere));
+			}
 		}
 		return out;
 	}
 
-	private static JsonObject nether(MinecraftServer server, ServerLevel from, Portal portal, List<Shared> parts, Map<String, List<Portal>> portals) {
+	private static JsonObject nether(MinecraftServer server, ServerLevel from, Portal portal, List<Shared> parts, Map<String, List<Portal>> portals, boolean everywhere) {
 		ResourceKey<Level> toKey = from.dimension() == Level.NETHER ? Level.OVERWORLD : Level.NETHER;
 		JsonObject o = base(portal, toKey);
 		ServerLevel to = server.getLevel(toKey);
@@ -69,48 +81,71 @@ final class Portals {
 		int radius = toNether ? 16 : 128;
 		double scale = DimensionType.getTeleportationScale(from.dimensionType(), to.dimensionType());
 		WorldBorder border = to.getWorldBorder();
-		List<BlockPos> exits = new ArrayList<>();
-		for (BlockPos b : portal.blocks) exits.add(border.clampToBounds((b.getX() + 0.5) * scale, b.getY(), (b.getZ() + 0.5) * scale));
+		// The game scales the entity's position, not the block's: try each corner of every block, since scaling up by 8
+		// spreads one block's corners over 8 blocks of the Overworld.
+		List<List<BlockPos>> exits = new ArrayList<>();
+		for (BlockPos b : portal.blocks) {
+			List<BlockPos> corners = new ArrayList<>();
+			for (double dx : EDGES) for (double dz : EDGES) corners.add(border.clampToBounds((b.getX() + dx) * scale, b.getY(), (b.getZ() + dz) * scale));
+			exits.add(corners);
+		}
 
 		// Every portal any exit could reach: the game's index around them all, and the portals the parts plan there.
 		int x0 = Integer.MAX_VALUE, z0 = Integer.MAX_VALUE, x1 = Integer.MIN_VALUE, z1 = Integer.MIN_VALUE;
-		for (BlockPos e : exits) {
+		for (List<BlockPos> corners : exits) for (BlockPos e : corners) {
 			x0 = Math.min(x0, e.getX()); z0 = Math.min(z0, e.getZ());
 			x1 = Math.max(x1, e.getX()); z1 = Math.max(z1, e.getZ());
 		}
-		BlockPos mid = new BlockPos((x0 + x1) >> 1, 0, (z0 + z1) >> 1);
 		Set<BlockPos> planned = new LinkedHashSet<>();
 		for (Shared q : parts)
 			if (q.dim.equals(name(toKey)))
 				for (Portal p : portals.get(q.id)) if (!p.end) planned.addAll(p.blocks);
 		Set<BlockPos> built = new LinkedHashSet<>();
-		to.getPoiManager().getInSquare(t -> t.is(PoiTypes.NETHER_PORTAL), mid, radius + Math.max(x1 - x0, z1 - z0) / 2 + 1, PoiManager.Occupancy.ANY)
-			.map(PoiRecord::getPos).filter(p -> stillPortal(to, p)).forEach(built::add);
+		for (int cx = (x0 - radius) >> 4; cx <= (x1 + radius) >> 4; cx++)
+			for (int cz = (z0 - radius) >> 4; cz <= (z1 + radius) >> 4; cz++) {
+				if (!everywhere && to.getChunkSource().getChunkNow(cx, cz) == null) continue;
+				to.getPoiManager().getInChunk(t -> t.is(PoiTypes.NETHER_PORTAL), new ChunkPos(cx, cz), PoiManager.Occupancy.ANY)
+					.map(PoiRecord::getPos).filter(p -> stillPortal(to, p)).forEach(built::add);
+			}
 		Set<BlockPos> candidates = new LinkedHashSet<>(built);
 		candidates.addAll(planned);
 
-		// The game's pick for each block of the portal: inside the square, inside the border, nearest, then lowest.
-		Map<BlockPos, Integer> landed = new HashMap<>();
+		// The game's pick for each corner: inside the square, inside the border, nearest, then lowest. null = no portal.
+		List<List<BlockPos>> picks = new ArrayList<>();
+		Map<BlockPos, Integer> votes = new HashMap<>();
 		int nowhere = 0;
-		for (BlockPos e : exits) {
-			BlockPos best = candidates.stream()
-				.filter(c -> Math.abs(c.getX() - e.getX()) <= radius && Math.abs(c.getZ() - e.getZ()) <= radius && border.isWithinBounds(c))
-				.min(Comparator.<BlockPos>comparingDouble(c -> c.distSqr(e)).thenComparingInt(BlockPos::getY)).orElse(null);
-			if (best == null) nowhere++;
-			else landed.merge(best, 1, Integer::sum);
+		for (List<BlockPos> corners : exits) {
+			List<BlockPos> blockPicks = new ArrayList<>();
+			for (BlockPos e : corners) {
+				BlockPos best = candidates.stream()
+					.filter(c -> Math.abs(c.getX() - e.getX()) <= radius && Math.abs(c.getZ() - e.getZ()) <= radius && border.isWithinBounds(c))
+					.min(Comparator.<BlockPos>comparingDouble(c -> c.distSqr(e)).thenComparingInt(BlockPos::getY)).orElse(null);
+				blockPicks.add(best);
+				if (best == null) nowhere++;
+				else votes.merge(best, 1, Integer::sum);
+			}
+			picks.add(blockPicks);
 		}
-		var top = landed.entrySet().stream().max(Map.Entry.comparingByValue()).orElse(null);
-		if (top == null || nowhere > top.getValue()) {
+		var top = votes.entrySet().stream().max(Map.Entry.comparingByValue()).orElse(null);
+		BlockPos answer = top == null || nowhere > top.getValue() ? null : top.getKey();
+		// A block leads somewhere else when any spot in it does.
+		int others = 0;
+		for (List<BlockPos> blockPicks : picks) if (blockPicks.stream().anyMatch(b -> !java.util.Objects.equals(b, answer))) others++;
+		o.addProperty("others", others);
+		if (!everywhere) o.addProperty("loadedOnly", true);
+		if (answer == null) {
 			o.addProperty("lands", "new"); // the game builds a portal of its own near the exit
-			o.add("at", ints(exits.get(0)));
-			o.addProperty("others", portal.blocks.size() - nowhere);
+			BlockPos b = portal.blocks.get(0);
+			BlockPos at = border.clampToBounds((b.getX() + 0.5) * scale, b.getY(), (b.getZ() + 0.5) * scale);
+			o.add("at", ints(at));
+			String in = partAt(parts, toKey, at, false); // making room for it can break that part's blocks
+			if (in != null) o.addProperty("in", in);
 		} else {
 			o.addProperty("lands", "portal");
-			o.add("at", ints(top.getKey()));
-			String in = partAt(parts, toKey, top.getKey(), false);
+			o.add("at", ints(answer));
+			String in = partAt(parts, toKey, answer, false);
 			if (in != null) o.addProperty("in", in);
-			o.addProperty("built", built.contains(top.getKey())); // false: a part's portal that isn't in the world yet
-			o.addProperty("others", portal.blocks.size() - top.getValue());
+			o.addProperty("built", built.contains(answer)); // false: a part's portal that isn't in the world yet
 		}
 		return o;
 	}
@@ -127,7 +162,7 @@ final class Portals {
 		}
 		//? if >=1.21.9 {
 		var spawn = server.getRespawnData();
-		ResourceKey<Level> toKey = spawn.dimension() == Level.END ? Level.OVERWORLD : spawn.dimension();
+		ResourceKey<Level> toKey = spawn.dimension(); // a world spawn set in the End keeps it in the End
 		BlockPos at = spawn.pos();
 		//?} else {
 		/*ResourceKey<Level> toKey = Level.OVERWORLD;

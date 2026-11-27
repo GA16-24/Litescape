@@ -553,4 +553,10 @@ export default {
   "A schematic can't be connected to itself": '設計図を自分自身とつなげることはできません',
   'Only the owner of both schematics or an operator can connect them':
     'つなげられるのは両方の設計図の所有者かオペレーターだけです',
+  'That spot is in {part}, and making room for the new portal can break its blocks.':
+    'その場所は {part} の中で、新しいポータルの場所を空けるときにそのブロックが壊れることがあります。',
+  'Only portals in loaded chunks were checked. On this server, only operators can check the rest.':
+    '読み込まれたチャンクのポータルだけを確認しました。このサーバーでは、残りはオペレーターだけが確認できます。',
+  'Magma cubes still spawn on nether wart blocks in the nether wastes.':
+    'ネザーの荒地では、マグマキューブはネザーウォートブロックの上にもスポーンします。',
 };

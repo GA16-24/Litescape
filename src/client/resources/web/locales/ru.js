@@ -596,4 +596,10 @@ export default {
   "A schematic can't be connected to itself": 'Схему нельзя связать саму с собой',
   'Only the owner of both schematics or an operator can connect them':
     'Связать их может только владелец обеих схем или оператор',
+  'That spot is in {part}, and making room for the new portal can break its blocks.':
+    'Это место находится в {part}, и место под новый портал может сломать его блоки.',
+  'Only portals in loaded chunks were checked. On this server, only operators can check the rest.':
+    'Проверены только порталы в загруженных чанках. На этом сервере остальные могут проверить только операторы.',
+  'Magma cubes still spawn on nether wart blocks in the nether wastes.':
+    'Магмовые кубы всё равно спавнятся на блоках незерского нароста в Незерских пустошах.',
 };

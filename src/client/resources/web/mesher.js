@@ -391,8 +391,10 @@ function spawnable() {
   for (let i = 0; i < n; i++) all[i] = pal[blocks[i]] && !pal[blocks[i]].air ? 1 : 0;
   const L = lightOf(all);
   const fits = (i) => i >= n || !!pal[blocks[i]]?.spawnIn; // above the view is open air
+  const open = (i) => i >= n || !!pal[blocks[i]]?.open;
+  // The game checks the two cells a mob stands in for spawn-blocking blocks; higher up only collision and liquid matter.
   const room = (i) => {
-    for (let c = 1; c <= cells; c++) if (!fits(i + c * layer)) return false;
+    for (let c = 1; c <= cells; c++) if (!(c <= 2 ? fits : open)(i + c * layer)) return false;
     return true;
   };
   const out = [];

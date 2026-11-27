@@ -586,6 +586,7 @@ function prepare(data, atlas, refit) {
         light: e.light || 0,
         spawnOn: !!e.spawnOn,
         spawnIn: e.air || !!e.spawnIn,
+        open: e.air || (e.open ?? !!e.spawnIn),
         q: new Float32Array((e.q || []).flat()),
       },
   );
@@ -1741,17 +1742,22 @@ function portalsHtml(sh) {
         "Leads to a different portal at {at} in the {dim}, which isn't part of this farm. Move one of them, or what goes through ends up there.",
         where,
       );
-    else if (p.lands === 'new')
+    else if (p.lands === 'new') {
       text = t('No portal within {r} blocks of {at} in the {dim}, so the game builds a new one near there.', {
         ...where,
         r: p.to === 'minecraft:the_nether' ? 16 : 128,
       });
+      if (p.in)
+        text += ` ${t('That spot is in {part}, and making room for the new portal can break its blocks.', { part: nameOf(p.in) })}`;
+    }
     else if (p.lands === 'platform') text = t('Leads to the obsidian platform at {at} in the End.', where);
     else
       text = `${t('Leads to the world spawn at {at} in the {dim}, on top of the highest block.', where)} ${p.in ? t('That spot is in {part}.', { part: nameOf(p.in) }) : t('No connected part covers that spot.')}`;
     if (p.others) text += ` ${t('{n} of its {total} blocks lead somewhere else.', { n: p.others, total: p.blocks })}`;
     h += `<div><div class="updated" style="margin:0"><b>${kind}</b> · ${nameOf(p.part)} · ${esc(xyz(p.from))}</div><p class="updated" style="margin:2px 0 8px">${text}</p></div>`;
   }
+  if (r.list.some((p) => p.loadedOnly))
+    h += `<p class="updated" style="margin:0 0 8px">${t('Only portals in loaded chunks were checked. On this server, only operators can check the rest.')}</p>`;
   return h;
 }
 
@@ -2005,7 +2011,7 @@ function spawnText(rule, n) {
     return t(
       "{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks. Light doesn't stop it, so cover them, dig them out or swap them for nether wart blocks.",
       v,
-    );
+    ) + ` ${t('Magma cubes still spawn on nether wart blocks in the nether wastes.')}`;
   if (light > 0)
     return t(
       '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and block light of {l} or less. Light them above {l}, cover them or dig them out.',

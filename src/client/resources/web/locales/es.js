@@ -559,4 +559,10 @@ export default {
   "A schematic can't be connected to itself": 'Un esquema no se puede conectar consigo mismo',
   'Only the owner of both schematics or an operator can connect them':
     'Solo el dueño de ambos esquemas o un operador puede conectarlos',
+  'That spot is in {part}, and making room for the new portal can break its blocks.':
+    'Ese lugar está en {part}, y hacer sitio para el nuevo portal puede romper sus bloques.',
+  'Only portals in loaded chunks were checked. On this server, only operators can check the rest.':
+    'Solo se revisaron los portales en chunks cargados. En este servidor, solo los operadores pueden revisar el resto.',
+  'Magma cubes still spawn on nether wart blocks in the nether wastes.':
+    'Los cubos de magma siguen apareciendo sobre bloques de verruga del Nether en los páramos del Nether.',
 };

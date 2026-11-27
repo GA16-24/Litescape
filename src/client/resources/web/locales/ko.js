@@ -548,4 +548,10 @@ export default {
     '{mob}: 스폰할 수 있는 블록 {n}개, 높이 {h}블록만큼의 공간이 있고 횃불이나 램프 빛이 닿지 않아요. 밝히거나, 덮거나, 파내세요.',
   "A schematic can't be connected to itself": '설계도를 자기 자신과 연결할 수는 없어요',
   'Only the owner of both schematics or an operator can connect them': '두 설계도의 주인이나 관리자만 연결할 수 있어요',
+  'That spot is in {part}, and making room for the new portal can break its blocks.':
+    '그 위치는 {part} 안에 있고, 새 포털 자리를 만들면서 그 블록이 부서질 수 있어요.',
+  'Only portals in loaded chunks were checked. On this server, only operators can check the rest.':
+    '불러온 청크의 포털만 확인했어요. 이 서버에서는 나머지는 관리자만 확인할 수 있어요.',
+  'Magma cubes still spawn on nether wart blocks in the nether wastes.':
+    '네더 황무지에서는 마그마 큐브가 네더 사마귀 블록 위에도 스폰돼요.',
 };

@@ -332,7 +332,9 @@ public final class LitWeb implements ModInitializer {
 				}
 				Map<String, Volume> volumes = new HashMap<>();
 				for (Shared p : parts) volumes.put(p.id, volume(p));
-				send(player, req.req(), "", GSON.toJson(Portals.check(server, parts, volumes)).getBytes(StandardCharsets.UTF_8));
+				// The whole portal index is region-read; alone in their own world, the host sees it all anyway.
+				boolean everywhere = allowed(player, "region-read") || !server.isDedicatedServer() && server.getPlayerCount() == 1;
+				send(player, req.req(), "", GSON.toJson(Portals.check(server, parts, volumes, everywhere)).getBytes(StandardCharsets.UTF_8));
 			}
 			case "answer" -> { // accept or deny someone else's share request
 				JsonObject a = GSON.fromJson(req.arg(), JsonObject.class);

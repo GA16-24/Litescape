@@ -154,6 +154,8 @@ final class Models {
 		o.addProperty("spawnOn", !wart && state.isValidSpawn(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, spawn.type()));
 		o.addProperty("spawnIn", NaturalSpawner.isValidEmptySpawnBlock(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, state, state.getFluidState(), spawn.type())
 			&& state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).isEmpty());
+		// Above the two cells it stands in, a tall mob (an enderman) only needs no collision and no liquid (Mob.checkSpawnObstruction).
+		o.addProperty("open", state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).isEmpty() && state.getFluidState().isEmpty());
 
 		JsonArray quads = new JsonArray();
 		//? if >=26.1 {
