@@ -42,7 +42,7 @@ Get the Litescape app. It finds your Minecraft instances, installs the mod and i
 brew install --cask GA16-24/tap/litescape   # macOS and Linux
 ```
 
-On Windows, run the `.exe` from the [releases page](https://github.com/GA16-24/homebrew-tap/releases). Linux without Homebrew: grab the `.AppImage` there.
+On Windows, run the `.exe` from the [releases page](https://github.com/GA16-24/homebrew-tap/releases) (`win-arm64` on ARM). Linux without Homebrew: grab the `.AppImage`, `.deb` or `.rpm` there.
 
 The app reads the Minecraft Launcher, Prism, the Modrinth App and CurseForge. Click Install next to an instance, then start the game from it. Install pulls Fabric API, MaLiLib and Litematica if they're missing, and only works on Fabric with Minecraft 26.3. "Create Litescape instance" makes a launcher profile with everything in it; close the Minecraft Launcher first or it may overwrite the profile.
 

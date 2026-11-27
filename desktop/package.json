@@ -1,9 +1,10 @@
 {
   "name": "litescape",
   "productName": "Litescape",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Desktop window for the Litescape mod's 3D schematic viewer, and installer for the mod",
   "author": "GA16-24",
+  "homepage": "https://github.com/GA16-24/Litescape",
   "license": "MIT",
   "private": true,
   "type": "module",
@@ -70,9 +71,24 @@
             "x64",
             "arm64"
           ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
-      "category": "Game"
+      "category": "Game",
+      "maintainer": "GA16-24 <207302983+GA16-24@users.noreply.github.com>"
     }
   }
 }
