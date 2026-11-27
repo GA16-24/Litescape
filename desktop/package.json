@@ -1,7 +1,7 @@
 {
   "name": "litescape",
   "productName": "Litescape",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Desktop window for the Litescape mod's 3D schematic viewer, and installer for the mod",
   "author": "GA16-24",
   "homepage": "https://github.com/GA16-24/Litescape",
