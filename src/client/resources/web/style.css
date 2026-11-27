@@ -1050,6 +1050,20 @@ button {
   color: var(--text);
   margin-bottom: 8px;
 }
+/* A portal row that leads into a part follows it there */
+a.ready.portal {
+  text-decoration: none;
+  border-radius: 6px;
+  margin: 0 -6px 4px;
+  padding: 2px 6px;
+}
+a.ready.portal:hover {
+  background: var(--hover);
+}
+a.ready.portal:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
 .ready .pt {
   flex: 1;
   min-width: 0;

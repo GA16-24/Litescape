@@ -116,6 +116,7 @@ const S = {
   notes: new Map(), // shared id -> notes typed but not saved yet
   portals: new Map(), // shared id -> {list} or {err} from the server's portal check, or {busy}
   linkPick: '', // the schematic picked in Connected parts to connect next
+  focus: null, // {key, at}: the block a portal row's link asked the next view to look at
 };
 
 // ---------------------------------------------------------------- three.js
@@ -412,6 +413,7 @@ worker.onmessage = (e) => {
     S.pendingFit = false;
     fit();
   }
+  focusBlock();
   hideOverlayIfLoaded();
 };
 
@@ -494,12 +496,15 @@ function firstToDo() {
 
 async function open(desc, { force = false } = {}) {
   if (!desc) return;
+  const { at, ...view } = desc; // a block to look at once, from a portal row's link
+  desc = view;
   const key = keyOf(desc);
   const changedView = key !== keyOf(S.desc);
   S.desc = desc;
+  S.focus = at && { key, at };
   const hash = `#/${desc.type}${desc.id ? `/${desc.id}` : ''}`;
   if (location.hash !== hash) history.replaceState(null, '', hash);
-  if (!force && !changedView && S.data) return;
+  if (!force && !changedView && S.data) return focusBlock();
   if (changedView) {
     S.status = null;
     S.counts = null;
@@ -758,6 +763,21 @@ function fit() {
   needsRender = true;
 }
 
+/** Turns the camera to the block a portal row's link named, once this view has loaded. */
+function focusBlock() {
+  const f = S.focus;
+  if (!f || f.key !== keyOf(S.desc) || !S.data) return;
+  S.focus = null;
+  const [ox, oy, oz] = S.data.origin;
+  const c = new THREE.Vector3(f.at[0] - ox + 0.5, f.at[1] - oy + 0.5, f.at[2] - oz + 0.5);
+  const off = camera.position.clone().sub(controls.target); // keep the angle the view had
+  const dist = Math.min(off.length(), 14); // close enough to see a whole portal frame
+  controls.target.copy(c);
+  camera.position.copy(c).addScaledVector(off.normalize(), dist);
+  controls.update();
+  needsRender = true;
+}
+
 // ---------------------------------------------------------------- status (build progress)
 
 let statusTimer = 0;
@@ -982,8 +1002,10 @@ function exists(d) {
 }
 
 function parseHash() {
-  const [, type, id] = location.hash.split('/');
-  return ['selection', 'placement', 'shared'].includes(type) ? { type, id: id || undefined } : null;
+  const [, type, id, pos] = location.hash.split('/');
+  const at = pos?.split(',').map(Number);
+  if (!['selection', 'placement', 'shared'].includes(type)) return null;
+  return { type, id: id || undefined, ...(at?.length === 3 && at.every(Number.isFinite) && { at }) };
 }
 
 function clearScene() {
@@ -1753,9 +1775,12 @@ function portalsHtml(sh) {
     // The world spawn's height isn't known, and its line already names it.
     const at = p.lands === 'spawn' ? '' : ` ${esc(xyz(p.at))}`;
     const where = `<span class="nw">${esc(xyz(p.from))}</span> → <span class="nw">${esc(dimName(p.to))}${at}</span>`;
+    // A row that lands in a part links to that spot there, so a click follows the portal and Cmd-click opens a tab.
+    const go = p.in && p.at.every((v) => v != null);
+    const tag = go ? `a href="#/shared/${encodeURIComponent(p.in)}/${p.at.join(',')}"` : 'div';
     return {
       bad,
-      html: `<div class="ready portal${bad ? '' : ' ok'}">${bad ? ICON.alert : ICON.check}<span class="pt"><span class="line">${nm(p.part)}→${to}</span>${notes.length ? `<span class="sub">${notes.join(' · ')}</span>` : ''}<span class="sub">${where}</span></span></div>`,
+      html: `<${tag} class="ready portal${bad ? '' : ' ok'}">${bad ? ICON.alert : ICON.check}<span class="pt"><span class="line">${nm(p.part)}→${to}</span>${notes.length ? `<span class="sub">${notes.join(' · ')}</span>` : ''}<span class="sub">${where}</span></span></${go ? 'a' : 'div'}>`,
     };
   });
   const bad = rows.filter((x) => x.bad).length;
