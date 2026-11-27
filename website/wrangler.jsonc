@@ -1,0 +1,6 @@
+{
+  // Cloudflare Pages project, served at https://litescapemc.pages.dev. Deployed by .github/workflows/website.yml.
+  "name": "litescapemc",
+  "compatibility_date": "2026-11-23",
+  "pages_build_output_dir": "./public"
+}
