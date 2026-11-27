@@ -1749,8 +1749,7 @@ function portalsHtml(sh) {
       });
       if (p.in)
         text += ` ${t('That spot is in {part}, and making room for the new portal can break its blocks.', { part: nameOf(p.in) })}`;
-    }
-    else if (p.lands === 'platform') text = t('Leads to the obsidian platform at {at} in the End.', where);
+    } else if (p.lands === 'platform') text = t('Leads to the obsidian platform at {at} in the End.', where);
     else
       text = `${t('Leads to the world spawn at {at} in the {dim}, on top of the highest block.', where)} ${p.in ? t('That spot is in {part}.', { part: nameOf(p.in) }) : t('No connected part covers that spot.')}`;
     if (p.others) text += ` ${t('{n} of its {total} blocks lead somewhere else.', { n: p.others, total: p.blocks })}`;
@@ -2008,10 +2007,10 @@ function spawnText(rule, n) {
     );
   const v = { mob: esc(mob), n, h: cells, l: light };
   if (light >= 15)
-    return t(
+    return `${t(
       "{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks. Light doesn't stop it, so cover them, dig them out or swap them for nether wart blocks.",
       v,
-    ) + ` ${t('Magma cubes still spawn on nether wart blocks in the nether wastes.')}`;
+    )} ${t('Magma cubes still spawn on nether wart blocks in the nether wastes.')}`;
   if (light > 0)
     return t(
       '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and block light of {l} or less. Light them above {l}, cover them or dig them out.',

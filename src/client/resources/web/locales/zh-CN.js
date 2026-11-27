@@ -541,6 +541,5 @@ export default {
     '那个位置在 {part} 里，为新传送门腾出空间可能会破坏它的方块。',
   'Only portals in loaded chunks were checked. On this server, only operators can check the rest.':
     '只检查了已加载区块里的传送门。在这个服务器上，只有管理员能检查其余部分。',
-  'Magma cubes still spawn on nether wart blocks in the nether wastes.':
-    '在下界荒地，岩浆怪仍会在下界疣块上生成。',
+  'Magma cubes still spawn on nether wart blocks in the nether wastes.': '在下界荒地，岩浆怪仍会在下界疣块上生成。',
 };
