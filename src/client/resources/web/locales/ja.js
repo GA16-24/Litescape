@@ -545,4 +545,71 @@ export default {
   'Not built or not loaded': '未建設か未読み込み',
   'None loaded within {r} blocks': '{r} ブロック以内に読み込み済みのものなし',
   '{when}. {fix}': '{when}。{fix}',
+  'Farm test': '装置テスト',
+  'Run test': 'テストを開始',
+  'Stop test': 'テストを停止',
+  'The farm test stopped: {error}': '装置テストが止まりました：{error}',
+  'Building the copy… {pct}%': 'コピーを建築中… {pct}%',
+  'selected items an hour': '選んだアイテム／時間',
+  'Select the items you farm to add up their rate.': '集めたいアイテムを選ぶと、その合計の効率が表示されます。',
+  'Nothing has reached its containers yet.': 'まだコンテナに何も入っていません。',
+  '<b class="num">{n}</b> an hour': '1時間あたり <b class="num">{n}</b>',
+  'Schematic files': '設計図ファイル',
+  'Open file…': 'ファイルを開く…',
+  'No schematic files yet': '設計図ファイルはまだありません',
+  "Schematics in Litematica's folder in each of your Minecraft instances show up here, and so does any .litematic file you open.":
+    '各 Minecraft インスタンスの Litematica フォルダにある設計図と、開いた .litematic ファイルがここに表示されます。',
+  "Couldn't open the file": 'ファイルを開けませんでした',
+  'Unknown blocks': '不明なブロック',
+  'Not set, so no mobs spawn.': '未設定のため、モブは湧きません。',
+  'AFK spot': '待機場所',
+  'Click the block to stand on.': '立つブロックをクリックしてください。',
+  'Levers and buttons to use': '使うレバーとボタン',
+  Done: '完了',
+  'Choose in 3D': '3D で選ぶ',
+  'Run for': '実行時間',
+  Biome: 'バイオーム',
+  'I agree to the <a href="https://aka.ms/MinecraftEULA" target="_blank">Minecraft EULA</a>':
+    '<a href="https://aka.ms/MinecraftEULA" target="_blank">Minecraft EULA</a> に同意します',
+  'Starting the test server…': 'テストサーバーを起動中…',
+  'Getting ready…': '準備中…',
+  '{time} of {total} farm time, {speed}× game speed': '稼働時間 {time} / {total}、ゲーム速度の {speed} 倍',
+  '{n} mobs around the farm': { other: '装置の周りのモブ {n} 体' },
+  'Server cost': 'サーバー負荷',
+  'ms per tick': 'ms／ティック',
+  'This farm adds {ms} ms to every tick, {pct}% of the 50 ms a tick may take.':
+    'この装置は毎ティック {ms} ms を追加します。1ティックに許される 50 ms の {pct}% です。',
+  'That is more than a whole tick, so any server running it lags.':
+    '1ティック分を超えているため、これを動かすサーバーは必ずラグります。',
+  'A server whose ticks already take more than {ms} ms would start to lag with it.':
+    'ティックがすでに {ms} ms を超えているサーバーでは、これでラグが出始めます。',
+  'That schematic file is gone': 'その設計図ファイルは見つかりません',
+  'Start Minecraft with Litescape once, so the app learns how blocks look':
+    'ブロックの見た目を覚えるため、一度 Litescape を入れて Minecraft を起動してください',
+  'Agree to the Minecraft EULA first': '先に Minecraft EULA に同意してください',
+  'Containers to keep full': '満タンに保つコンテナ',
+  'Click chests, barrels and hoppers in the view to keep them full of an item, like raw iron and coal for furnaces.':
+    'ビューでチェスト、樽、ホッパーをクリックすると、アイテムで満タンに保てます。かまどなら原石の鉄と石炭など。',
+  Smelting: '精錬',
+  'items smelted an hour': '精錬したアイテム／時間',
+  '{n} furnaces, {pct}% of their top speed of {top} an hour.': {
+    other: 'かまど {n} 基、最高速度 {top}／時間の {pct}%です。',
+  },
+  Cancel: 'キャンセル',
+  'On {block}': '{block}の上',
+  '{block} is in the way, marked red in the view. Click a block with two free blocks above it.':
+    '{block}が邪魔です（ビューで赤く表示）。上に 2 ブロック空きがあるブロックをクリックしてください。',
+  'Runs this farm on a test server in the background and counts what its chests and hoppers collect. Mobs and minecarts in the schematic are left out.':
+    'テストサーバーでこの装置をバックグラウンド実行し、チェストやホッパーに集まった量を数えます。設計図内のモブとトロッコは除きます。',
+  'Click the levers and buttons the test should pull or press once the farm is built.':
+    '装置の設置後にテストで操作するレバーやボタンをクリックしてください。',
+  'None, so the farm runs as built.': 'なし。装置はそのまま動きます。',
+  'None, so every container starts empty.': 'なし。すべてのコンテナは空で始まります。',
+  "{block} can't be picked here.": '{block}はここでは選べません。',
+  "{items} go into the farm, so they aren't counted.": '{items}は装置に投入するので数えません。',
+  "There's nothing to stand on at the {block}.": '{block}の上には立てません。',
+  'Furnaces fill from the hoppers above and behind them. Pick the chest or hopper that feeds those.':
+    'かまどは上と後ろのホッパーから補充されます。それらに供給しているチェストかホッパーを選んでください。',
+  'Keep {name} full of': '{name}を満タンにするアイテム',
+  'Remove {block}': '{block}を外す',
 };

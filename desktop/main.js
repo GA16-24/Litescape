@@ -1,18 +1,21 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
+import { setupFarm } from './farmwindow.js';
 import {
   bundledMods,
   createInstance,
   defaultRoots,
   install,
   installDeps,
+  mcBase,
   mcBases,
   modFor,
   scan,
   shouldUpdate,
   uninstall,
 } from './instances.js';
+import { acceptEula, eulaAccepted, findJava, javaDirs, LocalServer } from './localserver.js';
 
 // The mod serves the viewer on the first free port in 8723-8732 (WebServer.java).
 const PORTS = Array.from({ length: 10 }, (_, i) => 8723 + i);
@@ -85,7 +88,7 @@ function saveFolders(list) {
   fs.writeFileSync(FOLDERS(), JSON.stringify(list));
 }
 
-// The installer API is for the bundled pages (waiting, settings) only, never the viewer page loaded from a local port.
+// The installer and server API is for the bundled pages (waiting, settings, server) only, never the viewer page loaded from a local port.
 function handle(channel, fn) {
   ipcMain.handle(channel, (e, ...args) => {
     if (!e.senderFrame?.url.startsWith('file:')) throw new Error('Not allowed from this page');
@@ -158,6 +161,71 @@ function setupInstaller(win) {
     saveFolders(folders().filter((f) => f !== dir));
     return folders();
   });
+  setupServer(modFor(mods, newest), mods); // the test server runs the newest Minecraft the app has a jar for
+}
+
+const SERVER_DIR = () => path.join(app.getPath('userData'), 'server');
+let serverWin = null;
+const server = new LocalServer(
+  (msg) => serverWin?.isDestroyed() === false && serverWin.webContents.send('server', msg),
+);
+
+let openFarm = () => {};
+function setupServer(mod, mods) {
+  const startServer = async () => {
+    if (!mod) throw new Error('This build has no mod jar');
+    if (!eulaAccepted(SERVER_DIR())) throw new Error('Agree to the Minecraft EULA first');
+    const need = mcBase(mod.mc).startsWith('1.') ? 21 : 25; // 1.21.x launchers ship Java 21, 26.x needs 25
+    const java = await findJava(javaDirs(defaultRoots()), need);
+    if (!java)
+      throw new Error(
+        `The server needs Java ${need}. Start Minecraft ${mcBase(mod.mc)} once so your launcher downloads it, or install Java ${need}`,
+      );
+    await server.start(SERVER_DIR(), mod, java.bin);
+  };
+  // Scanning reads every mod jar, so the farm window's file list rescans the instances at most every 30 seconds.
+  let dirs = { at: 0, list: [] };
+  const instanceDirs = () => {
+    if (Date.now() - dirs.at > 30000)
+      dirs = { at: Date.now(), list: scan(defaultRoots(), folders(), mods).map((i) => i.dir) };
+    return dirs.list;
+  };
+  openFarm = setupFarm({ mod, server, serverDir: SERVER_DIR, startServer, instanceDirs, openOutside });
+  handle('open-farm', openFarm);
+  handle('open-server', openServer);
+  handle('server', () => ({
+    state: server.state,
+    log: server.log,
+    eula: eulaAccepted(SERVER_DIR()),
+    load: server.load,
+  }));
+  handle('server-start', async (agree) => {
+    if (agree === true) acceptEula(SERVER_DIR());
+    await startServer();
+  });
+  handle('server-stop', () => server.stop());
+  handle('server-command', (cmd) => server.send(cmd));
+  handle('server-folder', () => {
+    fs.mkdirSync(SERVER_DIR(), { recursive: true });
+    return shell.openPath(SERVER_DIR());
+  });
+}
+
+function openServer() {
+  if (serverWin && !serverWin.isDestroyed()) return serverWin.focus();
+  serverWin = new BrowserWindow({
+    width: 760,
+    height: 640,
+    title: 'Test Server',
+    fullscreenable: false,
+    autoHideMenuBar: true,
+    webPreferences: { preload: path.join(import.meta.dirname, 'preload.cjs') },
+  });
+  serverWin.webContents.setWindowOpenHandler(({ url }) => {
+    openOutside(url);
+    return { action: 'deny' };
+  });
+  serverWin.loadFile('server.html');
 }
 
 let settingsWin = null;
@@ -178,6 +246,8 @@ function openSettings() {
 
 function setupMenu() {
   const settings = { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: openSettings };
+  const testServer = { label: 'Test Server…', accelerator: 'CmdOrCtrl+Shift+S', click: openServer };
+  const farmTest = { label: 'Farm Test…', accelerator: 'CmdOrCtrl+Shift+F', click: () => openFarm() };
   const first =
     process.platform === 'darwin'
       ? {
@@ -186,6 +256,8 @@ function setupMenu() {
             { role: 'about' },
             { type: 'separator' },
             settings,
+            farmTest,
+            testServer,
             { type: 'separator' },
             { role: 'services' },
             { type: 'separator' },
@@ -196,7 +268,7 @@ function setupMenu() {
             { role: 'quit' },
           ],
         }
-      : { label: 'File', submenu: [settings, { type: 'separator' }, { role: 'quit' }] };
+      : { label: 'File', submenu: [settings, farmTest, testServer, { type: 'separator' }, { role: 'quit' }] };
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([first, { role: 'editMenu' }, { role: 'viewMenu' }, { role: 'windowMenu' }]),
   );
@@ -239,3 +311,9 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => app.quit());
+// Quitting saves and stops the test server first, so its world isn't cut off mid-write.
+app.on('before-quit', (e) => {
+  if (!server.running) return;
+  e.preventDefault();
+  server.stop().then(() => app.quit());
+});

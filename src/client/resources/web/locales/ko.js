@@ -541,4 +541,71 @@ export default {
   'Not built or not loaded': '안 지었거나 로드 안 됨',
   'None loaded within {r} blocks': '{r}블록 안에 로드된 것 없음',
   '{when}. {fix}': '{when}. {fix}',
+  'Farm test': '농장 테스트',
+  'Run test': '테스트 시작',
+  'Stop test': '테스트 중지',
+  'The farm test stopped: {error}': '농장 테스트가 멈췄습니다: {error}',
+  'Building the copy… {pct}%': '복사본을 짓는 중… {pct}%',
+  'selected items an hour': '선택한 아이템 / 시간',
+  'Select the items you farm to add up their rate.': '농사짓는 아이템을 선택하면 효율을 합산합니다.',
+  'Nothing has reached its containers yet.': '아직 보관함에 들어온 것이 없습니다.',
+  '<b class="num">{n}</b> an hour': '시간당 <b class="num">{n}</b>',
+  'Schematic files': '설계도 파일',
+  'Open file…': '파일 열기…',
+  'No schematic files yet': '아직 설계도 파일이 없습니다',
+  "Schematics in Litematica's folder in each of your Minecraft instances show up here, and so does any .litematic file you open.":
+    '각 Minecraft 인스턴스의 Litematica 폴더에 있는 설계도와, 직접 연 .litematic 파일이 여기에 표시됩니다.',
+  "Couldn't open the file": '파일을 열 수 없습니다',
+  'Unknown blocks': '알 수 없는 블록',
+  'Not set, so no mobs spawn.': '설정하지 않아 몹이 스폰되지 않습니다.',
+  'AFK spot': '잠수 위치',
+  'Click the block to stand on.': '서 있을 블록을 클릭하세요.',
+  'Levers and buttons to use': '사용할 레버와 버튼',
+  Done: '완료',
+  'Choose in 3D': '3D에서 선택',
+  'Run for': '실행 시간',
+  Biome: '생물 군계',
+  'I agree to the <a href="https://aka.ms/MinecraftEULA" target="_blank">Minecraft EULA</a>':
+    '<a href="https://aka.ms/MinecraftEULA" target="_blank">Minecraft EULA</a>에 동의합니다',
+  'Starting the test server…': '테스트 서버 시작 중…',
+  'Getting ready…': '준비 중…',
+  '{time} of {total} farm time, {speed}× game speed': '농장 시간 {time} / {total}, 게임 속도의 {speed}배',
+  '{n} mobs around the farm': { other: '농장 주변 몹 {n}마리' },
+  'Server cost': '서버 부하',
+  'ms per tick': '틱당 ms',
+  'This farm adds {ms} ms to every tick, {pct}% of the 50 ms a tick may take.':
+    '이 농장은 틱마다 {ms} ms를 더합니다. 한 틱에 허용되는 50 ms의 {pct}%입니다.',
+  'That is more than a whole tick, so any server running it lags.':
+    '한 틱 전체보다 길어서, 이걸 돌리는 서버는 모두 렉이 걸립니다.',
+  'A server whose ticks already take more than {ms} ms would start to lag with it.':
+    '틱이 이미 {ms} ms보다 오래 걸리는 서버는 이 농장 때문에 렉이 걸리기 시작합니다.',
+  'That schematic file is gone': '그 설계도 파일이 없습니다',
+  'Start Minecraft with Litescape once, so the app learns how blocks look':
+    '앱이 블록 모양을 알 수 있도록 Litescape를 설치한 Minecraft를 한 번 실행하세요',
+  'Agree to the Minecraft EULA first': '먼저 Minecraft EULA에 동의하세요',
+  'Containers to keep full': '가득 채워 둘 컨테이너',
+  'Click chests, barrels and hoppers in the view to keep them full of an item, like raw iron and coal for furnaces.':
+    '보기에서 상자, 통, 호퍼를 클릭하면 아이템으로 가득 채워 둡니다. 화로라면 철 원석과 석탄처럼요.',
+  Smelting: '제련',
+  'items smelted an hour': '제련한 아이템 / 시간',
+  '{n} furnaces, {pct}% of their top speed of {top} an hour.': {
+    other: '화로 {n}개, 최고 속도 시간당 {top}개의 {pct}%입니다.',
+  },
+  Cancel: '취소',
+  'On {block}': '{block} 위',
+  '{block} is in the way, marked red in the view. Click a block with two free blocks above it.':
+    '{block}이(가) 막고 있습니다(보기에 빨간색으로 표시). 위로 두 칸이 비어 있는 블록을 클릭하세요.',
+  'Runs this farm on a test server in the background and counts what its chests and hoppers collect. Mobs and minecarts in the schematic are left out.':
+    '테스트 서버에서 이 농장을 백그라운드로 돌려 상자와 호퍼에 모인 양을 셉니다. 설계도 안의 몹과 광산 수레는 빠집니다.',
+  'Click the levers and buttons the test should pull or press once the farm is built.':
+    '농장이 지어진 뒤 테스트가 당기거나 누를 레버와 버튼을 클릭하세요.',
+  'None, so the farm runs as built.': '없음. 농장은 지어진 그대로 작동합니다.',
+  'None, so every container starts empty.': '없음. 모든 컨테이너가 빈 채로 시작합니다.',
+  "{block} can't be picked here.": '{block}은(는) 여기서 고를 수 없습니다.',
+  "{items} go into the farm, so they aren't counted.": '{items}은(는) 농장에 넣는 것이라 세지 않습니다.',
+  "There's nothing to stand on at the {block}.": '{block} 위에는 설 수 없습니다.',
+  'Furnaces fill from the hoppers above and behind them. Pick the chest or hopper that feeds those.':
+    '화로는 위와 뒤의 호퍼로 채워집니다. 그 호퍼에 공급하는 상자나 호퍼를 고르세요.',
+  'Keep {name} full of': '{name}을(를) 가득 채울 아이템',
+  'Remove {block}': '{block} 제거',
 };

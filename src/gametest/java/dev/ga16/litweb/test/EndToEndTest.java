@@ -24,6 +24,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 //? if >=1.21.4 {
@@ -273,7 +274,9 @@ public class EndToEndTest implements FabricClientGameTest {
 						if (e.getAsJsonObject().get("id").getAsString().equals(shared) && cs != null && !cs.isEmpty()) contrib = cs;
 					}
 				}
-				save("state-3.json", call(ctx, "GET", "/api/state"));
+				//? if >=26.3 {
+				farmTest(ctx, sp);
+				//?}
 				// Contributor faces: the test player plus the two example players web-dev/serve.mjs adds.
 				List<String> faces = new ArrayList<>(contrib.keySet());
 				faces.addAll(List.of("b6d1f0f2-0000-4000-8000-00000000a1ce", "5c2e7a10-0000-4000-8000-000000000b0b"));
@@ -302,6 +305,23 @@ public class EndToEndTest implements FabricClientGameTest {
 				ctx.takeScreenshot("litweb-scene");
 				crossDimension(ctx, sp);
 			}
+			//? if >=26.3 {
+			// The desktop app draws schematic files from the block table the mod saves from the menus.
+			Path table = Path.of(System.getProperty("user.home"), ".litescape", "blocks", net.minecraft.SharedConstants.getCurrentVersion().name());
+			// A table from an older build lacks "collides"; wait for this build's to replace it.
+			JsonObject states = null;
+			for (int i = 0; i < 60 && (states == null || !states.getAsJsonObject("minecraft:stone").has("collides")); i++, ctx.waitTicks(20)) {
+				try (var in = new java.util.zip.GZIPInputStream(Files.newInputStream(table.resolve("states.json.gz")))) {
+					states = JsonParser.parseString(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject().getAsJsonObject("states");
+				} catch (IOException e) {
+					states = null; // not written yet, or being replaced
+				}
+			}
+			JsonObject lever = states == null ? null : states.getAsJsonObject("minecraft:lever[face=floor,facing=east,powered=false]");
+			check(lever != null && !lever.getAsJsonArray("q").isEmpty() && !lever.get("collides").getAsBoolean()
+				&& states.getAsJsonObject("minecraft:stone").get("collides").getAsBoolean() && Files.exists(table.resolve("tex/minecraft/block/lever.png")),
+				"block table for the desktop app, with what a player can stand in");
+			//?}
 			// The production test checks for this, so a run that never reaches the end can't pass.
 			Files.writeString(out.resolve("passed"), "");
 		} catch (IOException e) {
@@ -464,6 +484,99 @@ public class EndToEndTest implements FabricClientGameTest {
 				for (JsonElement l : e.getAsJsonObject().getAsJsonArray("links")) out.add(l.getAsString());
 		return out;
 	}
+
+	//? if >=26.3 {
+	/**
+	 * The farm test the desktop app runs on its test server (Farm.java): a tiny farm whose lever makes the piston pop the
+	 * pumpkin into the hopper and on to the chest; a furnace fed from chests kept full; then a dark stone box where mobs spawn around a stand-in. The game test
+	 * runs the server at 20 ticks a second, so the runs are short; the app's test server fast-forwards them.
+	 */
+	private void farmTest(ClientGameTestContext ctx, TestSingleplayerContext sp) throws IOException {
+		// x, y, z inside a 3×3×3 box at 60 -60 0; everything else is air
+		String farm = farmJob("pumpkin", new int[] {60, -60, 0}, new int[] {3, 3, 3}, Map.of(
+			"1,0,1", "minecraft:hopper[facing=east]", "2,0,1", "minecraft:chest", "1,1,1", "minecraft:pumpkin",
+			"1,2,1", "minecraft:piston[facing=down]", "0,1,1", "minecraft:stone", "0,2,1", "minecraft:lever[face=floor,facing=north]",
+			"1,1,0", "minecraft:glass", "1,1,2", "minecraft:glass", "2,1,1", "minecraft:glass"), null, "[[60,-58,1]]", 200);
+		JsonObject f = runFarm(ctx, sp, farm);
+		check(f.get("state").getAsString().equals("done") && f.getAsJsonArray("items").toString().equals("[[\"minecraft:pumpkin\",\"Pumpkin\",1]]"),
+			"the pumpkin reached the chest: " + f);
+		check(f.get("ticks").getAsLong() == 200 && f.has("msBase") && f.has("msTick"), "the test reports its ticks and their cost: " + f);
+
+		// A furnace fed through hoppers from two chests the test keeps full; the raw iron and coal on their way aren't output.
+		JsonObject smelter = JsonParser.parseString(farmJob("furnace", new int[] {70, -60, 0}, new int[] {3, 3, 3}, Map.of(
+			"1,0,1", "minecraft:furnace[facing=north]", "1,1,1", "minecraft:hopper[facing=down]", "1,2,1", "minecraft:chest",
+			"2,0,1", "minecraft:hopper[facing=west]", "2,1,1", "minecraft:chest"), null, "[]", 260)).getAsJsonObject();
+		smelter.add("feed", JsonParser.parseString("[[71,-58,1,\"minecraft:raw_iron\"],[72,-59,1,\"minecraft:coal\"]]"));
+		f = runFarm(ctx, sp, smelter.toString());
+		check(f.getAsJsonArray("items").toString().equals("[[\"minecraft:iron_ingot\",\"Iron Ingot\",1]]")
+			&& f.get("smelting").toString().equals("{\"furnaces\":1,\"smelted\":1,\"top\":360}"), "the furnace smelted one raw iron in 10 seconds: " + f);
+
+		// A hollow 7×5×7 stone box is dark inside, so with a stand-in where the player stands, 36 blocks away, zombies spawn in it.
+		BlockPos me = sp.getServer().computeOnServer(server -> server.getPlayerList().getPlayers().getFirst().blockPosition());
+		Map<String, String> box = new java.util.HashMap<>();
+		for (int x = 0; x < 7; x++) for (int y = 0; y < 5; y++) for (int z = 0; z < 7; z++)
+			if (x == 0 || x == 6 || y == 0 || y == 4 || z == 0 || z == 6) box.put(x + "," + y + "," + z, "minecraft:stone");
+		sp.getServer().runCommand("gamerule spawn_mobs true"); // test worlds turn it off
+		String afk = "[" + me.getX() + "," + me.getY() + "," + me.getZ() + "]";
+		f = runFarm(ctx, sp, farmJob("box", new int[] {me.getX() + 36, me.getY(), me.getZ() - 3}, new int[] {7, 5, 7}, box, afk, "[]", 600));
+		sp.getServer().runCommand("gamerule spawn_mobs false");
+		check(f.get("mobs").getAsInt() > 0, "mobs spawn around the stand-in: " + f);
+		String gone = sp.getServer().computeOnServer(server -> String.valueOf(server.overworld().getBlockState(new BlockPos(61, -59, 1)).getBlock()));
+		check(gone.equals("Block{minecraft:air}"), "the last test's build is cleared before the next one: " + gone);
+	}
+
+	/** A job like the desktop app writes: blocks keyed "x,y,z" inside the box, a palette of block states. */
+	private static String farmJob(String id, int[] origin, int[] size, Map<String, String> blocks, String afk, String flips, int ticks) {
+		List<String> palette = new ArrayList<>(List.of("minecraft:air"));
+		java.nio.ByteBuffer b = java.nio.ByteBuffer.allocate(size[0] * size[1] * size[2] * 2).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+		for (int y = 0; y < size[1]; y++) for (int z = 0; z < size[2]; z++) for (int x = 0; x < size[0]; x++) {
+			String s = blocks.getOrDefault(x + "," + y + "," + z, "minecraft:air");
+			if (!palette.contains(s)) palette.add(s);
+			b.putShort((short) palette.indexOf(s));
+		}
+		JsonArray pal = new JsonArray();
+		for (String s : palette) {
+			JsonObject e = new JsonObject();
+			int i = s.indexOf('[');
+			e.addProperty("Name", i < 0 ? s : s.substring(0, i));
+			if (i >= 0) {
+				JsonObject props = new JsonObject();
+				for (String kv : s.substring(i + 1, s.length() - 1).split(",")) props.addProperty(kv.split("=")[0], kv.split("=")[1]);
+				e.add("Properties", props);
+			}
+			pal.add(e);
+		}
+		JsonObject job = new JsonObject();
+		job.addProperty("id", id);
+		job.add("origin", JsonParser.parseString(java.util.Arrays.toString(origin)));
+		job.add("size", JsonParser.parseString(java.util.Arrays.toString(size)));
+		job.add("palette", pal);
+		job.addProperty("dataVersion", net.minecraft.SharedConstants.getCurrentVersion().dataVersion().version());
+		job.addProperty("blocks", java.util.Base64.getEncoder().encodeToString(b.array()));
+		job.add("afk", afk == null ? null : JsonParser.parseString(afk));
+		job.add("flips", JsonParser.parseString(flips));
+		job.addProperty("ticks", ticks);
+		job.addProperty("biome", "minecraft:plains");
+		job.addProperty("dimension", "minecraft:overworld");
+		return job.toString();
+	}
+
+	/** Runs a farm job the way the app does, through the job file and the console command, and waits for it to finish. */
+	private static JsonObject runFarm(ClientGameTestContext ctx, TestSingleplayerContext sp, String job) throws IOException {
+		Path file = Path.of("litweb-farm", "job.json");
+		Files.createDirectories(file.getParent());
+		Files.writeString(file, job);
+		String id = JsonParser.parseString(job).getAsJsonObject().get("id").getAsString();
+		sp.getServer().runCommand("litweb-farm run");
+		JsonObject f = new JsonObject();
+		for (int i = 0; i < 1200; i++, ctx.waitTicks(1)) {
+			f = JsonParser.parseString(sp.getServer().computeOnServer(server -> dev.ga16.litweb.Farm.status())).getAsJsonObject();
+			if (f.has("id") && f.get("id").getAsString().equals(id) && !f.get("state").getAsString().matches("clearing|baseline|pasting|loading|running")) break;
+			if (f.has("error")) break;
+		}
+		return f;
+	}
+	//?}
 
 	/** A BuildPrint build and selection show up like Litematica's: listed, viewable and compared with the world. */
 	private static void buildPrint(ClientGameTestContext ctx, TestSingleplayerContext sp) {

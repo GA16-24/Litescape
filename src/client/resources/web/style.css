@@ -23,6 +23,13 @@
   --state: #fbbf24;
   --redstone: #d66bff;
   --unknown: #525252;
+  /* the farm test's marks in the view and their badges in the panel */
+  --farm-afk: var(--ok);
+  --farm-flip: var(--state);
+  --farm-feed: var(--accent);
+  --farm-off: var(--missing);
+  --farm-blocked: var(--danger);
+  --farm-ink-warm: var(--bg); /* digits on the green and amber badges */
   --danger: #fb414a;
   --scene: #000;
   --shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(245, 245, 245, 0.1);
@@ -64,6 +71,7 @@
     --missing: #64748b;
     --wrong: #ef4444;
     --state: #d97706;
+    --farm-ink-warm: var(--text);
     --redstone: #a21caf;
     --unknown: #a1a1aa;
     --danger: #dc2626;
@@ -94,6 +102,7 @@
   --missing: #64748b;
   --wrong: #ef4444;
   --state: #d97706;
+  --farm-ink-warm: var(--text);
   --redstone: #a21caf;
   --unknown: #a1a1aa;
   --danger: #dc2626;
@@ -2712,4 +2721,105 @@ details.more:not([open]) > summary {
   padding: 12px;
   font-size: 12px;
   line-height: 1.5;
+}
+
+/* The farm test's picked blocks: a numbered badge per row, matching the label over the block in the view */
+.farm-head {
+  margin: 8px 0 2px;
+}
+.farm-hint {
+  margin: 0 0 6px;
+}
+.farm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  margin: 0 -6px 2px;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.farm-row.hot {
+  background: var(--hover);
+}
+.farm-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.farm-row .opt-select {
+  max-width: 140px;
+}
+.farm-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--farm-color);
+  color: var(--farm-ink, var(--bg));
+  font: 600 11px / 1 var(--font);
+  font-variant-numeric: tabular-nums;
+}
+:is(.farm-badge, .farm-tag)[data-kind="afk"] {
+  --farm-color: var(--farm-afk);
+  --farm-ink: var(--farm-ink-warm);
+}
+:is(.farm-badge, .farm-tag)[data-kind="flip"] {
+  --farm-color: var(--farm-flip);
+  --farm-ink: var(--farm-ink-warm);
+}
+:is(.farm-badge, .farm-tag)[data-kind="feed"] {
+  --farm-color: var(--farm-feed);
+}
+.farm-tag[data-kind="blocked"] {
+  --farm-color: var(--farm-blocked);
+}
+.farm-badge:empty {
+  min-width: 10px;
+  height: 10px;
+  margin: 0 4px;
+}
+.farm-tags {
+  position: absolute;
+  inset: 0;
+  z-index: 0; /* under the layer control, compass and loading overlay */
+  pointer-events: none;
+  overflow: hidden;
+}
+.farm-tag {
+  position: absolute;
+  left: 0;
+  top: -6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 3px;
+  border-radius: 12px;
+  background: var(--overlay);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  border: 1.5px solid var(--farm-color);
+  font: 500 12px / 1 var(--font);
+  white-space: nowrap;
+  transform-origin: 50% 100%;
+}
+.farm-tag[data-kind="afk"],
+.farm-tag[data-kind="blocked"] {
+  padding-left: 8px;
+}
+.farm-tag.compact {
+  padding: 3px;
+}
+.farm-tag[hidden] {
+  display: none;
+}
+/* the picker that is choosing in the view */
+.farm-head .link[aria-pressed="true"] {
+  color: var(--accent-text);
+  background: var(--accent-soft);
 }

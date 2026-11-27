@@ -170,6 +170,7 @@ if (tests[mc]) {
 		def dir = runs.map { it.dir('client') }
 		runDir = dir
 		jvmArgs.add '-Dfabric.client.gametest'
+		jvmArgs.add '-Dlitweb.farmServer=true' // the end-to-end test runs the desktop app's farm test (Farm.java)
 		// A separate home and temp folder keep the test away from the developer's ~/.litescape, and make LWJGL
 		// extract the natives this jar bundles instead of reusing ones another Minecraft version left behind.
 		jvmArgs.add dir.map { "-Duser.home=${it.dir('home').asFile}".toString() }
@@ -209,6 +210,9 @@ if (tests[mc]) {
 	}
 	productionTests.configure { dependsOn client, server }
 }
+
+// The end-to-end test runs the desktop app's farm test, which only exists on servers started with this.
+tasks.matching { it.name == 'runClientGameTest' }.configureEach { jvmArgs '-Dlitweb.farmServer=true' }
 
 // Serves /api/shaders without Minecraft, for web-dev/serve.mjs: ./gradlew :26.3:shaderDev [-Ppacks=<shaderpacks folder>]
 tasks.register('shaderDev', JavaExec) {

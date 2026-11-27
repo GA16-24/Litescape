@@ -52,7 +52,7 @@ export function modInfo(jar) {
 }
 
 /** Every jar in the instance's mods folder with the mod ids it provides. */
-function jars(dir) {
+export function jars(dir) {
   const modsDir = path.join(dir, 'mods');
   let names = [];
   try {
@@ -352,18 +352,18 @@ export function uninstall(dir) {
   for (const j of jars(dir)) if (j.ids.includes(MOD_ID)) fs.rmSync(j.file);
 }
 
-async function get(url) {
+export async function get(url) {
   const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(60000) });
   if (!res.ok) throw new Error(`${new URL(url).host} answered ${res.status}`);
   return res;
 }
 
 /** Downloads the newest Fabric build of each dependency the instance lacks from Modrinth, checking its hash. */
-export async function installDeps(dir, mc) {
+export async function installDeps(dir, mc, deps = DEPS) {
   const modsDir = path.join(dir, 'mods');
   fs.mkdirSync(modsDir, { recursive: true });
   const have = jars(dir).flatMap((j) => j.ids);
-  for (const slug of DEPS.filter((d) => !have.includes(d))) {
+  for (const slug of deps.filter((d) => !have.includes(d))) {
     const q = new URLSearchParams({ loaders: '["fabric"]', game_versions: JSON.stringify([mc]) });
     const versions = await (await get(`https://api.modrinth.com/v2/project/${slug}/version?${q}`)).json();
     // Newest first, betas included: Fabric API's build for a new Minecraft version is often still marked beta.

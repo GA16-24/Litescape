@@ -72,5 +72,7 @@ async function act(action, arg) {
 
 document.getElementById('create').onclick = () => act('createInstance');
 document.getElementById('add').onclick = () => act('addFolder');
+document.getElementById('server').onclick = () => window.litescape.openServer();
+document.getElementById('farm').onclick = () => window.litescape.openFarm();
 window.addEventListener('focus', () => act('instances'));
 act('instances');
