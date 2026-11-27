@@ -567,8 +567,6 @@ export default {
   "A schematic can't be connected to itself": 'Схему нельзя связать саму с собой',
   'Only the owner of both schematics or an operator can connect them':
     'Связать их может только владелец обеих схем или оператор',
-  'Only portals in loaded chunks were checked. On this server, only operators can check the rest.':
-    'Проверены только порталы в загруженных чанках. На этом сервере остальные могут проверить только операторы.',
   'Other portal': 'Другой портал',
   'Not built yet': 'Ещё не построен',
   'New portal': 'Новый портал',
@@ -584,6 +582,9 @@ export default {
   'Any light': 'При любом свете',
   'Cover them or dig them out.': 'Накройте их или выкопайте.',
   'Block light {l} or less': 'Свет блоков {l} или меньше',
-  'No block light': 'Без света блоков',
   'Light them, cover them or dig them out.': 'Осветите их, накройте или выкопайте.',
+  'Not in this farm': 'Не из этой фермы',
+  'Block light 0': 'Свет блоков 0',
+  'Only loaded chunks were checked. Operators can check the rest.':
+    'Проверены только загруженные чанки. Остальное могут проверить операторы.',
 };

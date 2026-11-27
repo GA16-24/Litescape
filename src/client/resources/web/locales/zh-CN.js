@@ -509,8 +509,6 @@ export default {
   "Couldn't disconnect the part": '无法取消关联该部分',
   "A schematic can't be connected to itself": '投影不能关联到自身',
   'Only the owner of both schematics or an operator can connect them': '只有两个投影的所有者或管理员才能关联它们',
-  'Only portals in loaded chunks were checked. On this server, only operators can check the rest.':
-    '只检查了已加载区块里的传送门。在这个服务器上，只有管理员能检查其余部分。',
   'Other portal': '其他传送门',
   'Not built yet': '尚未建造',
   'New portal': '新传送门',
@@ -526,6 +524,8 @@ export default {
   'Any light': '任何光照',
   'Cover them or dig them out.': '覆盖或挖掉它们。',
   'Block light {l} or less': '方块光照 {l} 或更低',
-  'No block light': '无方块光照',
   'Light them, cover them or dig them out.': '点亮、覆盖或挖掉它们。',
+  'Not in this farm': '不在这个农场里',
+  'Block light 0': '方块光照 0',
+  'Only loaded chunks were checked. Operators can check the rest.': '只检查了已加载的区块。管理员可以检查其余部分。',
 };

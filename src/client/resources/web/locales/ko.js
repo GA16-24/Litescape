@@ -519,8 +519,6 @@ export default {
   "Couldn't disconnect the part": '부분의 연결을 끊지 못했어요',
   "A schematic can't be connected to itself": '설계도를 자기 자신과 연결할 수는 없어요',
   'Only the owner of both schematics or an operator can connect them': '두 설계도의 주인이나 관리자만 연결할 수 있어요',
-  'Only portals in loaded chunks were checked. On this server, only operators can check the rest.':
-    '불러온 청크의 포털만 확인했어요. 이 서버에서는 나머지는 관리자만 확인할 수 있어요.',
   'Other portal': '다른 포털',
   'Not built yet': '아직 안 지음',
   'New portal': '새 포털',
@@ -536,6 +534,9 @@ export default {
   'Any light': '밝기와 상관없음',
   'Cover them or dig them out.': '덮거나 파내세요.',
   'Block light {l} or less': '블록 빛 {l} 이하',
-  'No block light': '블록 빛 없음',
   'Light them, cover them or dig them out.': '밝히거나 덮거나 파내세요.',
+  'Not in this farm': '이 농장 밖',
+  'Block light 0': '블록 빛 0',
+  'Only loaded chunks were checked. Operators can check the rest.':
+    '로드된 청크만 확인했습니다. 나머지는 관리자가 확인할 수 있습니다.',
 };

@@ -530,8 +530,6 @@ export default {
   "A schematic can't be connected to itself": 'Un esquema no se puede conectar consigo mismo',
   'Only the owner of both schematics or an operator can connect them':
     'Solo el dueño de ambos esquemas o un operador puede conectarlos',
-  'Only portals in loaded chunks were checked. On this server, only operators can check the rest.':
-    'Solo se revisaron los portales en chunks cargados. En este servidor, solo los operadores pueden revisar el resto.',
   'Other portal': 'Otro portal',
   'Not built yet': 'Aún sin construir',
   'New portal': 'Portal nuevo',
@@ -547,6 +545,9 @@ export default {
   'Any light': 'Con cualquier luz',
   'Cover them or dig them out.': 'Cúbrelos o quítalos.',
   'Block light {l} or less': 'Luz de bloque {l} o menos',
-  'No block light': 'Sin luz de bloque',
   'Light them, cover them or dig them out.': 'Ilumínalos, cúbrelos o quítalos.',
+  'Not in this farm': 'No es de esta granja',
+  'Block light 0': 'Luz de bloque 0',
+  'Only loaded chunks were checked. Operators can check the rest.':
+    'Solo se comprobaron los chunks cargados. Los operadores pueden comprobar el resto.',
 };

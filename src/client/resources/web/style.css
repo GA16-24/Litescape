@@ -1047,9 +1047,38 @@ button {
   color: var(--text);
   margin-bottom: 8px;
 }
+.ready .pt {
+  flex: 1;
+  min-width: 0;
+}
+.ready .line {
+  display: flex;
+  gap: 4px;
+}
+.ready .nm {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The destination keeps its room, so a short label never cuts; the source name gives way first */
+.ready .nm:last-child {
+  flex: none;
+  max-width: 55%;
+}
 .ready .sub {
   display: block;
   color: var(--muted);
+}
+.ready .nw {
+  white-space: nowrap;
+}
+.head-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.head-meta .icon-btn {
+  margin: -6px -6px -6px 0;
 }
 .updated .text {
   color: var(--text);
@@ -1057,7 +1086,7 @@ button {
 .part-add {
   display: flex;
   gap: 6px;
-  margin-top: 8px;
+  margin: 8px 0;
 }
 .part-add select {
   flex: 1;

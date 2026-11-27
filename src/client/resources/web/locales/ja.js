@@ -523,8 +523,6 @@ export default {
   "A schematic can't be connected to itself": '設計図を自分自身とつなげることはできません',
   'Only the owner of both schematics or an operator can connect them':
     'つなげられるのは両方の設計図の所有者かオペレーターだけです',
-  'Only portals in loaded chunks were checked. On this server, only operators can check the rest.':
-    '読み込まれたチャンクのポータルだけを確認しました。このサーバーでは、残りはオペレーターだけが確認できます。',
   'Other portal': '別のポータル',
   'Not built yet': '未建設',
   'New portal': '新しいポータル',
@@ -540,6 +538,9 @@ export default {
   'Any light': '明るさに関係なし',
   'Cover them or dig them out.': '覆うか、掘り取ってください。',
   'Block light {l} or less': 'ブロック光 {l} 以下',
-  'No block light': 'ブロック光なし',
   'Light them, cover them or dig them out.': '明かりを置くか、覆うか、掘り取ってください。',
+  'Not in this farm': 'このファームの外',
+  'Block light 0': 'ブロック光 0',
+  'Only loaded chunks were checked. Operators can check the rest.':
+    '読み込み済みのチャンクだけを確認しました。残りはオペレーターが確認できます。',
 };

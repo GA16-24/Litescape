@@ -1710,7 +1710,7 @@ function partsHtml(sh) {
     if (mine.length) {
       const pick = mine.some((s) => s.id === S.linkPick) ? S.linkPick : mine[0].id;
       const busy = S.busy.has(`link:${sh.id}`);
-      h += `<div class="part-add"><select class="opt-select" id="link-pick" aria-label="${t('Add a part')}">${mine.map((s) => `<option value="${esc(s.id)}"${s.id === pick ? ' selected' : ''}>${esc(s.name)} · ${esc(dimName(s.dim))}</option>`).join('')}</select>
+      h += `<div class="part-add"><select class="opt-select" id="link-pick" aria-label="${t('Add a part')}">${mine.map((s) => `<option value="${esc(s.id)}"${s.id === pick ? ' selected' : ''}>${esc(dimName(s.dim))} · ${esc(s.name)}</option>`).join('')}</select>
         <button class="btn" data-link="${esc(pick)}" data-for="${esc(sh.id)}" ${busy ? 'disabled' : ''}>${ICON.plug}${t('Connect')}</button></div>`;
     }
     h += '</section>';
@@ -1728,8 +1728,10 @@ function portalsHtml(sh) {
     let to = nameOf(p.in);
     const notes = [];
     let bad = !!p.others;
-    if (p.lands === 'portal' && !p.in) [to, bad] = [t('Other portal'), true];
-    else if (p.lands === 'portal' && !p.built) notes.push(t('Not built yet'));
+    if (p.lands === 'portal' && !p.in) {
+      [to, bad] = [t('Other portal'), true];
+      notes.push(t('Not in this farm'));
+    } else if (p.lands === 'portal' && !p.built) notes.push(t('Not built yet'));
     else if (p.lands === 'new') {
       [to, bad] = [t('New portal'), true];
       notes.push(
@@ -1740,34 +1742,35 @@ function portalsHtml(sh) {
     } else if (p.lands === 'platform') to = t('End platform');
     else if (p.lands !== 'portal') to = t('World spawn');
     if (p.others) notes.push(t('{n} of {total} blocks go elsewhere', { n: p.others, total: p.blocks }));
-    const where = `${esc(xyz(p.from))} → ${esc(dimName(p.to))} ${esc(xyz(p.at))}`;
+    // The world spawn's height isn't known, and its line already names it.
+    const at = p.lands === 'spawn' ? '' : ` ${esc(xyz(p.at))}`;
+    const where = `<span class="nw">${esc(xyz(p.from))}</span> → <span class="nw">${esc(dimName(p.to))}${at}</span>`;
     return {
       bad,
-      html: `<div class="ready portal${bad ? '' : ' ok'}">${bad ? ICON.alert : ICON.check}<span>${nameOf(p.part)} → ${to}${notes.length ? `<span class="sub">${notes.join(' · ')}</span>` : ''}<span class="sub">${where}</span></span></div>`,
+      html: `<div class="ready portal${bad ? '' : ' ok'}">${bad ? ICON.alert : ICON.check}<span class="pt"><span class="line"><span class="nm">${nameOf(p.part)}</span>→<span class="nm">${to}</span></span>${notes.length ? `<span class="sub">${notes.join(' · ')}</span>` : ''}<span class="sub">${where}</span></span></div>`,
     };
   });
   const bad = rows.filter((x) => x.bad).length;
-  let meta = '';
-  if (!r || r.busy) meta = `<span class="row-meta">${t('Checking…')}</span>`;
-  else {
-    if (bad) meta += `<span class="chip warn">${t('{n} to fix', { n: bad })}</span>`;
-    if (r.list?.some((p) => p.loadedOnly))
-      meta += `<span class="chip" data-tip="${t('Only portals in loaded chunks were checked. On this server, only operators can check the rest.')}">${t('Loaded chunks')}</span>`;
-    meta += `<button class="link" data-check-portals="${esc(sh.id)}" data-tip="${t('Check again')}" aria-label="${t('Check again')}">${ICON.retry}</button>`;
-  }
-  let h = `<section class="panel" id="portals"><div class="panel-head"><h3>${t('Portals')}</h3><span class="chips">${meta}</span></div>`;
+  let meta = bad ? `<span class="chip warn">${t('{n} to fix', { n: bad })}</span>` : '';
+  meta +=
+    !r || r.busy
+      ? `<span class="row-meta">${t('Checking…')}</span>`
+      : `<button class="icon-btn" data-check-portals="${esc(sh.id)}" data-tip="${t('Check again')}" aria-label="${t('Check again')}">${ICON.retry}</button>`;
+  let h = `<section class="panel" id="portals"><div class="panel-head"><h3>${t('Portals')}</h3><span class="head-meta">${meta}</span></div>`;
   if (r?.err) h += `<p class="updated" style="color:var(--danger)">${esc(r.err)}</p>`;
   else if (r?.list && !r.list.length) h += `<p class="updated">${t('No lit portals.')}</p>`;
   h += rows
     .sort((x, y) => y.bad - x.bad)
     .map((x) => x.html)
     .join('');
+  if (r?.list?.some((p) => p.loadedOnly))
+    h += `<p class="updated">${t('Only loaded chunks were checked. Operators can check the rest.')}</p>`;
   return `${h}</section>`;
 }
 
-async function checkPortals(id) {
-  if (S.portals.get(id)?.busy) return;
-  S.portals.set(id, { busy: true });
+async function checkPortals(id, retry) {
+  if (S.portals.get(id)?.busy && !retry) return;
+  S.portals.set(id, { ...S.portals.get(id), busy: true }); // the last answer stays on screen while it checks
   renderInspector();
   try {
     const r = await api(`api/portals?id=${encodeURIComponent(id)}`);
@@ -1775,8 +1778,7 @@ async function checkPortals(id) {
   } catch (err) {
     // A part opened right after another hits the server's 2 s limit; try once more after it.
     if (err.message === 'rate-limited') {
-      setTimeout(() => S.portals.delete(id) && renderInspector(), 2100);
-      S.portals.set(id, { busy: true });
+      setTimeout(() => S.portals.get(id)?.busy && checkPortals(id, true), 2100);
       return;
     }
     S.portals.set(id, { err: err.message });
@@ -2009,7 +2011,7 @@ function spawnText(rule) {
     light >= 15
       ? [t('Any light'), t('Cover them or dig them out.')]
       : [
-          light ? t('Block light {l} or less', { l: light }) : t('No block light'),
+          light ? t('Block light {l} or less', { l: light }) : t('Block light 0'),
           t('Light them, cover them or dig them out.'),
         ];
   return `<span><span class="text">${esc(mob)}</span> · ${when}. ${fix}</span>`;
@@ -2379,10 +2381,7 @@ $('inspector').addEventListener('click', (e) => {
   const ln = t.closest('[data-link]');
   if (ln) return link(ln.dataset.for, $('link-pick')?.value || ln.dataset.link, true);
   const cp = t.closest('[data-check-portals]');
-  if (cp) {
-    S.portals.delete(cp.dataset.checkPortals);
-    return renderInspector();
-  }
+  if (cp) return checkPortals(cp.dataset.checkPortals);
   const go = t.closest('[data-go-shared]');
   if (go) return open({ type: 'shared', id: go.dataset.goShared });
   const rc = t.closest('[data-recapture]');
