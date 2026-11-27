@@ -347,15 +347,8 @@ public final class LitWeb implements ModInitializer {
 			case "delete" -> {
 				Shared s = require(player, req.arg());
 				if (!canManage(player, s)) throw new IOException("Only " + s.ownerName + " or an operator can stop sharing this schematic");
-				shared.remove(s.id);
+				forget(s.id);
 				for (Shared o : shared.values()) o.links.remove(s.id);
-				loaded.remove(s.id);
-				credited.remove(s.id);
-				creditedDirty.remove(s.id);
-				Files.deleteIfExists(dir.resolve(s.id + ".bin"));
-				Files.deleteIfExists(dir.resolve(s.id + ".credited"));
-				Files.deleteIfExists(dir.resolve(s.id + ".terrain.bin"));
-				Files.deleteIfExists(dir.resolve(s.id + ".litematic"));
 				saveIndexAndBroadcast(server);
 				send(player, req.req(), "", new byte[0]);
 			}
@@ -385,30 +378,79 @@ public final class LitWeb implements ModInitializer {
 		Volume v = Volume.decode(data); // validates before anything touches disk
 		String owner = player.getStringUUID();
 		String id = UUID.nameUUIDFromBytes((owner + ":" + meta.get("key").getAsString()).getBytes(StandardCharsets.UTF_8)).toString();
-		long mine = shared.values().stream().filter(s -> s.owner.equals(owner) && !s.id.equals(id)).count();
-		if (mine >= Integer.parseInt(config.getProperty("max-shared-per-player", "20"))) {
-			throw new IOException("You are already sharing " + mine + " schematics. Stop sharing one first.");
-		}
 		Shared s = new Shared();
 		s.id = id;
 		s.name = meta.get("name").getAsString();
 		s.owner = owner;
 		s.ownerName = player.getName().getString();
 		s.dim = player.level().dimension().identifier().toString();
-		s.origin = new int[] {v.x0, v.y0, v.z0};
-		s.size = new int[] {v.sx, v.sy, v.sz};
 		s.updated = System.currentTimeMillis();
 		if (meta.has("author")) s.author = meta.get("author").getAsString().substring(0, Math.min(64, meta.get("author").getAsString().length()));
 		s.access = "private"; // new shares stay with the owner until they choose who else sees them
 		Shared old = shared.get(id);
-		if (old != null) { // "Update copy" keeps who helped so far and who can see it
-			s.contributors = old.contributors;
-			s.access = old.access;
-			s.players = old.players;
-			s.answers = old.answers;
-			s.notes = old.notes;
-			s.links = old.links;
+		// The owner's other shares that this one overlaps, and those the joint box then reaches, fold into it.
+		List<Shared> over = new ArrayList<>();
+		int[] box = {v.x0, v.y0, v.z0, v.x0 + v.sx - 1, v.y0 + v.sy - 1, v.z0 + v.sz - 1};
+		for (boolean grew = true; grew; ) {
+			grew = false;
+			for (Shared o : shared.values()) {
+				if (o.id.equals(id) || over.contains(o) || !o.owner.equals(owner) || !o.dim.equals(s.dim) || !overlaps(box, o)) continue;
+				over.add(o);
+				box = Volume.union(List.of(box, boxOf(o)));
+				grew = true;
+			}
 		}
+		long mine = shared.values().stream().filter(o -> o.owner.equals(owner) && !o.id.equals(id)).count() - over.size(); // folded shares free their slots
+		if (mine >= Integer.parseInt(config.getProperty("max-shared-per-player", "20"))) {
+			throw new IOException("You are already sharing " + mine + " schematics. Stop sharing one first.");
+		}
+		// Who can see it and what it says come from the share players already know; contributors and links from all of them.
+		Shared keep = old != null ? old : over.isEmpty() ? null : over.getFirst();
+		if (keep != null) { // "Update copy" keeps who helped so far and who can see it
+			s.contributors = new LinkedHashMap<>(keep.contributors); // copies, so a refused upload leaves the old share as it was
+			s.access = keep.access;
+			s.players = keep.players;
+			s.answers = keep.answers;
+			s.notes = keep.notes;
+			s.links = new ArrayList<>(keep.links);
+		}
+		boolean whole = true; // whether the uploaded Litematica placement still covers the whole share
+		byte[] bin = data;
+		Set<String> gone = new HashSet<>();
+		java.util.BitSet done = new java.util.BitSet();
+		if (!over.isEmpty()) {
+			List<Volume> pieces = new ArrayList<>();
+			for (Shared o : over) pieces.add(volume(o));
+			pieces.add(v); // the new upload wins where they disagree
+			Volume merged;
+			try {
+				merged = Volume.merge(pieces);
+			} catch (IllegalArgumentException e) {
+				throw new IOException("This overlaps " + over.getFirst().name + ", and together they're too large to share. " + e.getMessage());
+			}
+			if (old != null) moveCredited(old, merged, done);
+			for (Shared o : over) {
+				moveCredited(o, merged, done);
+				gone.add(o.id);
+				if (o == keep) continue;
+				for (var e : o.contributors.entrySet()) {
+					s.contributors.merge(e.getKey(), e.getValue(), (a, b) -> {
+						Contributor c = new Contributor();
+						c.name = a.last >= b.last ? a.name : b.name;
+						c.placed = a.placed + b.placed;
+						c.last = Math.max(a.last, b.last);
+						return c;
+					});
+				}
+				for (String l : o.links) if (!s.links.contains(l)) s.links.add(l);
+			}
+			s.links.removeIf(l -> l.equals(id) || gone.contains(l));
+			whole = merged.sx == v.sx && merged.sy == v.sy && merged.sz == v.sz;
+			v = merged;
+			bin = v.encode();
+		}
+		s.origin = new int[] {v.x0, v.y0, v.z0};
+		s.size = new int[] {v.sx, v.sy, v.sz};
 		// Old clients send no margin; they get no surroundings rather than stale ones from before a move.
 		int margin = meta.has("margin") ? meta.get("margin").getAsInt() : 0;
 		if (old != null && old.margin > 0 && margin == old.margin && !allowed(player, "terrain-capture")) {
@@ -421,15 +463,57 @@ public final class LitWeb implements ModInitializer {
 			s.chunks = old.chunks;
 			s.chunksCaptured = old.chunksCaptured;
 		} else capture(player, s, v, serverLevel(player), margin);
-		Files.write(dir.resolve(id + ".bin"), data);
+		Files.write(dir.resolve(id + ".bin"), bin);
 		Path placement = dir.resolve(id + ".litematic");
-		if (placementLen > 0) Files.write(placement, Arrays.copyOfRange(all, data.length, all.length));
+		// A placement that covers only part of a merged share would load only that part in Litematica.
+		s.placement = placementLen > 0 && whole;
+		if (s.placement) Files.write(placement, Arrays.copyOfRange(all, data.length, all.length));
 		else Files.deleteIfExists(placement);
-		s.placement = placementLen > 0;
 		shared.put(id, s);
 		loaded.put(id, v);
+		if (!gone.isEmpty()) {
+			for (String g : gone) forget(g);
+			for (Shared o : shared.values()) { // parts connected to a folded share now point at the merged one
+				if (o.links.removeIf(gone::contains) && !o.id.equals(id) && !o.links.contains(id)) o.links.add(id);
+			}
+			credited.put(id, done);
+			creditedDirty.remove(id);
+			Files.write(dir.resolve(id + ".credited"), done.toByteArray());
+		}
 		saveIndexAndBroadcast(server);
 		send(player, req.req(), "", id.getBytes(StandardCharsets.UTF_8));
+	}
+
+	/** Drops a share and its files. Callers fix up the links that pointed at it. */
+	private void forget(String id) throws IOException {
+		shared.remove(id);
+		loaded.remove(id);
+		credited.remove(id);
+		creditedDirty.remove(id);
+		Files.deleteIfExists(dir.resolve(id + ".bin"));
+		Files.deleteIfExists(dir.resolve(id + ".credited"));
+		Files.deleteIfExists(dir.resolve(id + ".terrain.bin"));
+		Files.deleteIfExists(dir.resolve(id + ".litematic"));
+	}
+
+	private static int[] boxOf(Shared s) {
+		return new int[] {s.origin[0], s.origin[1], s.origin[2], s.origin[0] + s.size[0] - 1, s.origin[1] + s.size[1] - 1, s.origin[2] + s.size[2] - 1};
+	}
+
+	private static boolean overlaps(int[] box, Shared s) {
+		int[] b = boxOf(s);
+		for (int i = 0; i < 3; i++) if (b[i] > box[i + 3] || b[i + 3] < box[i]) return false;
+		return true;
+	}
+
+	/** Copies a share's credited blocks into the merged box, so blocks placed before the merge aren't credited twice. */
+	private void moveCredited(Shared from, Volume to, java.util.BitSet into) {
+		java.util.BitSet bits = credited.computeIfAbsent(from.id, this::readCredited);
+		int sx = from.size[0], sz = from.size[2];
+		for (int i = bits.nextSetBit(0); i >= 0; i = bits.nextSetBit(i + 1)) {
+			int x = from.origin[0] + i % sx - to.x0, z = from.origin[2] + i / sx % sz - to.z0, y = from.origin[1] + i / (sx * sz) - to.y0;
+			if (x >= 0 && y >= 0 && z >= 0 && x < to.sx && y < to.sy && z < to.sz) into.set(to.at(x, y, z));
+		}
 	}
 
 	private int maxMargin() {
