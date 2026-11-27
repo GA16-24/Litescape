@@ -190,8 +190,8 @@ final class Portals {
 		boolean[] seen = new boolean[v.blocks.length];
 		int total = 0;
 		for (int i = 0; i < v.blocks.length && total < MAX_BLOCKS; i++) {
-			if (seen[i] || !isPortal[v.blocks[i]]) continue;
-			boolean end = isEnd[v.blocks[i]];
+			if (seen[i] || !isPortal[v.blocks[i] & 0xFFFF]) continue; // palette indices are unsigned shorts
+			boolean end = isEnd[v.blocks[i] & 0xFFFF];
 			List<BlockPos> blocks = new ArrayList<>();
 			ArrayDeque<Integer> queue = new ArrayDeque<>(List.of(i));
 			seen[i] = true;
@@ -203,7 +203,7 @@ final class Portals {
 					int nx = x + d.getStepX(), ny = y + d.getStepY(), nz = z + d.getStepZ();
 					if (nx < 0 || ny < 0 || nz < 0 || nx >= v.sx || ny >= v.sy || nz >= v.sz) continue;
 					int k = v.at(nx, ny, nz);
-					if (!seen[k] && isPortal[v.blocks[k]] && isEnd[v.blocks[k]] == end) {
+					if (!seen[k] && isPortal[v.blocks[k] & 0xFFFF] && isEnd[v.blocks[k] & 0xFFFF] == end) {
 						seen[k] = true;
 						queue.add(k);
 					}
