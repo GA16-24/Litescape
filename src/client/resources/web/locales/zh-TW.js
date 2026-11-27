@@ -516,7 +516,6 @@ export default {
   'End platform': '終界平台',
   'World spawn': '世界重生點',
   '{n} of {total} blocks go elsewhere': '{total} 個方塊中有 {n} 個通往別處',
-  'Checking…': '正在檢查…',
   '{n} to fix': '{n} 處需修正',
   'No lit portals.': '沒有點燃的傳送門。',
   Zombie: '殭屍',
@@ -527,4 +526,6 @@ export default {
   'Not in this farm': '不在這個農場裡',
   'Block light 0': '方塊光照 0',
   'Only loaded chunks were checked. Operators can check the rest.': '只檢查了已載入的區塊。管理員可以檢查其餘部分。',
+  'Not built or not loaded': '未建造或未載入',
+  'None loaded within {r} blocks': '{r} 格內沒有已載入的',
 };

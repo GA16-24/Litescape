@@ -1056,18 +1056,18 @@ button {
   gap: 4px;
 }
 .ready .nm {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* The destination keeps its room, so a short label never cuts; the source name gives way first */
-.ready .nm:last-child {
+.ready .nm.fixed {
   flex: none;
-  max-width: 55%;
 }
 .ready .sub {
   display: block;
   color: var(--muted);
+  text-wrap: pretty;
 }
 .ready .nw {
   white-space: nowrap;
@@ -1079,6 +1079,9 @@ button {
 }
 .head-meta .icon-btn {
   margin: -6px -6px -6px 0;
+}
+.head-meta .chip {
+  margin: -3px 0;
 }
 .updated .text {
   color: var(--text);

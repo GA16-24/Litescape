@@ -1724,38 +1724,42 @@ function portalsHtml(sh) {
   const r = S.portals.get(sh.id);
   if (!r) queueMicrotask(() => checkPortals(sh.id));
   const nameOf = (id) => esc(findShared(id)?.name || '?');
+  // A part's name, cut to fit with the full name on hover; a fixed label like "New portal" never gets cut.
+  const nm = (id) => `<span class="nm" title="${nameOf(id)}">${nameOf(id)}</span>`;
+  const label = (s) => `<span class="nm fixed">${s}</span>`;
   const rows = (r?.list || []).map((p) => {
-    let to = nameOf(p.in);
+    let to = nm(p.in);
     const notes = [];
     let bad = !!p.others;
+    // Without region access the server only sees loaded chunks, so "not there" may mean "not loaded".
     if (p.lands === 'portal' && !p.in) {
-      [to, bad] = [t('Other portal'), true];
+      [to, bad] = [label(t('Other portal')), true];
       notes.push(t('Not in this farm'));
-    } else if (p.lands === 'portal' && !p.built) notes.push(t('Not built yet'));
+    } else if (p.lands === 'portal' && !p.built)
+      notes.push(t(p.loadedOnly ? 'Not built or not loaded' : 'Not built yet'));
     else if (p.lands === 'new') {
-      [to, bad] = [t('New portal'), true];
+      [to, bad] = [label(t('New portal')), true];
+      const radius = p.to === 'minecraft:the_nether' ? 16 : 128;
       notes.push(
         p.in
           ? t('Can break blocks in {part}', { part: nameOf(p.in) })
-          : t('None within {r} blocks', { r: p.to === 'minecraft:the_nether' ? 16 : 128 }),
+          : t(p.loadedOnly ? 'None loaded within {r} blocks' : 'None within {r} blocks', { r: radius }),
       );
-    } else if (p.lands === 'platform') to = t('End platform');
-    else if (p.lands !== 'portal') to = t('World spawn');
+    } else if (p.lands === 'platform') to = label(t('End platform'));
+    else if (p.lands !== 'portal') to = label(t('World spawn'));
     if (p.others) notes.push(t('{n} of {total} blocks go elsewhere', { n: p.others, total: p.blocks }));
     // The world spawn's height isn't known, and its line already names it.
     const at = p.lands === 'spawn' ? '' : ` ${esc(xyz(p.at))}`;
     const where = `<span class="nw">${esc(xyz(p.from))}</span> → <span class="nw">${esc(dimName(p.to))}${at}</span>`;
     return {
       bad,
-      html: `<div class="ready portal${bad ? '' : ' ok'}">${bad ? ICON.alert : ICON.check}<span class="pt"><span class="line"><span class="nm">${nameOf(p.part)}</span>→<span class="nm">${to}</span></span>${notes.length ? `<span class="sub">${notes.join(' · ')}</span>` : ''}<span class="sub">${where}</span></span></div>`,
+      html: `<div class="ready portal${bad ? '' : ' ok'}">${bad ? ICON.alert : ICON.check}<span class="pt"><span class="line">${nm(p.part)}→${to}</span>${notes.length ? `<span class="sub">${notes.join(' · ')}</span>` : ''}<span class="sub">${where}</span></span></div>`,
     };
   });
   const bad = rows.filter((x) => x.bad).length;
   let meta = bad ? `<span class="chip warn">${t('{n} to fix', { n: bad })}</span>` : '';
-  meta +=
-    !r || r.busy
-      ? `<span class="row-meta">${t('Checking…')}</span>`
-      : `<button class="icon-btn" data-check-portals="${esc(sh.id)}" data-tip="${t('Check again')}" aria-label="${t('Check again')}">${ICON.retry}</button>`;
+  const busy = !r || r.busy; // the button stays put and spins, so the head doesn't shift
+  meta += `<button class="icon-btn" data-check-portals="${esc(sh.id)}" data-tip="${t('Check again')}" aria-label="${t('Check again')}" ${busy ? 'disabled aria-busy="true"' : ''}>${busy ? '<span class="spinner xs"></span>' : ICON.retry}</button>`;
   let h = `<section class="panel" id="portals"><div class="panel-head"><h3>${t('Portals')}</h3><span class="head-meta">${meta}</span></div>`;
   if (r?.err) h += `<p class="updated" style="color:var(--danger)">${esc(r.err)}</p>`;
   else if (r?.list && !r.list.length) h += `<p class="updated">${t('No lit portals.')}</p>`;
@@ -1776,7 +1780,7 @@ async function checkPortals(id, retry) {
     const r = await api(`api/portals?id=${encodeURIComponent(id)}`);
     S.portals.set(id, { list: r.portals });
   } catch (err) {
-    // A part opened right after another hits the server's 2 s limit; try once more after it.
+    // A part opened right after another hits the server's 2 s limit; try again after it.
     if (err.message === 'rate-limited') {
       setTimeout(() => S.portals.get(id)?.busy && checkPortals(id, true), 2100);
       return;

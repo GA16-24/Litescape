@@ -527,7 +527,6 @@ export default {
   'End platform': '엔드 플랫폼',
   'World spawn': '월드 스폰',
   '{n} of {total} blocks go elsewhere': '{total}블록 중 {n}블록은 다른 곳으로',
-  'Checking…': '확인 중…',
   '{n} to fix': '고칠 것 {n}',
   'No lit portals.': '켜진 포털이 없습니다.',
   Zombie: '좀비',
@@ -539,4 +538,6 @@ export default {
   'Block light 0': '블록 빛 0',
   'Only loaded chunks were checked. Operators can check the rest.':
     '로드된 청크만 확인했습니다. 나머지는 관리자가 확인할 수 있습니다.',
+  'Not built or not loaded': '안 지었거나 로드 안 됨',
+  'None loaded within {r} blocks': '{r}블록 안에 로드된 것 없음',
 };

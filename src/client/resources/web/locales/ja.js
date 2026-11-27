@@ -526,12 +526,11 @@ export default {
   'Other portal': '別のポータル',
   'Not built yet': '未建設',
   'New portal': '新しいポータル',
-  'Can break blocks in {part}': '{part} のブロックを壊すことがあります',
+  'Can break blocks in {part}': '{part} のブロックを壊す恐れ',
   'None within {r} blocks': '{r} ブロック以内にありません',
   'End platform': 'エンドの足場',
   'World spawn': 'ワールドスポーン',
-  '{n} of {total} blocks go elsewhere': '{total} ブロック中 {n} ブロックは別の場所へ',
-  'Checking…': '確認中…',
+  '{n} of {total} blocks go elsewhere': '{total} 中 {n} ブロックは別の場所へ',
   '{n} to fix': '要修正 {n}',
   'No lit portals.': '点火したポータルはありません。',
   Zombie: 'ゾンビ',
@@ -543,4 +542,6 @@ export default {
   'Block light 0': 'ブロック光 0',
   'Only loaded chunks were checked. Operators can check the rest.':
     '読み込み済みのチャンクだけを確認しました。残りはオペレーターが確認できます。',
+  'Not built or not loaded': '未建設か未読み込み',
+  'None loaded within {r} blocks': '{r} ブロック以内に読み込み済みのものなし',
 };

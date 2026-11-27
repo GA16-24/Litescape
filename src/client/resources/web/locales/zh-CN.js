@@ -517,7 +517,6 @@ export default {
   'End platform': '末地平台',
   'World spawn': '世界出生点',
   '{n} of {total} blocks go elsewhere': '{total} 个方块中有 {n} 个通往别处',
-  'Checking…': '正在检查…',
   '{n} to fix': '{n} 处需修正',
   'No lit portals.': '没有点燃的传送门。',
   Zombie: '僵尸',
@@ -528,4 +527,6 @@ export default {
   'Not in this farm': '不在这个农场里',
   'Block light 0': '方块光照 0',
   'Only loaded chunks were checked. Operators can check the rest.': '只检查了已加载的区块。管理员可以检查其余部分。',
+  'Not built or not loaded': '未建造或未加载',
+  'None loaded within {r} blocks': '{r} 格内没有已加载的',
 };

@@ -575,7 +575,6 @@ export default {
   'End platform': 'Платформа Края',
   'World spawn': 'Точка спавна мира',
   '{n} of {total} blocks go elsewhere': '{n} из {total} блоков ведут в другое место',
-  'Checking…': 'Проверка…',
   '{n} to fix': 'Исправить: {n}',
   'No lit portals.': 'Нет зажжённых порталов.',
   Zombie: 'Зомби',
@@ -587,4 +586,6 @@ export default {
   'Block light 0': 'Свет блоков 0',
   'Only loaded chunks were checked. Operators can check the rest.':
     'Проверены только загруженные чанки. Остальное могут проверить операторы.',
+  'Not built or not loaded': 'Не построен или не загружен',
+  'None loaded within {r} blocks': 'Нет загруженных в пределах {r} блоков',
 };

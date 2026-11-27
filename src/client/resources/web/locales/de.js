@@ -539,7 +539,6 @@ export default {
   'End platform': 'End-Plattform',
   'World spawn': 'Weltspawn',
   '{n} of {total} blocks go elsewhere': '{n} von {total} Blöcken führen woandershin',
-  'Checking…': 'Wird geprüft…',
   '{n} to fix': '{n} zu beheben',
   'No lit portals.': 'Keine entzündeten Portale.',
   Zombie: 'Zombie',
@@ -551,4 +550,6 @@ export default {
   'Block light 0': 'Blocklicht 0',
   'Only loaded chunks were checked. Operators can check the rest.':
     'Nur geladene Chunks wurden geprüft. Operatoren können den Rest prüfen.',
+  'Not built or not loaded': 'Nicht gebaut oder nicht geladen',
+  'None loaded within {r} blocks': 'Keins geladen im Umkreis von {r} Blöcken',
 };
