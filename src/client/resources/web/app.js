@@ -1740,10 +1740,10 @@ function portalsHtml(sh) {
     else if (p.lands === 'new') {
       [to, bad] = [label(t('New portal')), true];
       const radius = p.to === 'minecraft:the_nether' ? 16 : 128;
+      // "Can" already hedges; for a loaded-only check the panel's last line says the rest wasn't checked.
       notes.push(
         p.in
-          ? // "Can" already hedges; for a loaded-only check the panel's last line says the rest wasn't checked
-            t('Can break blocks in {part}', { part: nameOf(p.in) })
+          ? t('Can break blocks in {part}', { part: nameOf(p.in) })
           : t(p.loadedOnly ? 'None loaded within {r} blocks' : 'None within {r} blocks', { r: radius }),
       );
     } else if (p.lands === 'platform') to = label(t('End platform'));
