@@ -511,8 +511,6 @@ export default {
     'Pronto para ligar: todos os {n} blocos de redstone e contêineres estão certos.',
   'Mob spawning': 'Surgimento de criaturas',
   'Mark blocks mobs can spawn on': 'Marcar blocos onde criaturas podem surgir',
-  '{n} blocks where a zombie could spawn at night: room to stand and no light from torches or lamps. Light them, cover them or dig them out.':
-    '{n} blocos onde um zumbi poderia surgir à noite: há espaço para ficar de pé e nenhuma luz de tochas ou lâmpadas. Ilumine, cubra ou remova esses blocos.',
   'Checks the {m} blocks of surroundings captured around it. A farm needs everything within 128 blocks of where you stand spawnproofed.':
     'Verifica os {m} blocos de arredores capturados em volta. Uma farm precisa de tudo protegido num raio de 128 blocos de onde você fica parado.',
   'Checks only the blocks in this view. Share it with surroundings to check the land around it.':
@@ -524,46 +522,32 @@ export default {
   End: 'End',
   'Connected parts': 'Partes conectadas',
   Disconnect: 'Desconectar',
-  'Mobs only spawn near a player in the same dimension. While you stand at one part, a part in another dimension only runs while items go through its portal.':
-    'Criaturas só surgem perto de um jogador na mesma dimensão. Enquanto você está em uma parte, uma parte em outra dimensão só funciona enquanto itens passam pelo portal dela.',
   'Add a part': 'Adicionar uma parte',
   Connect: 'Conectar',
-  'Part of a farm in another dimension? Connect its other parts so builders find them together and the portals between them get checked.':
-    'Faz parte de uma farm em outra dimensão? Conecte as outras partes para que os construtores as encontrem juntas e os portais entre elas sejam verificados.',
   Portals: 'Portais',
   'Check again': 'Verificar de novo',
-  'Checking the portals…': 'Verificando os portais…',
-  'No lit Nether or End portals in these parts.': 'Não há portais do Nether ou do End acesos nestas partes.',
-  'End portal': 'Portal do End',
-  'Nether portal': 'Portal do Nether',
-  'Leads to the portal in {part} at {at}.': 'Leva ao portal em {part}, em {at}.',
-  "Leads to the portal planned in {part} at {at}, once it's built.":
-    'Levará ao portal planejado em {part}, em {at}, quando for construído.',
-  "Leads to a different portal at {at} in the {dim}, which isn't part of this farm. Move one of them, or what goes through ends up there.":
-    'Leva a outro portal em {at} ({dim}), que não faz parte desta farm. Mova um dos dois, ou o que passar vai parar lá.',
-  'No portal within {r} blocks of {at} in the {dim}, so the game builds a new one near there.':
-    'Nenhum portal a menos de {r} blocos de {at} ({dim}), então o jogo constrói um novo perto dali.',
-  'Leads to the obsidian platform at {at} in the End.': 'Leva à plataforma de obsidiana em {at} no End.',
-  'Leads to the world spawn at {at} in the {dim}, on top of the highest block.':
-    'Leva ao ponto de surgimento do mundo em {at} ({dim}), em cima do bloco mais alto.',
-  'That spot is in {part}.': 'Esse lugar fica em {part}.',
-  'No connected part covers that spot.': 'Nenhuma parte conectada cobre esse lugar.',
-  '{n} of its {total} blocks lead somewhere else.': '{n} dos seus {total} blocos levam a outro lugar.',
   "Couldn't connect the part": 'Não foi possível conectar a parte',
   "Couldn't disconnect the part": 'Não foi possível desconectar a parte',
-  "{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks. Light doesn't stop it, so cover them, dig them out or swap them for nether wart blocks.":
-    '{mob}: {n} blocos onde ele poderia surgir, com espaço para a altura de {h} blocos. A luz não o impede, então cubra-os, remova-os ou troque-os por blocos de verruga do Nether.',
-  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and block light of {l} or less. Light them above {l}, cover them or dig them out.':
-    '{mob}: {n} blocos onde ele poderia surgir, com espaço para a altura de {h} blocos e luz de bloco {l} ou menor. Ilumine-os acima de {l}, cubra-os ou remova-os.',
-  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and no light from torches or lamps. Light them, cover them or dig them out.':
-    '{mob}: {n} blocos onde ele poderia surgir, com espaço para a altura de {h} blocos e sem luz de tochas ou lâmpadas. Ilumine-os, cubra-os ou remova-os.',
   "A schematic can't be connected to itself": 'Um esquemático não pode ser conectado a si mesmo',
   'Only the owner of both schematics or an operator can connect them':
     'Só o dono dos dois esquemáticos ou um operador pode conectá-los',
-  'That spot is in {part}, and making room for the new portal can break its blocks.':
-    'Esse lugar está em {part}, e abrir espaço para o novo portal pode quebrar os blocos dele.',
   'Only portals in loaded chunks were checked. On this server, only operators can check the rest.':
     'Só os portais em chunks carregados foram verificados. Neste servidor, só operadores podem verificar o resto.',
-  'Magma cubes still spawn on nether wart blocks in the nether wastes.':
-    'Cubos de magma ainda surgem em blocos de verruga do Nether nos ermos do Nether.',
+  'Other portal': 'Outro portal',
+  'Not built yet': 'Ainda não construído',
+  'New portal': 'Portal novo',
+  'Can break blocks in {part}': 'Pode quebrar blocos de {part}',
+  'None within {r} blocks': 'Nenhum a menos de {r} blocos',
+  'End platform': 'Plataforma do End',
+  'World spawn': 'Ponto de surgimento',
+  '{n} of {total} blocks go elsewhere': '{n} de {total} blocos levam a outro lugar',
+  'Checking…': 'Verificando…',
+  '{n} to fix': '{n} para corrigir',
+  'No lit portals.': 'Nenhum portal aceso.',
+  Zombie: 'Zumbi',
+  'Any light': 'Com qualquer luz',
+  'Cover them or dig them out.': 'Cubra ou remova esses blocos.',
+  'Block light {l} or less': 'Luz de bloco {l} ou menos',
+  'No block light': 'Sem luz de bloco',
+  'Light them, cover them or dig them out.': 'Ilumine, cubra ou remova esses blocos.',
 };

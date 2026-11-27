@@ -511,8 +511,6 @@ export default {
     'Listo para activar: los {n} bloques de redstone y contenedores están bien.',
   'Mob spawning': 'Aparición de criaturas',
   'Mark blocks mobs can spawn on': 'Marcar bloques donde pueden aparecer criaturas',
-  '{n} blocks where a zombie could spawn at night: room to stand and no light from torches or lamps. Light them, cover them or dig them out.':
-    '{n} bloques donde podría aparecer un zombi de noche: hay espacio para estar de pie y no llega luz de antorchas ni lámparas. Ilumínalos, cúbrelos o quítalos.',
   'Checks the {m} blocks of surroundings captured around it. A farm needs everything within 128 blocks of where you stand spawnproofed.':
     'Revisa los {m} bloques de alrededores capturados. Una granja necesita que todo a 128 bloques de donde te quedas esté protegido contra apariciones.',
   'Checks only the blocks in this view. Share it with surroundings to check the land around it.':
@@ -523,46 +521,32 @@ export default {
   End: 'End',
   'Connected parts': 'Partes conectadas',
   Disconnect: 'Desconectar',
-  'Mobs only spawn near a player in the same dimension. While you stand at one part, a part in another dimension only runs while items go through its portal.':
-    'Las criaturas solo aparecen cerca de un jugador en la misma dimensión. Mientras estás en una parte, una parte en otra dimensión solo funciona mientras pasan objetos por su portal.',
   'Add a part': 'Añadir una parte',
   Connect: 'Conectar',
-  'Part of a farm in another dimension? Connect its other parts so builders find them together and the portals between them get checked.':
-    '¿Es parte de una granja en otra dimensión? Conecta sus otras partes para que los constructores las encuentren juntas y se comprueben los portales entre ellas.',
   Portals: 'Portales',
   'Check again': 'Volver a comprobar',
-  'Checking the portals…': 'Comprobando los portales…',
-  'No lit Nether or End portals in these parts.': 'No hay portales del Nether ni del End encendidos en estas partes.',
-  'End portal': 'Portal del End',
-  'Nether portal': 'Portal del Nether',
-  'Leads to the portal in {part} at {at}.': 'Lleva al portal de {part} en {at}.',
-  "Leads to the portal planned in {part} at {at}, once it's built.":
-    'Llevará al portal previsto en {part} en {at}, cuando esté construido.',
-  "Leads to a different portal at {at} in the {dim}, which isn't part of this farm. Move one of them, or what goes through ends up there.":
-    'Lleva a otro portal en {at} ({dim}) que no es parte de esta granja. Mueve uno de los dos, o lo que pase acabará allí.',
-  'No portal within {r} blocks of {at} in the {dim}, so the game builds a new one near there.':
-    'No hay ningún portal a menos de {r} bloques de {at} ({dim}), así que el juego construye uno nuevo cerca.',
-  'Leads to the obsidian platform at {at} in the End.': 'Lleva a la plataforma de obsidiana en {at} en el End.',
-  'Leads to the world spawn at {at} in the {dim}, on top of the highest block.':
-    'Lleva al punto de aparición del mundo en {at} ({dim}), encima del bloque más alto.',
-  'That spot is in {part}.': 'Ese lugar está en {part}.',
-  'No connected part covers that spot.': 'Ninguna parte conectada cubre ese lugar.',
-  '{n} of its {total} blocks lead somewhere else.': '{n} de sus {total} bloques llevan a otro sitio.',
   "Couldn't connect the part": 'No se pudo conectar la parte',
   "Couldn't disconnect the part": 'No se pudo desconectar la parte',
-  "{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks. Light doesn't stop it, so cover them, dig them out or swap them for nether wart blocks.":
-    '{mob}: {n} bloques donde podría aparecer, con espacio para su altura de {h} bloques. La luz no lo detiene, así que cúbrelos, quítalos o cámbialos por bloques de verruga del Nether.',
-  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and block light of {l} or less. Light them above {l}, cover them or dig them out.':
-    '{mob}: {n} bloques donde podría aparecer, con espacio para su altura de {h} bloques y luz de bloque de {l} o menos. Ilumínalos por encima de {l}, cúbrelos o quítalos.',
-  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and no light from torches or lamps. Light them, cover them or dig them out.':
-    '{mob}: {n} bloques donde podría aparecer, con espacio para su altura de {h} bloques y sin luz de antorchas ni lámparas. Ilumínalos, cúbrelos o quítalos.',
   "A schematic can't be connected to itself": 'Un esquema no se puede conectar consigo mismo',
   'Only the owner of both schematics or an operator can connect them':
     'Solo el dueño de ambos esquemas o un operador puede conectarlos',
-  'That spot is in {part}, and making room for the new portal can break its blocks.':
-    'Ese lugar está en {part}, y hacer sitio para el nuevo portal puede romper sus bloques.',
   'Only portals in loaded chunks were checked. On this server, only operators can check the rest.':
     'Solo se revisaron los portales en chunks cargados. En este servidor, solo los operadores pueden revisar el resto.',
-  'Magma cubes still spawn on nether wart blocks in the nether wastes.':
-    'Los cubos de magma siguen apareciendo sobre bloques de verruga del Nether en los páramos del Nether.',
+  'Other portal': 'Otro portal',
+  'Not built yet': 'Aún sin construir',
+  'New portal': 'Portal nuevo',
+  'Can break blocks in {part}': 'Puede romper bloques de {part}',
+  'None within {r} blocks': 'Ninguno a menos de {r} bloques',
+  'End platform': 'Plataforma del End',
+  'World spawn': 'Punto de aparición',
+  '{n} of {total} blocks go elsewhere': '{n} de {total} bloques llevan a otro sitio',
+  'Checking…': 'Comprobando…',
+  '{n} to fix': '{n} por arreglar',
+  'No lit portals.': 'No hay portales encendidos.',
+  Zombie: 'Zombi',
+  'Any light': 'Con cualquier luz',
+  'Cover them or dig them out.': 'Cúbrelos o quítalos.',
+  'Block light {l} or less': 'Luz de bloque {l} o menos',
+  'No block light': 'Sin luz de bloque',
+  'Light them, cover them or dig them out.': 'Ilumínalos, cúbrelos o quítalos.',
 };

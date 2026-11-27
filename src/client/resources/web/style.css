@@ -1042,6 +1042,29 @@ button {
 .ready .i {
   color: var(--mark);
 }
+/* Where a portal leads: the line, then its coordinates and any problem, quieter */
+.ready.portal {
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.ready .sub {
+  display: block;
+  color: var(--muted);
+}
+.updated .text {
+  color: var(--text);
+}
+.part-add {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.part-add select {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+  height: auto;
+}
 
 .facts {
   display: grid;

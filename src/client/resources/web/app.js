@@ -1687,7 +1687,8 @@ const dimName = (d) =>
       : d === 'minecraft:the_end'
         ? t('End')
         : d.replace('minecraft:', '');
-const xyz = (p) => p.map((v) => (v == null ? '~' : v)).join(', ');
+// A coordinate the server doesn't know (the world spawn's Y) is left out.
+const xyz = (p) => p.filter((v) => v != null).join(', ');
 
 /**
  * The other parts of the same farm, often in another dimension, and where every portal in them leads. The owner
@@ -1699,65 +1700,69 @@ function partsHtml(sh) {
     sh.manage && isLive() ? sharedList().filter((s) => s.manage && s.id !== sh.id && !sh.links?.includes(s.id)) : [];
   const portalsHere =
     S.desc?.type === 'shared' && S.data?.palette.some((e) => e && /^minecraft:(nether|end)_portal$/.test(e.n));
-  if (!parts.length && !mine.length && !portalsHere) return '';
-  let h = `<section class="panel" id="parts"><div class="panel-head"><h3>${t('Connected parts')}</h3>${parts.length ? `<span class="row-meta num">${parts.length}</span>` : ''}</div>`;
-  for (const p of parts)
-    h += `<div class="row" role="button" tabindex="0" data-go-shared="${esc(p.id)}"><span class="row-icon">${ICON.shared}</span>
-      <span class="row-main"><span class="row-title">${esc(p.name)}</span><span class="row-sub">${esc(dimName(p.dim))} · ${esc(xyz(p.origin))}</span></span>
-      ${sh.manage && isLive() ? `<button class="row-action" data-unlink="${esc(p.id)}" data-for="${esc(sh.id)}" data-tip="${t('Disconnect')}" aria-label="${t('Disconnect')}">${ICON.x}</button>` : ''}</div>`;
-  if (parts.some((p) => p.dim !== sh.dim))
-    h += `<p class="updated" style="margin:8px 0">${t('Mobs only spawn near a player in the same dimension. While you stand at one part, a part in another dimension only runs while items go through its portal.')}</p>`;
-  if (mine.length) {
-    const pick = mine.some((s) => s.id === S.linkPick) ? S.linkPick : mine[0].id;
-    const busy = S.busy.has(`link:${sh.id}`);
-    h += `<div class="sh-field"><span>${t('Add a part')}</span><select class="opt-select" id="link-pick" aria-label="${t('Add a part')}">${mine.map((s) => `<option value="${esc(s.id)}"${s.id === pick ? ' selected' : ''}>${esc(s.name)} · ${esc(dimName(s.dim))}</option>`).join('')}</select></div>
-      <div class="btn-row" style="margin:0 0 8px"><button class="btn" data-link="${esc(pick)}" data-for="${esc(sh.id)}" ${busy ? 'disabled' : ''}>${ICON.plug}${t('Connect')}</button></div>`;
-    if (!parts.length)
-      h += `<p class="updated" style="margin:0 0 8px">${t('Part of a farm in another dimension? Connect its other parts so builders find them together and the portals between them get checked.')}</p>`;
+  let h = '';
+  if (parts.length || mine.length) {
+    h += `<section class="panel" id="parts"><div class="panel-head"><h3>${t('Connected parts')}</h3></div>`;
+    for (const p of parts)
+      h += `<div class="row" role="button" tabindex="0" data-go-shared="${esc(p.id)}"><span class="row-icon">${ICON.shared}</span>
+        <span class="row-main"><span class="row-title">${esc(p.name)}</span><span class="row-sub">${esc(dimName(p.dim))} · ${esc(xyz(p.origin))}</span></span>
+        ${sh.manage && isLive() ? `<button class="row-action" data-unlink="${esc(p.id)}" data-for="${esc(sh.id)}" data-tip="${t('Disconnect')}" aria-label="${t('Disconnect')}">${ICON.x}</button>` : ''}</div>`;
+    if (mine.length) {
+      const pick = mine.some((s) => s.id === S.linkPick) ? S.linkPick : mine[0].id;
+      const busy = S.busy.has(`link:${sh.id}`);
+      h += `<div class="part-add"><select class="opt-select" id="link-pick" aria-label="${t('Add a part')}">${mine.map((s) => `<option value="${esc(s.id)}"${s.id === pick ? ' selected' : ''}>${esc(s.name)} · ${esc(dimName(s.dim))}</option>`).join('')}</select>
+        <button class="btn" data-link="${esc(pick)}" data-for="${esc(sh.id)}" ${busy ? 'disabled' : ''}>${ICON.plug}${t('Connect')}</button></div>`;
+    }
+    h += '</section>';
   }
   if (isLive() && (parts.length || portalsHere)) h += portalsHtml(sh);
-  return `${h}</section>`;
+  return h;
 }
 
+/** One line per lit portal: where it leads, problems first, with a short reason only when something is off. */
 function portalsHtml(sh) {
   const r = S.portals.get(sh.id);
   if (!r) queueMicrotask(() => checkPortals(sh.id));
-  let h = `<div class="panel-head" style="margin-top:8px"><h3>${t('Portals')}</h3>${r && !r.busy ? `<button class="link" data-check-portals="${esc(sh.id)}">${ICON.retry}${t('Check again')}</button>` : ''}</div>`;
-  if (!r || r.busy) return `${h}<p class="updated" style="margin:0 0 8px">${t('Checking the portals…')}</p>`;
-  if (r.err)
-    return `${h}<p class="updated" style="margin:0 0 8px"><span style="color:var(--danger)">${esc(r.err)}</span></p>`;
-  if (!r.list.length)
-    return `${h}<p class="updated" style="margin:0 0 8px">${t('No lit Nether or End portals in these parts.')}</p>`;
   const nameOf = (id) => esc(findShared(id)?.name || '?');
-  for (const p of r.list) {
-    const kind = p.kind === 'end' ? t('End portal') : t('Nether portal');
-    const where = { at: xyz(p.at), dim: dimName(p.to) };
-    let text;
-    if (p.lands === 'portal' && p.in)
-      text = p.built
-        ? t('Leads to the portal in {part} at {at}.', { ...where, part: nameOf(p.in) })
-        : t("Leads to the portal planned in {part} at {at}, once it's built.", { ...where, part: nameOf(p.in) });
-    else if (p.lands === 'portal')
-      text = t(
-        "Leads to a different portal at {at} in the {dim}, which isn't part of this farm. Move one of them, or what goes through ends up there.",
-        where,
-      );
+  const rows = (r?.list || []).map((p) => {
+    let to = nameOf(p.in);
+    const notes = [];
+    let bad = !!p.others;
+    if (p.lands === 'portal' && !p.in) [to, bad] = [t('Other portal'), true];
+    else if (p.lands === 'portal' && !p.built) notes.push(t('Not built yet'));
     else if (p.lands === 'new') {
-      text = t('No portal within {r} blocks of {at} in the {dim}, so the game builds a new one near there.', {
-        ...where,
-        r: p.to === 'minecraft:the_nether' ? 16 : 128,
-      });
-      if (p.in)
-        text += ` ${t('That spot is in {part}, and making room for the new portal can break its blocks.', { part: nameOf(p.in) })}`;
-    } else if (p.lands === 'platform') text = t('Leads to the obsidian platform at {at} in the End.', where);
-    else
-      text = `${t('Leads to the world spawn at {at} in the {dim}, on top of the highest block.', where)} ${p.in ? t('That spot is in {part}.', { part: nameOf(p.in) }) : t('No connected part covers that spot.')}`;
-    if (p.others) text += ` ${t('{n} of its {total} blocks lead somewhere else.', { n: p.others, total: p.blocks })}`;
-    h += `<div><div class="updated" style="margin:0"><b>${kind}</b> · ${nameOf(p.part)} · ${esc(xyz(p.from))}</div><p class="updated" style="margin:2px 0 8px">${text}</p></div>`;
+      [to, bad] = [t('New portal'), true];
+      notes.push(
+        p.in
+          ? t('Can break blocks in {part}', { part: nameOf(p.in) })
+          : t('None within {r} blocks', { r: p.to === 'minecraft:the_nether' ? 16 : 128 }),
+      );
+    } else if (p.lands === 'platform') to = t('End platform');
+    else if (p.lands !== 'portal') to = t('World spawn');
+    if (p.others) notes.push(t('{n} of {total} blocks go elsewhere', { n: p.others, total: p.blocks }));
+    const where = `${esc(xyz(p.from))} → ${esc(dimName(p.to))} ${esc(xyz(p.at))}`;
+    return {
+      bad,
+      html: `<div class="ready portal${bad ? '' : ' ok'}">${bad ? ICON.alert : ICON.check}<span>${nameOf(p.part)} → ${to}${notes.length ? `<span class="sub">${notes.join(' · ')}</span>` : ''}<span class="sub">${where}</span></span></div>`,
+    };
+  });
+  const bad = rows.filter((x) => x.bad).length;
+  let meta = '';
+  if (!r || r.busy) meta = `<span class="row-meta">${t('Checking…')}</span>`;
+  else {
+    if (bad) meta += `<span class="chip warn">${t('{n} to fix', { n: bad })}</span>`;
+    if (r.list?.some((p) => p.loadedOnly))
+      meta += `<span class="chip" data-tip="${t('Only portals in loaded chunks were checked. On this server, only operators can check the rest.')}">${t('Loaded chunks')}</span>`;
+    meta += `<button class="link" data-check-portals="${esc(sh.id)}" data-tip="${t('Check again')}" aria-label="${t('Check again')}">${ICON.retry}</button>`;
   }
-  if (r.list.some((p) => p.loadedOnly))
-    h += `<p class="updated" style="margin:0 0 8px">${t('Only portals in loaded chunks were checked. On this server, only operators can check the rest.')}</p>`;
-  return h;
+  let h = `<section class="panel" id="portals"><div class="panel-head"><h3>${t('Portals')}</h3><span class="chips">${meta}</span></div>`;
+  if (r?.err) h += `<p class="updated" style="color:var(--danger)">${esc(r.err)}</p>`;
+  else if (r?.list && !r.list.length) h += `<p class="updated">${t('No lit portals.')}</p>`;
+  h += rows
+    .sort((x, y) => y.bad - x.bad)
+    .map((x) => x.html)
+    .join('');
+  return `${h}</section>`;
 }
 
 async function checkPortals(id) {
@@ -1988,7 +1993,7 @@ function spawnHtml(sh) {
   let h = `<section class="panel" id="spawning"><div class="panel-head"><h3>${t('Mob spawning')}</h3>${S.spawn ? `<span class="row-meta num">${fmt.format(S.spawnCount)}</span>` : ''}</div>
     <div class="sh-field"><span>${label}</span><button type="button" class="switch" role="switch" id="spawn-marks" aria-checked="${S.spawn}" aria-label="${label}"></button></div>`;
   if (S.spawn) {
-    h += `<p class="updated" style="margin:0 0 8px">${spawnText(S.data?.spawnRule, fmt.format(S.spawnCount))}</p>`;
+    h += `<p class="updated" style="margin:0 0 8px">${spawnText(S.data?.spawnRule)}</p>`;
     h += `<p class="updated" style="margin:0 0 8px">${sh?.margin ? t('Checks the {m} blocks of surroundings captured around it. A farm needs everything within 128 blocks of where you stand spawnproofed.', { m: sh.margin }) : t('Checks only the blocks in this view. Share it with surroundings to check the land around it.')}</p>`;
     if (shaderOn())
       h += `<p class="updated" style="margin:0 0 8px">${t("The marks don't show while a shader pack is on.")}</p>`;
@@ -1996,30 +2001,18 @@ function spawnHtml(sh) {
   return `${h}</section>`;
 }
 
-/** What the marks mean for the view's mob, which the game picks for the view's dimension. */
-function spawnText(rule, n) {
+/** The view's mob and its light rule, which the game picks for the view's dimension, then how to fix the marks. */
+function spawnText(rule) {
   // Mods from before the rule judged every view for a zombie in the Overworld.
-  const { id = 'minecraft:zombie', mob, cells = 2, light = 0 } = rule || {};
-  if (id === 'minecraft:zombie' && light === 0)
-    return t(
-      '{n} blocks where a zombie could spawn at night: room to stand and no light from torches or lamps. Light them, cover them or dig them out.',
-      { n },
-    );
-  const v = { mob: esc(mob), n, h: cells, l: light };
-  if (light >= 15)
-    return `${t(
-      "{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks. Light doesn't stop it, so cover them, dig them out or swap them for nether wart blocks.",
-      v,
-    )} ${t('Magma cubes still spawn on nether wart blocks in the nether wastes.')}`;
-  if (light > 0)
-    return t(
-      '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and block light of {l} or less. Light them above {l}, cover them or dig them out.',
-      v,
-    );
-  return t(
-    '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and no light from torches or lamps. Light them, cover them or dig them out.',
-    v,
-  );
+  const { mob = t('Zombie'), light = 0 } = rule || {};
+  const [when, fix] =
+    light >= 15
+      ? [t('Any light'), t('Cover them or dig them out.')]
+      : [
+          light ? t('Block light {l} or less', { l: light }) : t('No block light'),
+          t('Light them, cover them or dig them out.'),
+        ];
+  return `<span><span class="text">${esc(mob)}</span> · ${when}. ${fix}</span>`;
 }
 
 function toggleSpawn() {

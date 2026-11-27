@@ -504,8 +504,6 @@ export default {
     '起動できます：レッドストーンとコンテナのブロック {n} 個はすべて正しく設置されています。',
   'Mob spawning': 'モブのスポーン',
   'Mark blocks mobs can spawn on': 'モブがスポーンできるブロックを表示',
-  '{n} blocks where a zombie could spawn at night: room to stand and no light from torches or lamps. Light them, cover them or dig them out.':
-    '夜にゾンビがスポーンできるブロックが{n}個あります。立てる空間があり、松明やランプの光が届いていません。明かりを置くか、覆うか、掘り取ってください。',
   'Checks the {m} blocks of surroundings captured around it. A farm needs everything within 128 blocks of where you stand spawnproofed.':
     '周りで取り込んだ{m}ブロック分の周辺を調べます。トラップタワーでは、待機場所から128ブロック以内をすべて湧き潰しする必要があります。',
   'Checks only the blocks in this view. Share it with surroundings to check the land around it.':
@@ -516,47 +514,32 @@ export default {
   End: 'エンド',
   'Connected parts': 'つながったパーツ',
   Disconnect: '切り離す',
-  'Mobs only spawn near a player in the same dimension. While you stand at one part, a part in another dimension only runs while items go through its portal.':
-    'モブは同じディメンションにいるプレイヤーの近くでしかスポーンしません。あるパーツにいる間、別のディメンションのパーツはアイテムがポータルを通るときだけ動きます。',
   'Add a part': 'パーツを追加',
   Connect: 'つなげる',
-  'Part of a farm in another dimension? Connect its other parts so builders find them together and the portals between them get checked.':
-    '別のディメンションにある装置の一部ですか？ほかのパーツとつなげると、建築者がまとめて見つけられ、間のポータルもチェックされます。',
   Portals: 'ポータル',
   'Check again': 'もう一度チェック',
-  'Checking the portals…': 'ポータルをチェック中…',
-  'No lit Nether or End portals in these parts.':
-    'これらのパーツに点火済みのネザーポータルやエンドポータルはありません。',
-  'End portal': 'エンドポータル',
-  'Nether portal': 'ネザーポータル',
-  'Leads to the portal in {part} at {at}.': '{part} の {at} にあるポータルにつながります。',
-  "Leads to the portal planned in {part} at {at}, once it's built.":
-    '{part} の {at} に予定されているポータルに、完成すればつながります。',
-  "Leads to a different portal at {at} in the {dim}, which isn't part of this farm. Move one of them, or what goes through ends up there.":
-    '{dim} の {at} にある、この装置に含まれない別のポータルにつながります。どちらかを動かさないと、通ったものがそこに行ってしまいます。',
-  'No portal within {r} blocks of {at} in the {dim}, so the game builds a new one near there.':
-    '{dim} の {at} から {r} ブロック以内にポータルがないため、ゲームがその近くに新しいポータルを作ります。',
-  'Leads to the obsidian platform at {at} in the End.': 'エンドの {at} にある黒曜石の足場につながります。',
-  'Leads to the world spawn at {at} in the {dim}, on top of the highest block.':
-    '{dim} の {at} にあるワールドスポーンの、一番高いブロックの上につながります。',
-  'That spot is in {part}.': 'その場所は {part} の中です。',
-  'No connected part covers that spot.': 'その場所を含むつながったパーツはありません。',
-  '{n} of its {total} blocks lead somewhere else.': '{total} ブロックのうち {n} ブロックは別の場所につながります。',
   "Couldn't connect the part": 'パーツをつなげられませんでした',
   "Couldn't disconnect the part": 'パーツを切り離せませんでした',
-  "{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks. Light doesn't stop it, so cover them, dig them out or swap them for nether wart blocks.":
-    '{mob}：スポーンできるブロックが {n} 個あり、高さ {h} ブロック分の空間があります。明るさでは防げないので、ふさぐか、掘るか、ネザーウォートブロックに置き換えてください。',
-  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and block light of {l} or less. Light them above {l}, cover them or dig them out.':
-    '{mob}：スポーンできるブロックが {n} 個あり、高さ {h} ブロック分の空間とブロック光 {l} 以下の暗さがあります。明るさを {l} より上げるか、ふさぐか、掘ってください。',
-  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and no light from torches or lamps. Light them, cover them or dig them out.':
-    '{mob}：スポーンできるブロックが {n} 個あり、高さ {h} ブロック分の空間があり、松明やランプの光が届いていません。照らすか、ふさぐか、掘ってください。',
   "A schematic can't be connected to itself": '設計図を自分自身とつなげることはできません',
   'Only the owner of both schematics or an operator can connect them':
     'つなげられるのは両方の設計図の所有者かオペレーターだけです',
-  'That spot is in {part}, and making room for the new portal can break its blocks.':
-    'その場所は {part} の中で、新しいポータルの場所を空けるときにそのブロックが壊れることがあります。',
   'Only portals in loaded chunks were checked. On this server, only operators can check the rest.':
     '読み込まれたチャンクのポータルだけを確認しました。このサーバーでは、残りはオペレーターだけが確認できます。',
-  'Magma cubes still spawn on nether wart blocks in the nether wastes.':
-    'ネザーの荒地では、マグマキューブはネザーウォートブロックの上にもスポーンします。',
+  'Other portal': '別のポータル',
+  'Not built yet': '未建設',
+  'New portal': '新しいポータル',
+  'Can break blocks in {part}': '{part} のブロックを壊すことがあります',
+  'None within {r} blocks': '{r} ブロック以内にありません',
+  'End platform': 'エンドの足場',
+  'World spawn': 'ワールドスポーン',
+  '{n} of {total} blocks go elsewhere': '{total} ブロック中 {n} ブロックは別の場所へ',
+  'Checking…': '確認中…',
+  '{n} to fix': '要修正 {n}',
+  'No lit portals.': '点火したポータルはありません。',
+  Zombie: 'ゾンビ',
+  'Any light': '明るさに関係なし',
+  'Cover them or dig them out.': '覆うか、掘り取ってください。',
+  'Block light {l} or less': 'ブロック光 {l} 以下',
+  'No block light': 'ブロック光なし',
+  'Light them, cover them or dig them out.': '明かりを置くか、覆うか、掘り取ってください。',
 };

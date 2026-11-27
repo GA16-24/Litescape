@@ -511,8 +511,6 @@ export default {
     'Bereit zum Einschalten: alle {n} Redstone- und Behälterblöcke stimmen.',
   'Mob spawning': 'Mob-Spawns',
   'Mark blocks mobs can spawn on': 'Blöcke markieren, auf denen Mobs spawnen können',
-  '{n} blocks where a zombie could spawn at night: room to stand and no light from torches or lamps. Light them, cover them or dig them out.':
-    '{n} Blöcke, auf denen nachts ein Zombie spawnen könnte: genug Platz und kein Licht von Fackeln oder Lampen. Beleuchte sie, decke sie ab oder grab sie weg.',
   'Checks the {m} blocks of surroundings captured around it. A farm needs everything within 128 blocks of where you stand spawnproofed.':
     'Prüft die {m} Blöcke Umgebung, die darum erfasst wurden. Eine Farm braucht alles im Umkreis von 128 Blöcken um deinen Standplatz spawnsicher.',
   'Checks only the blocks in this view. Share it with surroundings to check the land around it.':
@@ -524,46 +522,32 @@ export default {
   End: 'End',
   'Connected parts': 'Verbundene Teile',
   Disconnect: 'Trennen',
-  'Mobs only spawn near a player in the same dimension. While you stand at one part, a part in another dimension only runs while items go through its portal.':
-    'Mobs spawnen nur in der Nähe eines Spielers in derselben Dimension. Während du an einem Teil stehst, läuft ein Teil in einer anderen Dimension nur, solange Items durch sein Portal gehen.',
   'Add a part': 'Teil hinzufügen',
   Connect: 'Verbinden',
-  'Part of a farm in another dimension? Connect its other parts so builders find them together and the portals between them get checked.':
-    'Gehört sie zu einer Farm in einer anderen Dimension? Verbinde ihre anderen Teile, damit Bauende sie zusammen finden und die Portale dazwischen geprüft werden.',
   Portals: 'Portale',
   'Check again': 'Erneut prüfen',
-  'Checking the portals…': 'Portale werden geprüft…',
-  'No lit Nether or End portals in these parts.': 'In diesen Teilen gibt es keine entzündeten Nether- oder Endportale.',
-  'End portal': 'Endportal',
-  'Nether portal': 'Netherportal',
-  'Leads to the portal in {part} at {at}.': 'Führt zum Portal in {part} bei {at}.',
-  "Leads to the portal planned in {part} at {at}, once it's built.":
-    'Führt zum geplanten Portal in {part} bei {at}, sobald es gebaut ist.',
-  "Leads to a different portal at {at} in the {dim}, which isn't part of this farm. Move one of them, or what goes through ends up there.":
-    'Führt zu einem anderen Portal bei {at} ({dim}), das nicht zu dieser Farm gehört. Versetze eins der beiden, sonst landet dort, was hindurchgeht.',
-  'No portal within {r} blocks of {at} in the {dim}, so the game builds a new one near there.':
-    'Kein Portal im Umkreis von {r} Blöcken um {at} ({dim}), also baut das Spiel dort in der Nähe ein neues.',
-  'Leads to the obsidian platform at {at} in the End.': 'Führt zur Obsidianplattform bei {at} im End.',
-  'Leads to the world spawn at {at} in the {dim}, on top of the highest block.':
-    'Führt zum Weltspawn bei {at} ({dim}), oben auf den höchsten Block.',
-  'That spot is in {part}.': 'Diese Stelle liegt in {part}.',
-  'No connected part covers that spot.': 'Kein verbundener Teil deckt diese Stelle ab.',
-  '{n} of its {total} blocks lead somewhere else.': '{n} seiner {total} Blöcke führen woandershin.',
   "Couldn't connect the part": 'Teil konnte nicht verbunden werden',
   "Couldn't disconnect the part": 'Teil konnte nicht getrennt werden',
-  "{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks. Light doesn't stop it, so cover them, dig them out or swap them for nether wart blocks.":
-    '{mob}: {n} Blöcke, auf denen er spawnen kann, mit Platz für seine Höhe von {h} Blöcken. Licht hält ihn nicht auf, also decke sie ab, grabe sie aus oder ersetze sie durch Netherwarzenblöcke.',
-  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and block light of {l} or less. Light them above {l}, cover them or dig them out.':
-    '{mob}: {n} Blöcke, auf denen er spawnen kann, mit Platz für seine Höhe von {h} Blöcken und Blocklicht von höchstens {l}. Beleuchte sie heller als {l}, decke sie ab oder grabe sie aus.',
-  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and no light from torches or lamps. Light them, cover them or dig them out.':
-    '{mob}: {n} Blöcke, auf denen er spawnen kann, mit Platz für seine Höhe von {h} Blöcken und ohne Licht von Fackeln oder Lampen. Beleuchte sie, decke sie ab oder grabe sie aus.',
   "A schematic can't be connected to itself": 'Eine Schematic kann nicht mit sich selbst verbunden werden',
   'Only the owner of both schematics or an operator can connect them':
     'Nur wer beide Schematics besitzt oder ein Operator kann sie verbinden',
-  'That spot is in {part}, and making room for the new portal can break its blocks.':
-    'Diese Stelle liegt in {part}, und der Platz für das neue Portal kann dessen Blöcke zerstören.',
   'Only portals in loaded chunks were checked. On this server, only operators can check the rest.':
     'Nur Portale in geladenen Chunks wurden geprüft. Auf diesem Server können nur Operatoren den Rest prüfen.',
-  'Magma cubes still spawn on nether wart blocks in the nether wastes.':
-    'Magmawürfel spawnen in der Netherödnis trotzdem auf Netherwarzenblöcken.',
+  'Other portal': 'Anderes Portal',
+  'Not built yet': 'Noch nicht gebaut',
+  'New portal': 'Neues Portal',
+  'Can break blocks in {part}': 'Kann Blöcke in {part} zerstören',
+  'None within {r} blocks': 'Keins im Umkreis von {r} Blöcken',
+  'End platform': 'End-Plattform',
+  'World spawn': 'Weltspawn',
+  '{n} of {total} blocks go elsewhere': '{n} von {total} Blöcken führen woandershin',
+  'Checking…': 'Wird geprüft…',
+  '{n} to fix': '{n} zu beheben',
+  'No lit portals.': 'Keine entzündeten Portale.',
+  Zombie: 'Zombie',
+  'Any light': 'Bei jedem Licht',
+  'Cover them or dig them out.': 'Decke sie ab oder grab sie weg.',
+  'Block light {l} or less': 'Blocklicht {l} oder weniger',
+  'No block light': 'Kein Blocklicht',
+  'Light them, cover them or dig them out.': 'Beleuchte sie, decke sie ab oder grab sie weg.',
 };

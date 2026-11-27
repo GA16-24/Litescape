@@ -490,8 +490,6 @@ export default {
   'Ready to activate: all {n} redstone and container blocks are right.': '可以啟動：全部 {n} 個紅石和容器方塊都正確。',
   'Mob spawning': '生物生成',
   'Mark blocks mobs can spawn on': '標出生物能生成的方塊',
-  '{n} blocks where a zombie could spawn at night: room to stand and no light from torches or lamps. Light them, cover them or dig them out.':
-    '夜裡有 {n} 個方塊上可能生成殭屍：有站立的空間，也沒有火把或燈的光照。點亮、覆蓋或挖掉它們。',
   'Checks the {m} blocks of surroundings captured around it. A farm needs everything within 128 blocks of where you stand spawnproofed.':
     '檢查周圍已擷取的 {m} 格周圍環境。刷怪塔要求掛機點 128 格內全部防刷。',
   'Checks only the blocks in this view. Share it with surroundings to check the land around it.':
@@ -502,44 +500,31 @@ export default {
   End: '終界',
   'Connected parts': '連結的部分',
   Disconnect: '取消連結',
-  'Mobs only spawn near a player in the same dimension. While you stand at one part, a part in another dimension only runs while items go through its portal.':
-    '生物只會在同一維度的玩家附近生成。你站在某個部分時，另一個維度的部分只有在物品穿過它的傳送門時才會運作。',
   'Add a part': '新增部分',
   Connect: '連結',
-  'Part of a farm in another dimension? Connect its other parts so builders find them together and the portals between them get checked.':
-    '這是另一個維度中某座農場的一部分嗎？連結它的其他部分，建造者就能一起找到它們，它們之間的傳送門也會被檢查。',
   Portals: '傳送門',
   'Check again': '重新檢查',
-  'Checking the portals…': '正在檢查傳送門…',
-  'No lit Nether or End portals in these parts.': '這些部分中沒有點燃的地獄或終界傳送門。',
-  'End portal': '終界傳送門',
-  'Nether portal': '地獄傳送門',
-  'Leads to the portal in {part} at {at}.': '通往 {part} 中位於 {at} 的傳送門。',
-  "Leads to the portal planned in {part} at {at}, once it's built.": '蓋好後將通往 {part} 中預計在 {at} 的傳送門。',
-  "Leads to a different portal at {at} in the {dim}, which isn't part of this farm. Move one of them, or what goes through ends up there.":
-    '通往{dim}中位於 {at} 的另一個傳送門，它不屬於這座農場。移動其中一個，否則穿過的東西會跑到那裡。',
-  'No portal within {r} blocks of {at} in the {dim}, so the game builds a new one near there.':
-    '{dim}中 {at} 周圍 {r} 格內沒有傳送門，所以遊戲會在附近新建一個。',
-  'Leads to the obsidian platform at {at} in the End.': '通往終界中位於 {at} 的黑曜石平台。',
-  'Leads to the world spawn at {at} in the {dim}, on top of the highest block.':
-    '通往{dim}中位於 {at} 的世界重生點，在最高的方塊之上。',
-  'That spot is in {part}.': '那個位置在 {part} 中。',
-  'No connected part covers that spot.': '沒有連結的部分涵蓋那個位置。',
-  '{n} of its {total} blocks lead somewhere else.': '它的 {total} 個方塊中有 {n} 個通往別處。',
   "Couldn't connect the part": '無法連結該部分',
   "Couldn't disconnect the part": '無法取消連結該部分',
-  "{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks. Light doesn't stop it, so cover them, dig them out or swap them for nether wart blocks.":
-    '{mob}：它可以在 {n} 個方塊上生成，有容納它 {h} 格高的空間。光線擋不住它，所以請蓋住、挖掉或換成地獄疙瘩塊。',
-  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and block light of {l} or less. Light them above {l}, cover them or dig them out.':
-    '{mob}：它可以在 {n} 個方塊上生成，有容納它 {h} 格高的空間，且方塊光照不高於 {l}。把亮度提高到 {l} 以上，或蓋住、挖掉它們。',
-  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and no light from torches or lamps. Light them, cover them or dig them out.':
-    '{mob}：它可以在 {n} 個方塊上生成，有容納它 {h} 格高的空間，且沒有火把或燈的光線。照亮、蓋住或挖掉它們。',
   "A schematic can't be connected to itself": '投影不能連結到自身',
   'Only the owner of both schematics or an operator can connect them': '只有兩個投影的擁有者或管理員才能連結它們',
-  'That spot is in {part}, and making room for the new portal can break its blocks.':
-    '那個位置在 {part} 裡，為新傳送門騰出空間可能會破壞它的方塊。',
   'Only portals in loaded chunks were checked. On this server, only operators can check the rest.':
     '只檢查了已載入區塊裡的傳送門。在這個伺服器上，只有管理員能檢查其餘部分。',
-  'Magma cubes still spawn on nether wart blocks in the nether wastes.':
-    '在地獄荒原，岩漿立方怪仍會在地獄疙瘩塊上生成。',
+  'Other portal': '其他傳送門',
+  'Not built yet': '尚未建造',
+  'New portal': '新傳送門',
+  'Can break blocks in {part}': '可能破壞 {part} 中的方塊',
+  'None within {r} blocks': '{r} 格內沒有',
+  'End platform': '終界平台',
+  'World spawn': '世界重生點',
+  '{n} of {total} blocks go elsewhere': '{total} 個方塊中有 {n} 個通往別處',
+  'Checking…': '正在檢查…',
+  '{n} to fix': '{n} 處需修正',
+  'No lit portals.': '沒有點燃的傳送門。',
+  Zombie: '殭屍',
+  'Any light': '任何光照',
+  'Cover them or dig them out.': '覆蓋或挖掉它們。',
+  'Block light {l} or less': '方塊光照 {l} 或更低',
+  'No block light': '無方塊光照',
+  'Light them, cover them or dig them out.': '點亮、覆蓋或挖掉它們。',
 };
