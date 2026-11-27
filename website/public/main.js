@@ -19,7 +19,10 @@ if (os) {
   fetch('https://api.github.com/repos/GA16-24/homebrew-tap/releases/latest')
     .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
     .then(async (rel) => {
-      const arm = (await navigator.userAgentData?.getHighEntropyValues?.(['architecture']))?.architecture === 'arm';
+      // Client hints where the browser has them (Chromium); otherwise Linux user agents name the CPU ("Linux aarch64").
+      const arm =
+        (await navigator.userAgentData?.getHighEntropyValues?.(['architecture']))?.architecture === 'arm' ||
+        /aarch64|arm64/i.test(ua);
       const want = {
         mac: [/mac.*\.dmg$/],
         win: arm ? [/win-arm64\.exe$/, /win-x64\.exe$/] : [/win-x64\.exe$/],
