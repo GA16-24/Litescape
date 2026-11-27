@@ -376,23 +376,28 @@ function spread(L, queue, qh, qt, opaque) {
 }
 
 /**
- * Floor blocks a zombie could spawn on at night: it can stand on the block, fits in the two cells above, and the
- * cell it stands in has no block light. Worked out over every block, shown or not, once per load.
- * shortcut: overworld rule (block light 0) and light from blocks outside the view is missed; fine for a perimeter check.
+ * Floor blocks the view's mob could spawn on: it can stand on the block, fits in the cells above, and the cell it
+ * stands in has no more block light than the mob's rule allows (0 for a zombie, any for a zombified piglin). The game
+ * picks the mob and the light limit for the view's dimension. Worked out over every block, shown or not, once per load.
+ * shortcut: light from blocks outside the view is missed; fine for a perimeter check.
  */
 function spawnable() {
   if (V.spawn) return V.spawn;
   const { sx, sy, sz, blocks, pal } = V;
+  const { cells = 2, light = 0 } = V.spawnRule || {};
   const layer = sx * sz,
     n = layer * sy;
   const all = new Uint8Array(n);
   for (let i = 0; i < n; i++) all[i] = pal[blocks[i]] && !pal[blocks[i]].air ? 1 : 0;
   const L = lightOf(all);
   const fits = (i) => i >= n || !!pal[blocks[i]]?.spawnIn; // above the view is open air
+  const room = (i) => {
+    for (let c = 1; c <= cells; c++) if (!fits(i + c * layer)) return false;
+    return true;
+  };
   const out = [];
   // the top layer counts too: L past the end reads undefined, which shifts to 0 (no block light)
-  for (let i = 0; i < n; i++)
-    if (pal[blocks[i]]?.spawnOn && fits(i + layer) && fits(i + 2 * layer) && L[i + layer] >> 4 === 0) out.push(i);
+  for (let i = 0; i < n; i++) if (pal[blocks[i]]?.spawnOn && room(i) && L[i + layer] >> 4 <= light) out.push(i);
   V.spawn = Int32Array.from(out);
   return V.spawn;
 }

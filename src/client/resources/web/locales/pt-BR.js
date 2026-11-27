@@ -519,4 +519,45 @@ export default {
     'Verifica só os blocos desta visualização. Compartilhe com os arredores para verificar o terreno em volta.',
   "The marks don't show while a shader pack is on.":
     'As marcas não aparecem enquanto um pacote de shaders estiver ativo.',
+  Overworld: 'Superfície',
+  Nether: 'Nether',
+  End: 'End',
+  'Connected parts': 'Partes conectadas',
+  Disconnect: 'Desconectar',
+  'Mobs only spawn near a player in the same dimension. While you stand at one part, a part in another dimension only runs while items go through its portal.':
+    'Criaturas só surgem perto de um jogador na mesma dimensão. Enquanto você está em uma parte, uma parte em outra dimensão só funciona enquanto itens passam pelo portal dela.',
+  'Add a part': 'Adicionar uma parte',
+  Connect: 'Conectar',
+  'Part of a farm in another dimension? Connect its other parts so builders find them together and the portals between them get checked.':
+    'Faz parte de uma farm em outra dimensão? Conecte as outras partes para que os construtores as encontrem juntas e os portais entre elas sejam verificados.',
+  Portals: 'Portais',
+  'Check again': 'Verificar de novo',
+  'Checking the portals…': 'Verificando os portais…',
+  'No lit Nether or End portals in these parts.': 'Não há portais do Nether ou do End acesos nestas partes.',
+  'End portal': 'Portal do End',
+  'Nether portal': 'Portal do Nether',
+  'Leads to the portal in {part} at {at}.': 'Leva ao portal em {part}, em {at}.',
+  "Leads to the portal planned in {part} at {at}, once it's built.":
+    'Levará ao portal planejado em {part}, em {at}, quando for construído.',
+  "Leads to a different portal at {at} in the {dim}, which isn't part of this farm. Move one of them, or what goes through ends up there.":
+    'Leva a outro portal em {at} ({dim}), que não faz parte desta farm. Mova um dos dois, ou o que passar vai parar lá.',
+  'No portal within {r} blocks of {at} in the {dim}, so the game builds a new one near there.':
+    'Nenhum portal a menos de {r} blocos de {at} ({dim}), então o jogo constrói um novo perto dali.',
+  'Leads to the obsidian platform at {at} in the End.': 'Leva à plataforma de obsidiana em {at} no End.',
+  'Leads to the world spawn at {at} in the {dim}, on top of the highest block.':
+    'Leva ao ponto de surgimento do mundo em {at} ({dim}), em cima do bloco mais alto.',
+  'That spot is in {part}.': 'Esse lugar fica em {part}.',
+  'No connected part covers that spot.': 'Nenhuma parte conectada cobre esse lugar.',
+  '{n} of its {total} blocks lead somewhere else.': '{n} dos seus {total} blocos levam a outro lugar.',
+  "Couldn't connect the part": 'Não foi possível conectar a parte',
+  "Couldn't disconnect the part": 'Não foi possível desconectar a parte',
+  "{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks. Light doesn't stop it, so cover them, dig them out or swap them for nether wart blocks.":
+    '{mob}: {n} blocos onde ele poderia surgir, com espaço para a altura de {h} blocos. A luz não o impede, então cubra-os, remova-os ou troque-os por blocos de verruga do Nether.',
+  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and block light of {l} or less. Light them above {l}, cover them or dig them out.':
+    '{mob}: {n} blocos onde ele poderia surgir, com espaço para a altura de {h} blocos e luz de bloco {l} ou menor. Ilumine-os acima de {l}, cubra-os ou remova-os.',
+  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and no light from torches or lamps. Light them, cover them or dig them out.':
+    '{mob}: {n} blocos onde ele poderia surgir, com espaço para a altura de {h} blocos e sem luz de tochas ou lâmpadas. Ilumine-os, cubra-os ou remova-os.',
+  "A schematic can't be connected to itself": 'Um esquemático não pode ser conectado a si mesmo',
+  'Only the owner of both schematics or an operator can connect them':
+    'Só o dono dos dois esquemáticos ou um operador pode conectá-los',
 };

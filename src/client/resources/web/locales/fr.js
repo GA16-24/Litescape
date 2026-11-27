@@ -520,4 +520,45 @@ export default {
     'Vérifie seulement les blocs de cette vue. Partagez-la avec ses alentours pour vérifier le terrain autour.',
   "The marks don't show while a shader pack is on.":
     "Les marques ne s'affichent pas quand un pack de shaders est actif.",
+  Overworld: 'Surface',
+  Nether: 'Nether',
+  End: 'End',
+  'Connected parts': 'Parties connectées',
+  Disconnect: 'Déconnecter',
+  'Mobs only spawn near a player in the same dimension. While you stand at one part, a part in another dimension only runs while items go through its portal.':
+    'Les monstres n’apparaissent qu’à proximité d’un joueur dans la même dimension. Tant que vous êtes à une partie, une partie dans une autre dimension ne tourne que pendant que des objets passent par son portail.',
+  'Add a part': 'Ajouter une partie',
+  Connect: 'Connecter',
+  'Part of a farm in another dimension? Connect its other parts so builders find them together and the portals between them get checked.':
+    'Elle fait partie d’une ferme dans une autre dimension ? Connectez ses autres parties pour que les bâtisseurs les trouvent ensemble et que les portails entre elles soient vérifiés.',
+  Portals: 'Portails',
+  'Check again': 'Vérifier à nouveau',
+  'Checking the portals…': 'Vérification des portails…',
+  'No lit Nether or End portals in these parts.': 'Aucun portail du Nether ou de l’End allumé dans ces parties.',
+  'End portal': 'Portail de l’End',
+  'Nether portal': 'Portail du Nether',
+  'Leads to the portal in {part} at {at}.': 'Mène au portail de {part} en {at}.',
+  "Leads to the portal planned in {part} at {at}, once it's built.":
+    'Mènera au portail prévu dans {part} en {at}, une fois construit.',
+  "Leads to a different portal at {at} in the {dim}, which isn't part of this farm. Move one of them, or what goes through ends up there.":
+    'Mène à un autre portail en {at} ({dim}), qui ne fait pas partie de cette ferme. Déplacez l’un des deux, sinon ce qui passe finit là-bas.',
+  'No portal within {r} blocks of {at} in the {dim}, so the game builds a new one near there.':
+    'Aucun portail à moins de {r} blocs de {at} ({dim}), donc le jeu en construit un nouveau près de là.',
+  'Leads to the obsidian platform at {at} in the End.': 'Mène à la plateforme d’obsidienne en {at} dans l’End.',
+  'Leads to the world spawn at {at} in the {dim}, on top of the highest block.':
+    'Mène au point d’apparition du monde en {at} ({dim}), au-dessus du bloc le plus haut.',
+  'That spot is in {part}.': 'Cet endroit est dans {part}.',
+  'No connected part covers that spot.': 'Aucune partie connectée ne couvre cet endroit.',
+  '{n} of its {total} blocks lead somewhere else.': '{n} de ses {total} blocs mènent ailleurs.',
+  "Couldn't connect the part": 'Impossible de connecter la partie',
+  "Couldn't disconnect the part": 'Impossible de déconnecter la partie',
+  "{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks. Light doesn't stop it, so cover them, dig them out or swap them for nether wart blocks.":
+    '{mob} : {n} blocs où il pourrait apparaître, avec la place pour sa hauteur de {h} blocs. La lumière ne l’arrête pas : couvrez-les, retirez-les ou remplacez-les par des blocs de verrues du Nether.',
+  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and block light of {l} or less. Light them above {l}, cover them or dig them out.':
+    '{mob} : {n} blocs où il pourrait apparaître, avec la place pour sa hauteur de {h} blocs et une lumière de bloc de {l} ou moins. Éclairez-les au-dessus de {l}, couvrez-les ou retirez-les.',
+  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and no light from torches or lamps. Light them, cover them or dig them out.':
+    '{mob} : {n} blocs où il pourrait apparaître, avec la place pour sa hauteur de {h} blocs et sans lumière de torches ou de lampes. Éclairez-les, couvrez-les ou retirez-les.',
+  "A schematic can't be connected to itself": 'Une schématique ne peut pas être connectée à elle-même',
+  'Only the owner of both schematics or an operator can connect them':
+    'Seul le propriétaire des deux schématiques ou un opérateur peut les connecter',
 };

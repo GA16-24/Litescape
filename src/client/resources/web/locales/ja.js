@@ -511,4 +511,46 @@ export default {
   'Checks only the blocks in this view. Share it with surroundings to check the land around it.':
     'このビューのブロックだけを調べます。周辺を含めて共有すると、周りの地形も調べられます。',
   "The marks don't show while a shader pack is on.": 'シェーダーパックがオンの間はマークが表示されません。',
+  Overworld: 'オーバーワールド',
+  Nether: 'ネザー',
+  End: 'エンド',
+  'Connected parts': 'つながったパーツ',
+  Disconnect: '切り離す',
+  'Mobs only spawn near a player in the same dimension. While you stand at one part, a part in another dimension only runs while items go through its portal.':
+    'モブは同じディメンションにいるプレイヤーの近くでしかスポーンしません。あるパーツにいる間、別のディメンションのパーツはアイテムがポータルを通るときだけ動きます。',
+  'Add a part': 'パーツを追加',
+  Connect: 'つなげる',
+  'Part of a farm in another dimension? Connect its other parts so builders find them together and the portals between them get checked.':
+    '別のディメンションにある装置の一部ですか？ほかのパーツとつなげると、建築者がまとめて見つけられ、間のポータルもチェックされます。',
+  Portals: 'ポータル',
+  'Check again': 'もう一度チェック',
+  'Checking the portals…': 'ポータルをチェック中…',
+  'No lit Nether or End portals in these parts.':
+    'これらのパーツに点火済みのネザーポータルやエンドポータルはありません。',
+  'End portal': 'エンドポータル',
+  'Nether portal': 'ネザーポータル',
+  'Leads to the portal in {part} at {at}.': '{part} の {at} にあるポータルにつながります。',
+  "Leads to the portal planned in {part} at {at}, once it's built.":
+    '{part} の {at} に予定されているポータルに、完成すればつながります。',
+  "Leads to a different portal at {at} in the {dim}, which isn't part of this farm. Move one of them, or what goes through ends up there.":
+    '{dim} の {at} にある、この装置に含まれない別のポータルにつながります。どちらかを動かさないと、通ったものがそこに行ってしまいます。',
+  'No portal within {r} blocks of {at} in the {dim}, so the game builds a new one near there.':
+    '{dim} の {at} から {r} ブロック以内にポータルがないため、ゲームがその近くに新しいポータルを作ります。',
+  'Leads to the obsidian platform at {at} in the End.': 'エンドの {at} にある黒曜石の足場につながります。',
+  'Leads to the world spawn at {at} in the {dim}, on top of the highest block.':
+    '{dim} の {at} にあるワールドスポーンの、一番高いブロックの上につながります。',
+  'That spot is in {part}.': 'その場所は {part} の中です。',
+  'No connected part covers that spot.': 'その場所を含むつながったパーツはありません。',
+  '{n} of its {total} blocks lead somewhere else.': '{total} ブロックのうち {n} ブロックは別の場所につながります。',
+  "Couldn't connect the part": 'パーツをつなげられませんでした',
+  "Couldn't disconnect the part": 'パーツを切り離せませんでした',
+  "{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks. Light doesn't stop it, so cover them, dig them out or swap them for nether wart blocks.":
+    '{mob}：スポーンできるブロックが {n} 個あり、高さ {h} ブロック分の空間があります。明るさでは防げないので、ふさぐか、掘るか、ネザーウォートブロックに置き換えてください。',
+  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and block light of {l} or less. Light them above {l}, cover them or dig them out.':
+    '{mob}：スポーンできるブロックが {n} 個あり、高さ {h} ブロック分の空間とブロック光 {l} 以下の暗さがあります。明るさを {l} より上げるか、ふさぐか、掘ってください。',
+  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and no light from torches or lamps. Light them, cover them or dig them out.':
+    '{mob}：スポーンできるブロックが {n} 個あり、高さ {h} ブロック分の空間があり、松明やランプの光が届いていません。照らすか、ふさぐか、掘ってください。',
+  "A schematic can't be connected to itself": '設計図を自分自身とつなげることはできません',
+  'Only the owner of both schematics or an operator can connect them':
+    'つなげられるのは両方の設計図の所有者かオペレーターだけです',
 };

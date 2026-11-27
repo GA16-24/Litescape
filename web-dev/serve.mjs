@@ -24,6 +24,8 @@ const json = async (f) => JSON.parse(await readFile(join(fx, f), 'utf8'));
 let mode = 'full'; // full | offline | noworld | menu | empty (toggle with /dev?mode=...)
 const started = Date.now();
 const state = await json('state-3.json');
+// The game test's two-dimension farm: which recorded ids were its Overworld and Nether parts. Older fixtures lack it.
+const parts = await json('parts.json').catch(() => null);
 
 // Live progress: every 2 s, mark the lowest still-missing blocks as placed.
 async function status(file) {
@@ -91,10 +93,30 @@ function withContributors(st) {
   };
   // Alice also asks to share her lighthouse, so the page shows a share request until you answer it.
   const request = { ...theirs, id: LIGHTHOUSE, name: 'Harbor Lighthouse' };
+  // The cottage's Nether half, connected to it, with the portal room the game test built there.
+  const hub = parts && {
+    ...shared[0],
+    id: NETHER_HUB,
+    name: 'Nether hub',
+    dim: 'minecraft:the_nether',
+    origin: [7, 70, 2],
+    size: [4, 5, 1],
+    margin: 0,
+    contributors: {},
+    sharedId: undefined,
+  };
+  const linksOf = (id) => [...links].filter((l) => l.includes(id)).map((l) => l.replace(id, '').replace('|', ''));
   return {
     ...st,
     shared: [
-      ...shared.map((s) => ({ ...s, manage: true, answer: 'pending', ...access.get(s.id), ...notes.get(s.id) })),
+      ...[...shared, ...(hub ? [hub] : [])].map((s) => ({
+        ...s,
+        manage: true,
+        answer: 'pending',
+        ...access.get(s.id),
+        ...notes.get(s.id),
+        links: linksOf(s.id),
+      })),
       { ...theirs, answer: answers.get(theirs.id) || 'accepted' },
       { ...request, answer: answers.get(LIGHTHOUSE) || 'pending' },
     ].map((s) => ({ ...s, inGame: inGame.has(s.id) })),
@@ -110,6 +132,9 @@ const inGame = new Set(); // shared ids loaded in Litematica from the page
 const ALICE = 'b6d1f0f2-0000-4000-8000-00000000a1ce';
 const BOB = '5c2e7a10-0000-4000-8000-000000000b0b';
 const LIGHTHOUSE = 'a7d0c3a2-1111-4000-8000-00000000beef';
+const NETHER_HUB = 'a7d0c3a2-4444-4000-8000-00000000beef';
+// Connected parts, as "idA|idB"; the cottage starts connected to its Nether half.
+const links = new Set(parts ? [`${state.shared[0]?.id}|${NETHER_HUB}`] : []);
 // Share requests answered in the page, by shared id.
 const answers = new Map();
 
@@ -184,7 +209,26 @@ createServer(async (req, res) => {
         // Of the remembered server's two schematics, only the lighthouse was opened there before.
         if (url.searchParams.get('server') && !url.searchParams.get('id').includes('1111'))
           return send(404, { error: 'not-saved' });
+        if (url.searchParams.get('id') === NETHER_HUB) return send(200, await json('view-nether.json'));
         return send(200, await json(`view-${url.searchParams.get('type')}.json`));
+      }
+      case '/api/portals': {
+        // The test's portal check, with its part ids swapped for the cottage and its Nether hub.
+        await new Promise((r) => setTimeout(r, 400));
+        const id = url.searchParams.get('id');
+        const as = { [parts.overworld]: state.shared[0].id, [parts.nether]: NETHER_HUB };
+        const swap = (p) => ({ ...p, part: as[p.part], in: as[p.in] });
+        const here = [id, ...[...links].filter((l) => l.includes(id)).map((l) => l.replace(id, '').replace('|', ''))];
+        const list = (await json('portals.json')).portals.map(swap).filter((p) => here.includes(p.part));
+        return send(200, { portals: list.map((p) => (here.includes(p.in) ? p : { ...p, in: undefined })) });
+      }
+      case '/api/link': {
+        await new Promise((r) => setTimeout(r, 300));
+        const pair = [url.searchParams.get('id'), url.searchParams.get('other')].sort().join('|');
+        const [a, b] = pair.split('|');
+        for (const l of [...links]) if (l === `${a}|${b}` || l === `${b}|${a}`) links.delete(l);
+        if (url.searchParams.get('linked') !== 'false') links.add(pair);
+        return send(200, {});
       }
       case '/api/status':
         return send(200, await status(`status-${url.searchParams.get('type')}.json`));

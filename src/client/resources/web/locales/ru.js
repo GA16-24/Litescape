@@ -555,4 +555,45 @@ export default {
   'Checks only the blocks in this view. Share it with surroundings to check the land around it.':
     'Проверяет только блоки в этом виде. Поделитесь им с окрестностями, чтобы проверить местность вокруг.',
   "The marks don't show while a shader pack is on.": 'Отметки не видны, пока включён шейдерпак.',
+  Overworld: 'Верхний мир',
+  Nether: 'Незер',
+  End: 'Край',
+  'Connected parts': 'Связанные части',
+  Disconnect: 'Отвязать',
+  'Mobs only spawn near a player in the same dimension. While you stand at one part, a part in another dimension only runs while items go through its portal.':
+    'Мобы спавнятся только рядом с игроком в том же измерении. Пока вы стоите у одной части, часть в другом измерении работает, только пока предметы проходят через её портал.',
+  'Add a part': 'Добавить часть',
+  Connect: 'Связать',
+  'Part of a farm in another dimension? Connect its other parts so builders find them together and the portals between them get checked.':
+    'Это часть фермы в другом измерении? Свяжите её с остальными частями, чтобы строители нашли их вместе, а порталы между ними были проверены.',
+  Portals: 'Порталы',
+  'Check again': 'Проверить снова',
+  'Checking the portals…': 'Проверка порталов…',
+  'No lit Nether or End portals in these parts.': 'В этих частях нет зажжённых порталов в Незер или Край.',
+  'End portal': 'Портал в Край',
+  'Nether portal': 'Портал в Незер',
+  'Leads to the portal in {part} at {at}.': 'Ведёт к порталу в «{part}» на {at}.',
+  "Leads to the portal planned in {part} at {at}, once it's built.":
+    'Будет вести к порталу, запланированному в «{part}» на {at}, когда его построят.',
+  "Leads to a different portal at {at} in the {dim}, which isn't part of this farm. Move one of them, or what goes through ends up there.":
+    'Ведёт к другому порталу на {at} ({dim}), который не входит в эту ферму. Переместите один из них, иначе всё, что проходит, окажется там.',
+  'No portal within {r} blocks of {at} in the {dim}, so the game builds a new one near there.':
+    'В пределах {r} блоков от {at} ({dim}) нет портала, поэтому игра построит новый рядом.',
+  'Leads to the obsidian platform at {at} in the End.': 'Ведёт к обсидиановой платформе на {at} в Краю.',
+  'Leads to the world spawn at {at} in the {dim}, on top of the highest block.':
+    'Ведёт к точке спавна мира на {at} ({dim}), на самый высокий блок.',
+  'That spot is in {part}.': 'Это место находится в «{part}».',
+  'No connected part covers that spot.': 'Ни одна связанная часть не покрывает это место.',
+  '{n} of its {total} blocks lead somewhere else.': '{n} из {total} его блоков ведут в другое место.',
+  "Couldn't connect the part": 'Не удалось связать часть',
+  "Couldn't disconnect the part": 'Не удалось отвязать часть',
+  "{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks. Light doesn't stop it, so cover them, dig them out or swap them for nether wart blocks.":
+    '{mob}: блоков, где он может заспавниться: {n}, с местом для его роста в {h} бл. Свет его не останавливает, поэтому закройте их, выкопайте или замените блоками незерского нароста.',
+  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and block light of {l} or less. Light them above {l}, cover them or dig them out.':
+    '{mob}: блоков, где он может заспавниться: {n}, с местом для его роста в {h} бл. и светом от блоков не выше {l}. Осветите их ярче {l}, закройте или выкопайте.',
+  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and no light from torches or lamps. Light them, cover them or dig them out.':
+    '{mob}: блоков, где он может заспавниться: {n}, с местом для его роста в {h} бл. и без света от факелов или ламп. Осветите их, закройте или выкопайте.',
+  "A schematic can't be connected to itself": 'Схему нельзя связать саму с собой',
+  'Only the owner of both schematics or an operator can connect them':
+    'Связать их может только владелец обеих схем или оператор',
 };

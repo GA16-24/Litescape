@@ -508,4 +508,44 @@ export default {
   'Checks only the blocks in this view. Share it with surroundings to check the land around it.':
     '이 보기의 블록만 확인합니다. 주변을 포함해 공유하면 주위 지형도 확인할 수 있습니다.',
   "The marks don't show while a shader pack is on.": '셰이더 팩이 켜져 있는 동안에는 표시가 보이지 않습니다.',
+  Overworld: '오버월드',
+  Nether: '네더',
+  End: '엔드',
+  'Connected parts': '연결된 부분',
+  Disconnect: '연결 끊기',
+  'Mobs only spawn near a player in the same dimension. While you stand at one part, a part in another dimension only runs while items go through its portal.':
+    '몹은 같은 차원에 있는 플레이어 근처에서만 스폰돼요. 한 부분에 서 있는 동안 다른 차원의 부분은 아이템이 포털을 지나갈 때만 작동해요.',
+  'Add a part': '부분 추가',
+  Connect: '연결',
+  'Part of a farm in another dimension? Connect its other parts so builders find them together and the portals between them get checked.':
+    '다른 차원에 있는 농장의 일부인가요? 다른 부분을 연결하면 건축하는 사람이 함께 찾을 수 있고, 그 사이의 포털도 확인돼요.',
+  Portals: '포털',
+  'Check again': '다시 확인',
+  'Checking the portals…': '포털 확인 중…',
+  'No lit Nether or End portals in these parts.': '이 부분들에는 켜진 네더 포털이나 엔드 포털이 없어요.',
+  'End portal': '엔드 포털',
+  'Nether portal': '네더 포털',
+  'Leads to the portal in {part} at {at}.': '{part}의 {at}에 있는 포털로 이어져요.',
+  "Leads to the portal planned in {part} at {at}, once it's built.":
+    '{part}의 {at}에 계획된 포털로, 지어지면 이어져요.',
+  "Leads to a different portal at {at} in the {dim}, which isn't part of this farm. Move one of them, or what goes through ends up there.":
+    '{dim}의 {at}에 있는, 이 농장에 속하지 않은 다른 포털로 이어져요. 둘 중 하나를 옮기지 않으면 지나가는 것이 그곳으로 가요.',
+  'No portal within {r} blocks of {at} in the {dim}, so the game builds a new one near there.':
+    '{dim}의 {at}에서 {r}블록 안에 포털이 없어서, 게임이 그 근처에 새 포털을 만들어요.',
+  'Leads to the obsidian platform at {at} in the End.': '엔드의 {at}에 있는 흑요석 발판으로 이어져요.',
+  'Leads to the world spawn at {at} in the {dim}, on top of the highest block.':
+    '{dim}의 {at}에 있는 월드 스폰, 가장 높은 블록 위로 이어져요.',
+  'That spot is in {part}.': '그 자리는 {part} 안에 있어요.',
+  'No connected part covers that spot.': '그 자리를 포함하는 연결된 부분이 없어요.',
+  '{n} of its {total} blocks lead somewhere else.': '{total}개 블록 중 {n}개는 다른 곳으로 이어져요.',
+  "Couldn't connect the part": '부분을 연결하지 못했어요',
+  "Couldn't disconnect the part": '부분의 연결을 끊지 못했어요',
+  "{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks. Light doesn't stop it, so cover them, dig them out or swap them for nether wart blocks.":
+    '{mob}: 스폰할 수 있는 블록 {n}개, 높이 {h}블록만큼의 공간이 있어요. 빛으로는 막을 수 없으니 덮거나, 파내거나, 네더 사마귀 블록으로 바꾸세요.',
+  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and block light of {l} or less. Light them above {l}, cover them or dig them out.':
+    '{mob}: 스폰할 수 있는 블록 {n}개, 높이 {h}블록만큼의 공간과 {l} 이하의 블록 빛이 있어요. {l}보다 밝게 비추거나, 덮거나, 파내세요.',
+  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and no light from torches or lamps. Light them, cover them or dig them out.':
+    '{mob}: 스폰할 수 있는 블록 {n}개, 높이 {h}블록만큼의 공간이 있고 횃불이나 램프 빛이 닿지 않아요. 밝히거나, 덮거나, 파내세요.',
+  "A schematic can't be connected to itself": '설계도를 자기 자신과 연결할 수는 없어요',
+  'Only the owner of both schematics or an operator can connect them': '두 설계도의 주인이나 관리자만 연결할 수 있어요',
 };

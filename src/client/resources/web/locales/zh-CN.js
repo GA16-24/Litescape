@@ -498,4 +498,43 @@ export default {
   'Checks only the blocks in this view. Share it with surroundings to check the land around it.':
     '只检查此视图中的方块。连同周边环境一起共享，即可检查周围的地形。',
   "The marks don't show while a shader pack is on.": '开启光影包时不显示这些标记。',
+  Overworld: '主世界',
+  Nether: '下界',
+  End: '末地',
+  'Connected parts': '关联部分',
+  Disconnect: '取消关联',
+  'Mobs only spawn near a player in the same dimension. While you stand at one part, a part in another dimension only runs while items go through its portal.':
+    '生物只会在同一维度的玩家附近生成。你站在某个部分时，另一个维度的部分只有在物品穿过它的传送门时才会运行。',
+  'Add a part': '添加部分',
+  Connect: '关联',
+  'Part of a farm in another dimension? Connect its other parts so builders find them together and the portals between them get checked.':
+    '这是另一个维度中某个农场的一部分？关联它的其他部分，建造者就能一起找到它们，它们之间的传送门也会被检查。',
+  Portals: '传送门',
+  'Check again': '重新检查',
+  'Checking the portals…': '正在检查传送门…',
+  'No lit Nether or End portals in these parts.': '这些部分中没有点燃的下界或末地传送门。',
+  'End portal': '末地传送门',
+  'Nether portal': '下界传送门',
+  'Leads to the portal in {part} at {at}.': '通往 {part} 中位于 {at} 的传送门。',
+  "Leads to the portal planned in {part} at {at}, once it's built.": '建好后将通往 {part} 中计划在 {at} 的传送门。',
+  "Leads to a different portal at {at} in the {dim}, which isn't part of this farm. Move one of them, or what goes through ends up there.":
+    '通往{dim}中位于 {at} 的另一个传送门，它不属于这个农场。移动其中一个，否则穿过的东西会到那里。',
+  'No portal within {r} blocks of {at} in the {dim}, so the game builds a new one near there.':
+    '{dim}中 {at} 周围 {r} 格内没有传送门，所以游戏会在附近新建一个。',
+  'Leads to the obsidian platform at {at} in the End.': '通往末地中位于 {at} 的黑曜石平台。',
+  'Leads to the world spawn at {at} in the {dim}, on top of the highest block.':
+    '通往{dim}中位于 {at} 的世界出生点，在最高的方块之上。',
+  'That spot is in {part}.': '那个位置在 {part} 中。',
+  'No connected part covers that spot.': '没有关联部分覆盖那个位置。',
+  '{n} of its {total} blocks lead somewhere else.': '它的 {total} 个方块中有 {n} 个通往别处。',
+  "Couldn't connect the part": '无法关联该部分',
+  "Couldn't disconnect the part": '无法取消关联该部分',
+  "{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks. Light doesn't stop it, so cover them, dig them out or swap them for nether wart blocks.":
+    '{mob}：它可以在 {n} 个方块上生成，有容纳它 {h} 格高的空间。光照挡不住它，所以请盖住、挖掉或换成下界疣块。',
+  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and block light of {l} or less. Light them above {l}, cover them or dig them out.':
+    '{mob}：它可以在 {n} 个方块上生成，有容纳它 {h} 格高的空间，且方块光照不高于 {l}。把亮度提高到 {l} 以上，或盖住、挖掉它们。',
+  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and no light from torches or lamps. Light them, cover them or dig them out.':
+    '{mob}：它可以在 {n} 个方块上生成，有容纳它 {h} 格高的空间，且没有火把或灯的光照。照亮、盖住或挖掉它们。',
+  "A schematic can't be connected to itself": '投影不能关联到自身',
+  'Only the owner of both schematics or an operator can connect them': '只有两个投影的所有者或管理员才能关联它们',
 };

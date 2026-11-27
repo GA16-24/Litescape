@@ -519,4 +519,45 @@ export default {
     'Prüft nur die Blöcke in dieser Ansicht. Teile sie mit Umgebung, um das Land darum zu prüfen.',
   "The marks don't show while a shader pack is on.":
     'Die Markierungen sind nicht zu sehen, solange ein Shaderpack aktiv ist.',
+  Overworld: 'Oberwelt',
+  Nether: 'Nether',
+  End: 'End',
+  'Connected parts': 'Verbundene Teile',
+  Disconnect: 'Trennen',
+  'Mobs only spawn near a player in the same dimension. While you stand at one part, a part in another dimension only runs while items go through its portal.':
+    'Mobs spawnen nur in der Nähe eines Spielers in derselben Dimension. Während du an einem Teil stehst, läuft ein Teil in einer anderen Dimension nur, solange Items durch sein Portal gehen.',
+  'Add a part': 'Teil hinzufügen',
+  Connect: 'Verbinden',
+  'Part of a farm in another dimension? Connect its other parts so builders find them together and the portals between them get checked.':
+    'Gehört sie zu einer Farm in einer anderen Dimension? Verbinde ihre anderen Teile, damit Bauende sie zusammen finden und die Portale dazwischen geprüft werden.',
+  Portals: 'Portale',
+  'Check again': 'Erneut prüfen',
+  'Checking the portals…': 'Portale werden geprüft…',
+  'No lit Nether or End portals in these parts.': 'In diesen Teilen gibt es keine entzündeten Nether- oder Endportale.',
+  'End portal': 'Endportal',
+  'Nether portal': 'Netherportal',
+  'Leads to the portal in {part} at {at}.': 'Führt zum Portal in {part} bei {at}.',
+  "Leads to the portal planned in {part} at {at}, once it's built.":
+    'Führt zum geplanten Portal in {part} bei {at}, sobald es gebaut ist.',
+  "Leads to a different portal at {at} in the {dim}, which isn't part of this farm. Move one of them, or what goes through ends up there.":
+    'Führt zu einem anderen Portal bei {at} ({dim}), das nicht zu dieser Farm gehört. Versetze eins der beiden, sonst landet dort, was hindurchgeht.',
+  'No portal within {r} blocks of {at} in the {dim}, so the game builds a new one near there.':
+    'Kein Portal im Umkreis von {r} Blöcken um {at} ({dim}), also baut das Spiel dort in der Nähe ein neues.',
+  'Leads to the obsidian platform at {at} in the End.': 'Führt zur Obsidianplattform bei {at} im End.',
+  'Leads to the world spawn at {at} in the {dim}, on top of the highest block.':
+    'Führt zum Weltspawn bei {at} ({dim}), oben auf den höchsten Block.',
+  'That spot is in {part}.': 'Diese Stelle liegt in {part}.',
+  'No connected part covers that spot.': 'Kein verbundener Teil deckt diese Stelle ab.',
+  '{n} of its {total} blocks lead somewhere else.': '{n} seiner {total} Blöcke führen woandershin.',
+  "Couldn't connect the part": 'Teil konnte nicht verbunden werden',
+  "Couldn't disconnect the part": 'Teil konnte nicht getrennt werden',
+  "{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks. Light doesn't stop it, so cover them, dig them out or swap them for nether wart blocks.":
+    '{mob}: {n} Blöcke, auf denen er spawnen kann, mit Platz für seine Höhe von {h} Blöcken. Licht hält ihn nicht auf, also decke sie ab, grabe sie aus oder ersetze sie durch Netherwarzenblöcke.',
+  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and block light of {l} or less. Light them above {l}, cover them or dig them out.':
+    '{mob}: {n} Blöcke, auf denen er spawnen kann, mit Platz für seine Höhe von {h} Blöcken und Blocklicht von höchstens {l}. Beleuchte sie heller als {l}, decke sie ab oder grabe sie aus.',
+  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and no light from torches or lamps. Light them, cover them or dig them out.':
+    '{mob}: {n} Blöcke, auf denen er spawnen kann, mit Platz für seine Höhe von {h} Blöcken und ohne Licht von Fackeln oder Lampen. Beleuchte sie, decke sie ab oder grabe sie aus.',
+  "A schematic can't be connected to itself": 'Eine Schematic kann nicht mit sich selbst verbunden werden',
+  'Only the owner of both schematics or an operator can connect them':
+    'Nur wer beide Schematics besitzt oder ein Operator kann sie verbinden',
 };

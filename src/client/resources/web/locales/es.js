@@ -518,4 +518,45 @@ export default {
   'Checks only the blocks in this view. Share it with surroundings to check the land around it.':
     'Solo revisa los bloques de esta vista. Compártela con alrededores para revisar el terreno que la rodea.',
   "The marks don't show while a shader pack is on.": 'Las marcas no se ven mientras hay un paquete de shaders activo.',
+  Overworld: 'Mundo superior',
+  Nether: 'Nether',
+  End: 'End',
+  'Connected parts': 'Partes conectadas',
+  Disconnect: 'Desconectar',
+  'Mobs only spawn near a player in the same dimension. While you stand at one part, a part in another dimension only runs while items go through its portal.':
+    'Las criaturas solo aparecen cerca de un jugador en la misma dimensión. Mientras estás en una parte, una parte en otra dimensión solo funciona mientras pasan objetos por su portal.',
+  'Add a part': 'Añadir una parte',
+  Connect: 'Conectar',
+  'Part of a farm in another dimension? Connect its other parts so builders find them together and the portals between them get checked.':
+    '¿Es parte de una granja en otra dimensión? Conecta sus otras partes para que los constructores las encuentren juntas y se comprueben los portales entre ellas.',
+  Portals: 'Portales',
+  'Check again': 'Volver a comprobar',
+  'Checking the portals…': 'Comprobando los portales…',
+  'No lit Nether or End portals in these parts.': 'No hay portales del Nether ni del End encendidos en estas partes.',
+  'End portal': 'Portal del End',
+  'Nether portal': 'Portal del Nether',
+  'Leads to the portal in {part} at {at}.': 'Lleva al portal de {part} en {at}.',
+  "Leads to the portal planned in {part} at {at}, once it's built.":
+    'Llevará al portal previsto en {part} en {at}, cuando esté construido.',
+  "Leads to a different portal at {at} in the {dim}, which isn't part of this farm. Move one of them, or what goes through ends up there.":
+    'Lleva a otro portal en {at} ({dim}) que no es parte de esta granja. Mueve uno de los dos, o lo que pase acabará allí.',
+  'No portal within {r} blocks of {at} in the {dim}, so the game builds a new one near there.':
+    'No hay ningún portal a menos de {r} bloques de {at} ({dim}), así que el juego construye uno nuevo cerca.',
+  'Leads to the obsidian platform at {at} in the End.': 'Lleva a la plataforma de obsidiana en {at} en el End.',
+  'Leads to the world spawn at {at} in the {dim}, on top of the highest block.':
+    'Lleva al punto de aparición del mundo en {at} ({dim}), encima del bloque más alto.',
+  'That spot is in {part}.': 'Ese lugar está en {part}.',
+  'No connected part covers that spot.': 'Ninguna parte conectada cubre ese lugar.',
+  '{n} of its {total} blocks lead somewhere else.': '{n} de sus {total} bloques llevan a otro sitio.',
+  "Couldn't connect the part": 'No se pudo conectar la parte',
+  "Couldn't disconnect the part": 'No se pudo desconectar la parte',
+  "{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks. Light doesn't stop it, so cover them, dig them out or swap them for nether wart blocks.":
+    '{mob}: {n} bloques donde podría aparecer, con espacio para su altura de {h} bloques. La luz no lo detiene, así que cúbrelos, quítalos o cámbialos por bloques de verruga del Nether.',
+  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and block light of {l} or less. Light them above {l}, cover them or dig them out.':
+    '{mob}: {n} bloques donde podría aparecer, con espacio para su altura de {h} bloques y luz de bloque de {l} o menos. Ilumínalos por encima de {l}, cúbrelos o quítalos.',
+  '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and no light from torches or lamps. Light them, cover them or dig them out.':
+    '{mob}: {n} bloques donde podría aparecer, con espacio para su altura de {h} bloques y sin luz de antorchas ni lámparas. Ilumínalos, cúbrelos o quítalos.',
+  "A schematic can't be connected to itself": 'Un esquema no se puede conectar consigo mismo',
+  'Only the owner of both schematics or an operator can connect them':
+    'Solo el dueño de ambos esquemas o un operador puede conectarlos',
 };

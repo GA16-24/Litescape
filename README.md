@@ -21,7 +21,8 @@ Litescape is a Fabric mod for Minecraft 1.21.1 to 26.3. It shows your Litematica
 - **A real 3D view.** Select an area in Litematica and it shows up at `http://127.0.0.1:8723/` with your resource pack's textures.
 - **Build progress.** Correct blocks look normal, missing ones are ghosts, wrong blocks are red, wrong orientation is amber, and redstone set up wrong (a backwards observer, a repeater on the wrong delay) is purple so it doesn't hide among cosmetic mistakes. "88 left" updates every 2 seconds.
 - **Build order.** The Order layer mode walks a schematic in survival order, one stage at a time, with the materials for each stage. Water waits for what holds it, and lava goes last so nobody makes obsidian by accident. It doesn't plan scaffolding or walking routes.
-- **Mob spawning.** A panel marks every block in view a zombie could spawn on at night. Handy for spawnproofing a farm. It only sees as far as the view, and it's off while a shader pack is on.
+- **Mob spawning.** A panel marks every block in view the dimension's farm mob could spawn on: a zombie in the Overworld, a zombified piglin in the Nether (torches don't stop those) and an enderman in the End. Handy for spawnproofing a farm. It only sees as far as the view, and it's off while a shader pack is on.
+- **Cross-dimension farms.** Connect the parts of a farm that live in different dimensions, like a gold farm on the Nether roof and its storage in the Overworld. The Portals panel shows where every portal really leads, by the game's own rules, and flags the ones that would send your items somewhere else.
 - **Sharing.** Click Share and other players with the mod can follow along. It's opt-in per placement. Only the owner or an op can unshare.
 - **Share requests.** Someone shares with you, you Accept or Deny. The server remembers. You can hide it again later.
 - **Access control.** Everyone, only the players you pick, or only you (the default). The server enforces it.

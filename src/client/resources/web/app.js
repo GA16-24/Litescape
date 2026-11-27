@@ -114,6 +114,8 @@ const S = {
   hidden: new Set(), // "server:sharedId" hidden in this browser, for servers from before share requests
   showHidden: false,
   notes: new Map(), // shared id -> notes typed but not saved yet
+  portals: new Map(), // shared id -> {list} or {err} from the server's portal check, or {busy}
+  linkPick: '', // the schematic picked in Connected parts to connect next
 };
 
 // ---------------------------------------------------------------- three.js
@@ -595,6 +597,7 @@ function prepare(data, atlas, refit) {
     blocks: data.blocks16,
     pal,
     rects: atlas.rects,
+    spawnRule: data.spawnRule,
   });
   sendEnt();
   buildHelpers(data);
@@ -1605,6 +1608,7 @@ function renderInspector() {
   h += '</section>';
   const shared = sh || (pl?.sharedId && findShared(pl.sharedId));
   if (shared) h += notesHtml(shared);
+  if (shared) h += partsHtml(shared);
   if (shared) h += surroundingsHtml(shared);
   h += spawnHtml(shared);
   if (shared?.manage && isLive()) h += accessHtml(shared);
@@ -1668,6 +1672,125 @@ function renderInspector() {
   if (f && document.activeElement?.id !== 'mat-filter' && S.matFocus) {
     f.focus();
     f.setSelectionRange(f.value.length, f.value.length);
+  }
+}
+
+// ---------------------------------------------------------------- connected parts
+
+/** A dimension's name; dimensions from mods and datapacks keep their id. */
+const dimName = (d) =>
+  d === 'minecraft:overworld'
+    ? t('Overworld')
+    : d === 'minecraft:the_nether'
+      ? t('Nether')
+      : d === 'minecraft:the_end'
+        ? t('End')
+        : d.replace('minecraft:', '');
+const xyz = (p) => p.map((v) => (v == null ? '~' : v)).join(', ');
+
+/**
+ * The other parts of the same farm, often in another dimension, and where every portal in them leads. The owner
+ * (or an operator) connects their schematics here; everyone who can see them reads the parts and the portal check.
+ */
+function partsHtml(sh) {
+  const parts = (sh.links || []).map(findShared).filter(Boolean);
+  const mine =
+    sh.manage && isLive() ? sharedList().filter((s) => s.manage && s.id !== sh.id && !sh.links?.includes(s.id)) : [];
+  const portalsHere =
+    S.desc?.type === 'shared' && S.data?.palette.some((e) => e && /^minecraft:(nether|end)_portal$/.test(e.n));
+  if (!parts.length && !mine.length && !portalsHere) return '';
+  let h = `<section class="panel" id="parts"><div class="panel-head"><h3>${t('Connected parts')}</h3>${parts.length ? `<span class="row-meta num">${parts.length}</span>` : ''}</div>`;
+  for (const p of parts)
+    h += `<div class="row" role="button" tabindex="0" data-go-shared="${esc(p.id)}"><span class="row-icon">${ICON.shared}</span>
+      <span class="row-main"><span class="row-title">${esc(p.name)}</span><span class="row-sub">${esc(dimName(p.dim))} · ${esc(xyz(p.origin))}</span></span>
+      ${sh.manage && isLive() ? `<button class="row-action" data-unlink="${esc(p.id)}" data-for="${esc(sh.id)}" data-tip="${t('Disconnect')}" aria-label="${t('Disconnect')}">${ICON.x}</button>` : ''}</div>`;
+  if (parts.some((p) => p.dim !== sh.dim))
+    h += `<p class="updated" style="margin:8px 0">${t('Mobs only spawn near a player in the same dimension. While you stand at one part, a part in another dimension only runs while items go through its portal.')}</p>`;
+  if (mine.length) {
+    const pick = mine.some((s) => s.id === S.linkPick) ? S.linkPick : mine[0].id;
+    const busy = S.busy.has(`link:${sh.id}`);
+    h += `<div class="sh-field"><span>${t('Add a part')}</span><select class="opt-select" id="link-pick" aria-label="${t('Add a part')}">${mine.map((s) => `<option value="${esc(s.id)}"${s.id === pick ? ' selected' : ''}>${esc(s.name)} · ${esc(dimName(s.dim))}</option>`).join('')}</select></div>
+      <div class="btn-row" style="margin:0 0 8px"><button class="btn" data-link="${esc(pick)}" data-for="${esc(sh.id)}" ${busy ? 'disabled' : ''}>${ICON.plug}${t('Connect')}</button></div>`;
+    if (!parts.length)
+      h += `<p class="updated" style="margin:0 0 8px">${t('Part of a farm in another dimension? Connect its other parts so builders find them together and the portals between them get checked.')}</p>`;
+  }
+  if (isLive() && (parts.length || portalsHere)) h += portalsHtml(sh);
+  return `${h}</section>`;
+}
+
+function portalsHtml(sh) {
+  const r = S.portals.get(sh.id);
+  if (!r) queueMicrotask(() => checkPortals(sh.id));
+  let h = `<div class="panel-head" style="margin-top:8px"><h3>${t('Portals')}</h3>${r && !r.busy ? `<button class="link" data-check-portals="${esc(sh.id)}">${ICON.retry}${t('Check again')}</button>` : ''}</div>`;
+  if (!r || r.busy) return `${h}<p class="updated" style="margin:0 0 8px">${t('Checking the portals…')}</p>`;
+  if (r.err)
+    return `${h}<p class="updated" style="margin:0 0 8px"><span style="color:var(--danger)">${esc(r.err)}</span></p>`;
+  if (!r.list.length)
+    return `${h}<p class="updated" style="margin:0 0 8px">${t('No lit Nether or End portals in these parts.')}</p>`;
+  const nameOf = (id) => esc(findShared(id)?.name || '?');
+  for (const p of r.list) {
+    const kind = p.kind === 'end' ? t('End portal') : t('Nether portal');
+    const where = { at: xyz(p.at), dim: dimName(p.to) };
+    let text;
+    if (p.lands === 'portal' && p.in)
+      text = p.built
+        ? t('Leads to the portal in {part} at {at}.', { ...where, part: nameOf(p.in) })
+        : t("Leads to the portal planned in {part} at {at}, once it's built.", { ...where, part: nameOf(p.in) });
+    else if (p.lands === 'portal')
+      text = t(
+        "Leads to a different portal at {at} in the {dim}, which isn't part of this farm. Move one of them, or what goes through ends up there.",
+        where,
+      );
+    else if (p.lands === 'new')
+      text = t('No portal within {r} blocks of {at} in the {dim}, so the game builds a new one near there.', {
+        ...where,
+        r: p.to === 'minecraft:the_nether' ? 16 : 128,
+      });
+    else if (p.lands === 'platform') text = t('Leads to the obsidian platform at {at} in the End.', where);
+    else
+      text = `${t('Leads to the world spawn at {at} in the {dim}, on top of the highest block.', where)} ${p.in ? t('That spot is in {part}.', { part: nameOf(p.in) }) : t('No connected part covers that spot.')}`;
+    if (p.others) text += ` ${t('{n} of its {total} blocks lead somewhere else.', { n: p.others, total: p.blocks })}`;
+    h += `<div><div class="updated" style="margin:0"><b>${kind}</b> · ${nameOf(p.part)} · ${esc(xyz(p.from))}</div><p class="updated" style="margin:2px 0 8px">${text}</p></div>`;
+  }
+  return h;
+}
+
+async function checkPortals(id) {
+  if (S.portals.get(id)?.busy) return;
+  S.portals.set(id, { busy: true });
+  renderInspector();
+  try {
+    const r = await api(`api/portals?id=${encodeURIComponent(id)}`);
+    S.portals.set(id, { list: r.portals });
+  } catch (err) {
+    // A part opened right after another hits the server's 2 s limit; try once more after it.
+    if (err.message === 'rate-limited') {
+      setTimeout(() => S.portals.delete(id) && renderInspector(), 2100);
+      S.portals.set(id, { busy: true });
+      return;
+    }
+    S.portals.set(id, { err: err.message });
+  }
+  renderInspector();
+}
+
+async function link(id, other, linked) {
+  const key = `link:${id}`;
+  if (S.busy.has(key)) return;
+  S.busy.add(key);
+  renderInspector();
+  try {
+    await api(`api/link?id=${encodeURIComponent(id)}&other=${encodeURIComponent(other)}&linked=${linked}`, {
+      method: 'POST',
+    });
+    S.api = await api('api/state'); // the server pushed the new list before it replied
+    S.portals.delete(id);
+    onState();
+  } catch (err) {
+    toast(t(linked ? "Couldn't connect the part" : "Couldn't disconnect the part"), err.message, { error: true });
+  } finally {
+    S.busy.delete(key);
+    renderInspector();
   }
 }
 
@@ -1860,12 +1983,38 @@ function spawnHtml(sh) {
   let h = `<section class="panel" id="spawning"><div class="panel-head"><h3>${t('Mob spawning')}</h3>${S.spawn ? `<span class="row-meta num">${fmt.format(S.spawnCount)}</span>` : ''}</div>
     <div class="sh-field"><span>${label}</span><button type="button" class="switch" role="switch" id="spawn-marks" aria-checked="${S.spawn}" aria-label="${label}"></button></div>`;
   if (S.spawn) {
-    h += `<p class="updated" style="margin:0 0 8px">${t('{n} blocks where a zombie could spawn at night: room to stand and no light from torches or lamps. Light them, cover them or dig them out.', { n: fmt.format(S.spawnCount) })}</p>`;
+    h += `<p class="updated" style="margin:0 0 8px">${spawnText(S.data?.spawnRule, fmt.format(S.spawnCount))}</p>`;
     h += `<p class="updated" style="margin:0 0 8px">${sh?.margin ? t('Checks the {m} blocks of surroundings captured around it. A farm needs everything within 128 blocks of where you stand spawnproofed.', { m: sh.margin }) : t('Checks only the blocks in this view. Share it with surroundings to check the land around it.')}</p>`;
     if (shaderOn())
       h += `<p class="updated" style="margin:0 0 8px">${t("The marks don't show while a shader pack is on.")}</p>`;
   }
   return `${h}</section>`;
+}
+
+/** What the marks mean for the view's mob, which the game picks for the view's dimension. */
+function spawnText(rule, n) {
+  // Mods from before the rule judged every view for a zombie in the Overworld.
+  const { id = 'minecraft:zombie', mob, cells = 2, light = 0 } = rule || {};
+  if (id === 'minecraft:zombie' && light === 0)
+    return t(
+      '{n} blocks where a zombie could spawn at night: room to stand and no light from torches or lamps. Light them, cover them or dig them out.',
+      { n },
+    );
+  const v = { mob: esc(mob), n, h: cells, l: light };
+  if (light >= 15)
+    return t(
+      "{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks. Light doesn't stop it, so cover them, dig them out or swap them for nether wart blocks.",
+      v,
+    );
+  if (light > 0)
+    return t(
+      '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and block light of {l} or less. Light them above {l}, cover them or dig them out.',
+      v,
+    );
+  return t(
+    '{mob}: {n} blocks it could spawn on, with room for its height of {h} blocks and no light from torches or lamps. Light them, cover them or dig them out.',
+    v,
+  );
 }
 
 function toggleSpawn() {
@@ -2227,6 +2376,17 @@ $('inspector').addEventListener('click', (e) => {
   }
   const sv = t.closest('[data-save-notes]');
   if (sv) return saveNotes(sv.dataset.saveNotes);
+  const ul = t.closest('[data-unlink]');
+  if (ul) return link(ul.dataset.for, ul.dataset.unlink, false);
+  const ln = t.closest('[data-link]');
+  if (ln) return link(ln.dataset.for, $('link-pick')?.value || ln.dataset.link, true);
+  const cp = t.closest('[data-check-portals]');
+  if (cp) {
+    S.portals.delete(cp.dataset.checkPortals);
+    return renderInspector();
+  }
+  const go = t.closest('[data-go-shared]');
+  if (go) return open({ type: 'shared', id: go.dataset.goShared });
   const rc = t.closest('[data-recapture]');
   if (rc) return recapture(rc.dataset.recapture, 'remove' in rc.dataset ? 0 : undefined);
   const tm = t.closest('[data-terrain]')?.dataset.terrain;
@@ -2251,10 +2411,18 @@ $('inspector').addEventListener('click', (e) => {
   if (t.closest('#ghosts')) return toggleGhosts();
   if (t.closest('#spawn-marks')) return toggleSpawn();
 });
+$('inspector').addEventListener('keydown', (e) => {
+  const go = (e.key === 'Enter' || e.key === ' ') && e.target.closest?.('[data-go-shared]');
+  if (go && e.target === go) {
+    e.preventDefault();
+    open({ type: 'shared', id: go.dataset.goShared });
+  }
+});
 $('inspector').addEventListener('mousedown', (e) => {
   if (e.target.closest('[data-add-player]')) e.preventDefault(); // keep focus in the field so the list stays open
 });
 $('inspector').addEventListener('change', (e) => {
+  if (e.target.id === 'link-pick') S.linkPick = e.target.value;
   if (e.target.name === 'access') {
     const a = accessTarget();
     setAccess(a.id, e.target.value, a.players);

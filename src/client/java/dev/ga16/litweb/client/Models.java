@@ -37,14 +37,18 @@ import net.minecraft.client.renderer.block.model.BlockStateModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.EntityType;
 //? if >=26.2 {
 import net.minecraft.world.entity.EntityTypes;
-//?} else {
-/*import net.minecraft.world.entity.EntityType;
-*///?}
+//?}
 import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.NaturalSpawner;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.material.FluidState;
@@ -63,20 +67,68 @@ final class Models {
 	/** Null when viewing a remembered server from the menus; tints then use their default colors. */
 	private final @Nullable ClientLevel level;
 	private final BlockPos tintPos;
+	private final SpawnRule spawn;
 	private final Map<TextureAtlasSprite, Integer> textures = new HashMap<>();
 	private final JsonArray tex = new JsonArray();
 
-	Models(@Nullable ClientLevel level, BlockPos tintPos) {
+	Models(@Nullable ClientLevel level, BlockPos tintPos, SpawnRule spawn) {
 		this.level = level;
 		this.tintPos = tintPos;
+		this.spawn = spawn;
 	}
 
-	/** Adds "palette" and "tex" to the response. */
+	/**
+	 * The mob a view is spawnproofed against, the main farm mob of its dimension, and the most block light it spawns
+	 * in. Zombified piglins have no light check at all; the others use the dimension's monster light rules.
+	 */
+	record SpawnRule(EntityType<?> type, int light) {
+		//? if >=26.2 {
+		static final EntityType<?> PIGLIN = EntityTypes.ZOMBIFIED_PIGLIN, ENDERMAN = EntityTypes.ENDERMAN, ZOMBIE = EntityTypes.ZOMBIE;
+		//?} else
+		//static final EntityType<?> PIGLIN = EntityType.ZOMBIFIED_PIGLIN, ENDERMAN = EntityType.ENDERMAN, ZOMBIE = EntityType.ZOMBIE;
+
+		static SpawnRule of(@Nullable ClientLevel level, @Nullable String dim) {
+			if ("minecraft:the_nether".equals(dim)) return new SpawnRule(PIGLIN, 15);
+			EntityType<?> type = "minecraft:the_end".equals(dim) ? ENDERMAN : ZOMBIE;
+			DimensionType dt = dim == null || level == null ? null : dimensionType(level, dim);
+			// Spawning needs block light at most the limit, and the brightness test passes at least sometimes.
+			return new SpawnRule(type, dt == null ? 0 : Math.min(dt.monsterSpawnBlockLightLimit(), maxOf(dt)));
+		}
+
+		/** Whole blocks of headroom the mob needs. */
+		int cells() {
+			return (int) Math.ceil(type.getHeight());
+		}
+
+		private static @Nullable DimensionType dimensionType(ClientLevel level, String dim) {
+			// A dimension shares its type's id unless a datapack says otherwise; then the Overworld rule stands.
+			var key = ResourceKey.create(Registries.DIMENSION_TYPE, Identifier.parse(dim));
+			//? if >=1.21.2 {
+			return level.registryAccess().lookupOrThrow(Registries.DIMENSION_TYPE).get(key).map(h -> h.value()).orElse(null);
+			//?} else
+			//return level.registryAccess().registryOrThrow(Registries.DIMENSION_TYPE).get(key);
+		}
+
+		private static int maxOf(DimensionType dt) {
+			//? if >=26.1 {
+			return dt.monsterSpawnLightTest().maxInclusive();
+			//?} else
+			//return dt.monsterSpawnLightTest().getMaxValue();
+		}
+	}
+
+	/** Adds "palette", "tex" and "spawnRule" to the response. */
 	void export(List<@Nullable BlockState> palette, JsonObject out) {
 		JsonArray list = new JsonArray();
 		for (BlockState s : palette) list.add(s == null ? JsonNull.INSTANCE : block(s));
 		out.add("palette", list);
 		out.add("tex", tex);
+		JsonObject rule = new JsonObject();
+		rule.addProperty("id", BuiltInRegistries.ENTITY_TYPE.getKey(spawn.type()).toString());
+		rule.addProperty("mob", spawn.type().getDescription().getString());
+		rule.addProperty("cells", spawn.cells());
+		rule.addProperty("light", spawn.light());
+		out.add("spawnRule", rule);
 	}
 
 	private JsonObject block(BlockState state) {
@@ -96,14 +148,11 @@ final class Models {
 		//o.addProperty("opaque", state.isSolidRender(EmptyBlockGetter.INSTANCE, BlockPos.ZERO));
 		o.addProperty("selfCull", state.skipRendering(state, Direction.UP));
 		o.addProperty("light", state.getLightEmission());
-		// Mob spawning, judged for a zombie like the game does: can one stand on this block, and fit inside this cell?
-		//? if >=26.2 {
-		var zombie = EntityTypes.ZOMBIE;
-		//?} else {
-		/*var zombie = EntityType.ZOMBIE;
-		*///?}
-		o.addProperty("spawnOn", state.isValidSpawn(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, zombie));
-		o.addProperty("spawnIn", NaturalSpawner.isValidEmptySpawnBlock(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, state, state.getFluidState(), zombie)
+		// Mob spawning, judged for the view's mob like the game does: can one stand on this block, and fit inside this cell?
+		// Zombified piglins can't spawn on nether wart blocks; magma blocks do hold them, since fire doesn't hurt them.
+		boolean wart = spawn.type() == SpawnRule.PIGLIN && state.is(Blocks.NETHER_WART_BLOCK);
+		o.addProperty("spawnOn", !wart && state.isValidSpawn(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, spawn.type()));
+		o.addProperty("spawnIn", NaturalSpawner.isValidEmptySpawnBlock(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, state, state.getFluidState(), spawn.type())
 			&& state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).isEmpty());
 
 		JsonArray quads = new JsonArray();
