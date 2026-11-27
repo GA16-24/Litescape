@@ -91,6 +91,7 @@ For the web dev server, shader dev server and fixtures, see the Development sect
 - The web app is plain ES modules with no build step. Don't add a bundler, framework or npm dependency. `vendor/` holds third-party code and is excluded from Biome. Don't edit it.
 - New Gradle dependencies need a reason in the PR. Dependency review fails on any known vulnerability.
 - Server reads must only touch chunks that are already loaded. Never load or generate terrain on behalf of a request.
+- `README.md` is also the [Modrinth page](https://modrinth.com/mod/litescape). Every merge that changes it or `src/main/resources/assets/litweb/icon.png` pushes both there (`.github/workflows/modrinth.yml`), so write the README for players and link to repo files with relative paths.
 
 ## License
 
