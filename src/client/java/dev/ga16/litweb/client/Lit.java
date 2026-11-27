@@ -26,7 +26,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
+//? if >=1.21.4
 import net.minecraft.client.renderer.item.ItemStackRenderState;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Vec3i;
@@ -175,12 +177,16 @@ final class Lit {
 			if (entities == null) continue;
 			for (var e : entities.entrySet()) {
 				JsonArray items = new JsonArray();
-				for (Tag t : DataConverterNbt.toVanillaCompound(e.getValue()).getListOrEmpty("Items")) {
+				//? if >=1.21.11 {
+				CompoundTag entity = DataConverterNbt.toVanillaCompound(e.getValue());
+				//?} else
+				//CompoundTag entity = e.getValue();
+				for (Tag t : compounds(entity, "Items")) {
 					if (!(t instanceof CompoundTag tag)) continue;
 					ItemStack stack = ItemStack.CODEC.parse(ops, tag).result().orElse(ItemStack.EMPTY);
 					if (stack.isEmpty()) continue;
 					JsonArray item = new JsonArray();
-					item.add(tag.getByteOr("Slot", (byte) 0));
+					item.add(byteOf(tag, "Slot"));
 					item.add(stack.getCount());
 					item.add(stack.getHoverName().getString());
 					item.add(icon(stack));
@@ -200,22 +206,41 @@ final class Lit {
 	 */
 	private static String icon(ItemStack stack) {
 		Minecraft mc = Minecraft.getInstance();
+		//? if >=1.21.4 {
 		ItemStackRenderState state = new ItemStackRenderState();
+		//?}
+		//? if >=26.1 {
 		mc.getItemModelResolver().updateForTopItem(state, stack, ItemDisplayContext.GUI, mc.level, null, 0);
 		var material = state.pickParticleMaterial(RandomSource.create(0));
-		return material == null ? "" : material.sprite().contents().name().toString();
+		TextureAtlasSprite sprite = material == null ? null : material.sprite();
+		//?} elif >=1.21.5 {
+		/*mc.getItemModelResolver().updateForTopItem(state, stack, ItemDisplayContext.GUI, mc.level, null, 0);
+		TextureAtlasSprite sprite = state.pickParticleIcon(RandomSource.create(0));
+		*///?} elif >=1.21.4 {
+		/*mc.getItemModelResolver().updateForTopItem(state, stack, ItemDisplayContext.GUI, false, mc.level, null, 0);
+		TextureAtlasSprite sprite = state.pickParticleIcon(RandomSource.create(0));
+		*///?} else {
+		/*TextureAtlasSprite sprite = mc.getItemRenderer().getModel(stack, mc.level, null, 0).getParticleIcon();
+		*///?}
+		return sprite == null ? "" : sprite.contents().name().toString();
 	}
 
 	// ---- shared placements: the placement with its schematic (block entities included), as compressed NBT ----
 
 	/** Shared schematics loaded into Litematica live here as <shared id>.litematic, so they survive a restart like any other. */
 	private static Path sharedDir() {
+		//? if >=1.21.5 {
 		return DataManager.getSchematicsBaseDirectory().resolve("litescape");
+		//?} else
+		//return DataManager.getSchematicsBaseDirectory().toPath().resolve("litescape");
 	}
 
 	private static byte[] placementBlob(SchematicPlacement sp) throws IOException {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		//? if >=1.21.11 {
 		NbtIo.writeCompressed(DataConverterNbt.toVanillaCompound(sp.toData(true)), out);
+		//?} else
+		//NbtIo.writeCompressed(sp.toNbt(true), out);
 		return out.toByteArray();
 	}
 
@@ -223,22 +248,31 @@ final class Lit {
 	 * Another player's upload, so nothing in it is trusted: the NBT is size-bounded, and region sizes are checked
 	 * before Litematica allocates a block array for each.
 	 */
+	//? if >=1.21.11 {
 	private static CompoundData readBlob(byte[] blob) throws IOException {
+	//?} else
+	//private static CompoundTag readBlob(byte[] blob) throws IOException {
 		CompoundTag tag = NbtIo.readCompressed(new ByteArrayInputStream(blob), NbtAccounter.create(256L << 20));
-		CompoundTag regions = tag.getCompoundOrEmpty("Schematics").getCompoundOrEmpty("Regions");
+		CompoundTag regions = compound(compound(tag, "Schematics"), "Regions");
 		long total = 0;
-		for (String name : regions.keySet()) {
-			CompoundTag size = regions.getCompoundOrEmpty(name).getCompoundOrEmpty("Size");
-			long blocks = Volume.blocks(size.getIntOr("x", 0), size.getIntOr("y", 0), size.getIntOr("z", 0));
+		for (String name : keys(regions)) {
+			CompoundTag size = compound(compound(regions, name), "Size");
+			long blocks = Volume.blocks(intOf(size, "x"), intOf(size, "y"), intOf(size, "z"));
 			if (blocks > Volume.MAX_VOLUME - total) throw new IOException("Couldn't read the shared placement");
 			total += blocks;
 		}
+		//? if >=1.21.11 {
 		return DataConverterNbt.fromVanillaCompound(tag);
+		//?} else
+		//return tag;
 	}
 
 	/** A placement that isn't added to Litematica, for reading what's in it. */
 	private static SchematicPlacement readPlacement(byte[] blob) throws IOException {
+		//? if >=1.21.11 {
 		SchematicPlacement p = SchematicPlacement.createFromData(readBlob(blob));
+		//?} else
+		//SchematicPlacement p = SchematicPlacement.createFromNbt(readBlob(blob));
 		if (p == null) throw new IOException("Couldn't read the shared placement");
 		return p;
 	}
@@ -246,14 +280,24 @@ final class Lit {
 	/** Saves the shared schematic to the schematics folder and adds its placement, replacing an earlier load of it. */
 	static void loadShared(String sharedId, byte[] blob) throws IOException {
 		if (!isId(sharedId)) throw new IOException("That schematic is no longer shared");
-		CompoundData data = readBlob(blob);
+		var data = readBlob(blob);
 		Path dir = sharedDir();
 		Files.createDirectories(dir);
 		Path file = dir.resolve(sharedId + LitematicaSchematic.FILE_EXTENSION);
 		unloadShared(sharedId);
+		//? if >=1.21.11 {
 		if (!DataFileUtils.writeCompoundDataToCompressedNbtFile(file, data.getCompound("Schematics"))) throw new IOException("Couldn't save the schematic");
 		LitematicaSchematic schematic = LitematicaSchematic.createFromFile(dir, file.getFileName().toString());
 		SchematicPlacement p = schematic == null ? null : SchematicPlacement.createFromData(schematic, data);
+		//?} elif >=1.21.5 {
+		/*NbtIo.writeCompressed(compound(data, "Schematics"), file);
+		LitematicaSchematic schematic = LitematicaSchematic.createFromFile(dir, file.getFileName().toString());
+		SchematicPlacement p = schematic == null ? null : SchematicPlacement.createFromNbt(schematic, data);
+		*///?} else {
+		/*NbtIo.writeCompressed(compound(data, "Schematics"), file);
+		LitematicaSchematic schematic = LitematicaSchematic.createFromFile(dir.toFile(), file.getFileName().toString());
+		SchematicPlacement p = schematic == null ? null : SchematicPlacement.createFromNbt(schematic, data);
+		*///?}
 		if (p == null) throw new IOException("Couldn't read the shared placement");
 		SchematicHolder.getInstance().addSchematic(schematic, false);
 		DataManager.getSchematicPlacementManager().addSchematicPlacement(p, false);
@@ -274,7 +318,8 @@ final class Lit {
 	}
 
 	static void unloadShared(String sharedId) {
-		for (SchematicPlacement p : DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()) {
+		// A copy, since removing changes the list, and Litematica before 0.26 hands out its live one.
+		for (SchematicPlacement p : List.copyOf(DataManager.getSchematicPlacementManager().getAllSchematicsPlacements())) {
 			if (!sharedId.equals(sharedIdOf(p))) continue;
 			DataManager.getSchematicPlacementManager().removeSchematicPlacement(p);
 			SchematicHolder.getInstance().removeSchematic(p.getSchematic());
@@ -283,10 +328,50 @@ final class Lit {
 
 	/** The shared schematic this placement was loaded from, or null for the player's own placements. */
 	private static @Nullable String sharedIdOf(SchematicPlacement p) {
+		//? if >=1.21.5 {
 		Path f = p.getSchematicFile();
+		//?} else
+		//Path f = p.getSchematicFile() == null ? null : p.getSchematicFile().toPath();
 		if (f == null || !sharedDir().toAbsolutePath().normalize().equals(f.toAbsolutePath().normalize().getParent())) return null;
 		String name = f.getFileName().toString();
 		return name.endsWith(LitematicaSchematic.FILE_EXTENSION) ? name.substring(0, name.length() - LitematicaSchematic.FILE_EXTENSION.length()) : null;
+	}
+
+	// ---- NBT reads, named the same on every version: 1.21.5 renamed these and added defaults ----
+
+	private static CompoundTag compound(CompoundTag tag, String key) {
+		//? if >=1.21.5 {
+		return tag.getCompoundOrEmpty(key);
+		//?} else
+		//return tag.getCompound(key);
+	}
+
+	private static Iterable<Tag> compounds(CompoundTag tag, String key) {
+		//? if >=1.21.5 {
+		return tag.getListOrEmpty(key);
+		//?} else
+		//return tag.getList(key, Tag.TAG_COMPOUND);
+	}
+
+	private static Iterable<String> keys(CompoundTag tag) {
+		//? if >=1.21.5 {
+		return tag.keySet();
+		//?} else
+		//return tag.getAllKeys();
+	}
+
+	private static int intOf(CompoundTag tag, String key) {
+		//? if >=1.21.5 {
+		return tag.getIntOr(key, 0);
+		//?} else
+		//return tag.getInt(key);
+	}
+
+	private static byte byteOf(CompoundTag tag, String key) {
+		//? if >=1.21.5 {
+		return tag.getByteOr(key, (byte) 0);
+		//?} else
+		//return tag.getByte(key);
 	}
 
 	private Lit() {}

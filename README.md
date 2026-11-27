@@ -3,7 +3,7 @@
 <p align="center">Litematica, but in a browser tab, and your friends can watch you build.</p>
 
 <p align="center">
-  <img alt="Minecraft 26.3" src="https://img.shields.io/badge/Minecraft-26.3-555?style=flat-square">
+  <img alt="Minecraft 1.21.1 to 26.3" src="https://img.shields.io/badge/Minecraft-1.21.1%E2%80%9326.3-555?style=flat-square">
   <img alt="Fabric Loader 0.20.1+" src="https://img.shields.io/badge/Fabric_Loader-0.20.1%2B-555?style=flat-square">
   <img alt="Litematica 0.29.1" src="https://img.shields.io/badge/Litematica-0.29.1-555?style=flat-square">
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-555?style=flat-square"></a>
@@ -14,7 +14,7 @@
   <img alt="A cottage placement about 80% built. Placed blocks render normally, the unbuilt roof shows as see-through ghost blocks, and the side panel shows build progress and who can see the shared schematic." src="docs/images/viewer-light.png">
 </picture>
 
-Litescape is a Fabric mod for Minecraft 26.3. It shows your Litematica selection and placements (and [BuildPrint](https://modrinth.com/mod/buildprint) builds) as 3D models in a browser tab. Share a placement on a server that runs the mod and everyone can watch the roof not get built.
+Litescape is a Fabric mod for Minecraft 1.21.1 to 26.3. It shows your Litematica selection and placements (and [BuildPrint](https://modrinth.com/mod/buildprint) builds) as 3D models in a browser tab. Share a placement on a server that runs the mod and everyone can watch the roof not get built.
 
 ## What you get
 
@@ -44,18 +44,35 @@ brew install --cask GA16-24/tap/litescape   # macOS and Linux
 
 On Windows, run the `.exe` from the [releases page](https://github.com/GA16-24/homebrew-tap/releases) (`win-arm64` on ARM). Linux without Homebrew: grab the `.AppImage`, `.deb` or `.rpm` there.
 
-The app reads the Minecraft Launcher, Prism, the Modrinth App and CurseForge. Click Install next to an instance, then start the game from it. Install pulls Fabric API, MaLiLib and Litematica if they're missing, and only works on Fabric with Minecraft 26.3. "Create Litescape instance" makes a launcher profile with everything in it; close the Minecraft Launcher first or it may overwrite the profile.
+The app reads the Minecraft Launcher, Prism, the Modrinth App and CurseForge. Click Install next to an instance, then start the game from it. Install pulls Fabric API, MaLiLib and Litematica if they're missing. It works on Fabric with Minecraft 1.21.1 to 26.3 and installs the jar built for that version. "Create Litescape instance" makes a launcher profile with everything in it; close the Minecraft Launcher first or it may overwrite the profile.
 
 The macOS build isn't notarized yet. The cask clears the quarantine flag. If you use the `.dmg`, allow it under System Settings → Privacy & Security.
 
 ### Without the app
 
-One jar, both sides. Drop it in `mods/` yourself.
+One jar per Minecraft version, both sides. Drop it in `mods/` yourself.
 
 | Where             | Needs                                                                                                                                                                                                           |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Client            | Fabric Loader 0.20.1+, Fabric API, Litematica 0.29.1 (and MaLiLib) or BuildPrint 0.1.46, this mod                                                                                                               |
+| Client            | Fabric Loader 0.20.1+, Fabric API, Litematica (and MaLiLib) or BuildPrint 0.1.46, this mod                                                                                                                      |
 | Server (optional) | Fabric server with the [jar from Modrinth](https://modrinth.com/mod/litescape) and [Fabric API](https://modrinth.com/mod/fabric-api) in `mods/`. No Litematica needed. See [Server settings](#server-settings). |
+
+There's one jar for each Litematica release line. Pick the one for your Minecraft version:
+
+| Jar ends in | Minecraft              |
+| ----------- | ---------------------- |
+| `+1.21.1`   | 1.21.1                 |
+| `+1.21.2`   | 1.21.2, 1.21.3         |
+| `+1.21.4`   | 1.21.4                 |
+| `+1.21.5`   | 1.21.5                 |
+| `+1.21.6`   | 1.21.6, 1.21.7, 1.21.8 |
+| `+1.21.9`   | 1.21.9, 1.21.10        |
+| `+1.21.11`  | 1.21.11                |
+| `+26.1`     | 26.1, 26.1.1, 26.1.2   |
+| `+26.2`     | 26.2                   |
+| `+26.3`     | 26.3                   |
+
+The jars before 26.2 are about 20 MB, because they carry the shader compiler (LWJGL's shaderc and SPIRV-Cross) that newer Minecraft ships itself.
 
 Without the server part, the client reads whatever chunks it has loaded and tells you how much of the area that covers.
 
@@ -99,10 +116,11 @@ The Shaders tab asks Modrinth for icons and download counts, and downloads the p
 ## Development
 
 ```sh
-./gradlew build                       # mod jar in build/libs/
-./gradlew runClientGameTest           # boots the real client and tests the whole thing
+./gradlew build                       # one mod jar per Minecraft version in build/libs/
+./gradlew :26.3:runClientGameTest     # boots the real client and tests the whole thing
+./gradlew productionTest -Ptest_minecraft=1.21.7  # the release jar in a real client on 1.21.7, plus a server boot
 node web-dev/serve.mjs                # web app on :8194 from the game test's fixtures
-./gradlew shaderDev -Ppacks=<folder>  # shader API on :8195 without Minecraft
+./gradlew :26.3:shaderDev -Ppacks=<folder>  # shader API on :8195 without Minecraft
 node web-dev/expr.test.mjs            # custom-uniform expression tests
 node web-dev/ui-tokens.test.mjs       # colors, font sizes and radii stay on the tokens
 cd desktop && npm ci && npm start     # desktop app (run ./gradlew build first)

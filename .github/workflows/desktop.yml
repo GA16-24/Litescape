@@ -20,7 +20,7 @@ jobs:
   mod:
     name: Mod jar
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
@@ -35,7 +35,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6.4.1
         with:
           cache-disabled: true
-      - run: ./gradlew assemble
+      # One jar per Minecraft release line, collected in build/libs.
+      - run: .github/retry-downloads.sh ./gradlew assemble
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: mod-jar
@@ -118,7 +119,7 @@ jobs:
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME#desktop-v}"
-          gh release upload "v$version" dist/* "mod/litescape-$version.jar" --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload "v$version" dist/* "mod/litescape-$version+"*.jar --repo "$GITHUB_REPOSITORY" --clobber
       - name: Release on GA16-24/homebrew-tap and update Casks/litescape.rb
         env:
           GH_TOKEN: ${{ secrets.TAP_TOKEN }}

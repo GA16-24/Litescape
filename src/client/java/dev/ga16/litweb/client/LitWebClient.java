@@ -10,7 +10,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+//? if >=26.1 {
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
+//?} else
+//import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -18,7 +21,11 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.ChatFormatting;
+//? if >=26.3 {
 import com.mojang.blaze3d.Blaze3D;
+//?} else {
+/*import net.minecraft.util.Util;
+*///?}
 
 public final class LitWebClient implements ClientModInitializer {
 	private boolean announced;
@@ -45,10 +52,13 @@ public final class LitWebClient implements ClientModInitializer {
 			if (Bridge.serverMod()) Bridge.refreshList();
 			if (!announced && mc.player != null) {
 				announced = true;
-				mc.player.sendSystemMessage(Component.literal("Litescape: ")
-					.append(Component.literal(WebServer.url()).withStyle(s -> s.withClickEvent(new ClickEvent.RunCommand("litweb"))
-						.withColor(ChatFormatting.AQUA).withUnderlined(true)))
-					.append(Component.translatable("litweb.chat.or_command").withStyle(ChatFormatting.GRAY)));
+				Component message = Component.literal("Litescape: ")
+					.append(Component.literal(WebServer.url()).withStyle(s -> s.withClickEvent(runLitweb()).withColor(ChatFormatting.AQUA).withUnderlined(true)))
+					.append(Component.translatable("litweb.chat.or_command").withStyle(ChatFormatting.GRAY));
+				//? if >=26.1 {
+				mc.player.sendSystemMessage(message);
+				//?} else
+				//mc.player.displayClientMessage(message, false);
 			}
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> {
@@ -56,7 +66,10 @@ public final class LitWebClient implements ClientModInitializer {
 			WebServer.regionRead = null;
 		});
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registries) -> dispatcher.register(
+			//? if >=26.1 {
 			ClientCommands.literal("litweb").executes(ctx -> {
+			//?} else
+			//ClientCommandManager.literal("litweb").executes(ctx -> {
 				ctx.getSource().sendFeedback(openViewer() ? Component.translatable("litweb.command.opening_app") : Component.translatable("litweb.command.opened", WebServer.url()));
 				return 1;
 			})));
@@ -76,11 +89,11 @@ public final class LitWebClient implements ClientModInitializer {
 	private static boolean openViewer() {
 		URI web = URI.create(WebServer.url());
 		if (Files.notExists(APP_MARKER)) {
-			Blaze3D.openUri(web);
+			openUri(web);
 			return false;
 		}
 		long asked = System.currentTimeMillis();
-		Blaze3D.openUri(URI.create("litescape://open"));
+		openUri(URI.create("litescape://open"));
 		// If the app never connects (uninstalled, or the link isn't registered), forget it and use the browser.
 		CompletableFuture.delayedExecutor(10, TimeUnit.SECONDS).execute(() -> {
 			if (appSeen >= asked) return;
@@ -89,8 +102,23 @@ public final class LitWebClient implements ClientModInitializer {
 			} catch (IOException e) {
 				LitWeb.LOG.warn("Could not forget the desktop app", e);
 			}
-			Blaze3D.openUri(web);
+			openUri(web);
 		});
 		return true;
+	}
+
+	private static ClickEvent runLitweb() {
+		//? if >=1.21.5 {
+		return new ClickEvent.RunCommand("litweb");
+		//?} else
+		//return new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/litweb");
+	}
+
+	private static void openUri(URI uri) {
+		//? if >=26.3 {
+		Blaze3D.openUri(uri);
+		//?} else {
+		/*Util.getPlatform().openUri(uri);
+		*///?}
 	}
 }

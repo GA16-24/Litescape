@@ -1,6 +1,11 @@
 pluginManagement {
 	repositories {
-		maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+		// Only Fabric's own artifacts: a Fabric Maven error would otherwise fail the lookup of plugins it doesn't have.
+		maven {
+			name = 'Fabric'
+			url = 'https://maven.fabricmc.net/'
+			content { includeGroupAndSubgroups 'net.fabricmc' }
+		}
 		mavenCentral()
 		gradlePluginPortal()
 	}
@@ -8,6 +13,18 @@ pluginManagement {
 
 plugins {
 	id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+	id 'dev.kikugie.stonecutter' version '0.10'
+}
+
+// One subproject per Litematica release line, named after the first Minecraft version it covers.
+// Each has its dependencies in versions/<name>/gradle.properties and builds from the shared src/.
+stonecutter {
+	kotlinController = false
+	centralScript = 'build.gradle'
+	create(rootProject) {
+		versions '1.21.1', '1.21.2', '1.21.4', '1.21.5', '1.21.6', '1.21.9', '1.21.11', '26.1', '26.2', '26.3'
+		vcsVersion = '26.3'
+	}
 }
 
 rootProject.name = 'litescape'

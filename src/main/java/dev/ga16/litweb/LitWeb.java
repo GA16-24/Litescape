@@ -40,6 +40,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+//? if >=1.21.11
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -108,8 +109,13 @@ public final class LitWeb implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		//? if >=26.1 {
 		PayloadTypeRegistry.serverboundPlay().register(Req.TYPE, Req.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(Reply.TYPE, Reply.CODEC);
+		//?} else {
+		/*PayloadTypeRegistry.playC2S().register(Req.TYPE, Req.CODEC);
+		PayloadTypeRegistry.playS2C().register(Reply.TYPE, Reply.CODEC);
+		*///?}
 		instance = this;
 		ServerLifecycleEvents.SERVER_STARTED.register(this::load);
 		ServerLifecycleEvents.SERVER_STOPPING.register(s -> flushContributors());
@@ -128,7 +134,7 @@ public final class LitWeb implements ModInitializer {
 			} catch (IOException e) { // expected refusals: permission, limits, missing schematic
 				send(player, req.req(), e.getMessage(), new byte[0]);
 			} catch (Exception e) {
-				LOG.warn("Request {} from {} failed", req.op(), player.getPlainTextName(), e);
+				LOG.warn("Request {} from {} failed", req.op(), player.getName().getString(), e);
 				send(player, req.req(), e.getMessage() == null ? e.toString() : e.getMessage(), new byte[0]);
 			}
 		});
@@ -176,13 +182,23 @@ public final class LitWeb implements ModInitializer {
 	private boolean allowed(ServerPlayer player, String key) {
 		return switch (config.getProperty(key, "ops")) {
 			case "everyone" -> true;
-			case "ops" -> player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
+			case "ops" -> isOp(player);
 			default -> false;
 		};
 	}
 
+	private static ServerLevel serverLevel(ServerPlayer player) {
+		//? if >=1.21.6 {
+		return player.level();
+		//?} else
+		//return player.serverLevel();
+	}
+
 	private static boolean isOp(ServerPlayer player) {
+		//? if >=1.21.11 {
 		return player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
+		//?} else
+		//return player.hasPermissions(2);
 	}
 
 	static boolean canManage(ServerPlayer player, Shared s) {
@@ -225,7 +241,7 @@ public final class LitWeb implements ModInitializer {
 				int[] u = Volume.union(boxes);
 				long volume = (long) (u[3] - u[0] + 1) * (u[4] - u[1] + 1) * (u[5] - u[2] + 1);
 				if (volume > SERVER_READ_MAX) throw new IOException("Area is too large for a server read (" + volume + " > " + SERVER_READ_MAX + " blocks)");
-				ServerLevel level = player.level();
+				ServerLevel level = serverLevel(player);
 				Volume v = Volume.ofBoxes(boxes);
 				v.fill(boxes, loadedOnly(level));
 				send(player, req.req(), "", v.encode());
@@ -334,7 +350,7 @@ public final class LitWeb implements ModInitializer {
 		s.id = id;
 		s.name = meta.get("name").getAsString();
 		s.owner = owner;
-		s.ownerName = player.getPlainTextName();
+		s.ownerName = player.getName().getString();
 		s.dim = player.level().dimension().identifier().toString();
 		s.origin = new int[] {v.x0, v.y0, v.z0};
 		s.size = new int[] {v.sx, v.sy, v.sz};
@@ -360,7 +376,7 @@ public final class LitWeb implements ModInitializer {
 			s.captured = old.captured;
 			s.chunks = old.chunks;
 			s.chunksCaptured = old.chunksCaptured;
-		} else capture(player, s, v, player.level(), margin);
+		} else capture(player, s, v, serverLevel(player), margin);
 		Files.write(dir.resolve(id + ".bin"), data);
 		Path placement = dir.resolve(id + ".litematic");
 		if (placementLen > 0) Files.write(placement, Arrays.copyOfRange(all, data.length, all.length));
@@ -395,8 +411,12 @@ public final class LitWeb implements ModInitializer {
 		}
 		if (margin < 0 || margin > maxMargin()) throw new IOException("Surroundings can reach at most " + maxMargin() + " blocks on this server");
 		if (!allowed(player, "terrain-capture")) throw new IOException("This server doesn't let you capture surroundings");
-		int[] box = {schem.x0 - margin, Math.max(level.getMinY(), schem.y0 - margin), schem.z0 - margin,
-			schem.x0 + schem.sx - 1 + margin, Math.min(level.getMaxY(), schem.y0 + schem.sy - 1 + margin), schem.z0 + schem.sz - 1 + margin};
+		//? if >=1.21.2 {
+		int minY = level.getMinY(), maxY = level.getMaxY();
+		//?} else
+		//int minY = level.getMinBuildHeight(), maxY = level.getMaxBuildHeight() - 1; // the old maximum was exclusive
+		int[] box = {schem.x0 - margin, Math.max(minY, schem.y0 - margin), schem.z0 - margin,
+			schem.x0 + schem.sx - 1 + margin, Math.min(maxY, schem.y0 + schem.sy - 1 + margin), schem.z0 + schem.sz - 1 + margin};
 		long volume = (long) (box[3] - box[0] + 1) * Math.max(0, box[4] - box[1] + 1) * (box[5] - box[2] + 1);
 		if (box[4] < box[1] || volume > SERVER_READ_MAX) {
 			throw new IOException("Surroundings of " + margin + " blocks are too large to capture (" + volume + " > " + SERVER_READ_MAX + " blocks)");
@@ -448,7 +468,7 @@ public final class LitWeb implements ModInitializer {
 			done.set(index);
 			creditedDirty.add(s.id);
 			Contributor c = s.contributors.computeIfAbsent(player.getStringUUID(), k -> new Contributor());
-			c.name = player.getPlainTextName();
+			c.name = player.getName().getString();
 			c.placed++;
 			c.last = System.currentTimeMillis();
 			contributorsDirty = true;
@@ -510,7 +530,10 @@ public final class LitWeb implements ModInitializer {
 		return pos -> {
 			int cx = pos.getX() >> 4, cz = pos.getZ() >> 4;
 			LevelChunk c = last[0];
+			//? if >=26.1 {
 			if (c == null || c.getPos().x() != cx || c.getPos().z() != cz) {
+			//?} else
+			//if (c == null || c.getPos().x != cx || c.getPos().z != cz) {
 				c = level.getChunkSource().getChunkNow(cx, cz);
 				if (c == null) return null;
 				last[0] = c;

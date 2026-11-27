@@ -199,7 +199,10 @@ public final class Volume {
 	public static @Nullable BlockState parse(String s) {
 		if (s.equals("?")) return null;
 		try {
+			//? if >=1.21.2 {
 			return BlockStateParser.parseForBlock(BuiltInRegistries.BLOCK, s, false).blockState();
+			//?} else
+			//return BlockStateParser.parseForBlock(BuiltInRegistries.BLOCK.asLookup(), s, false).blockState();
 		} catch (Exception e) {
 			return Blocks.AIR.defaultBlockState(); // block from a mod that isn't installed here
 		}

@@ -8,19 +8,41 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.color.block.BlockTintSource;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.model.geom.builders.UVPair;
+//? if >=26.1 {
+import net.minecraft.client.color.block.BlockTintSource;
 import net.minecraft.client.renderer.block.FluidModel;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.model.geom.builders.UVPair;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
+//?} else {
+/*import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandler;
+import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandlerRegistry;
+import net.minecraft.client.renderer.ItemBlockRenderTypes;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+*///?}
+//? if >=1.21.5 <26.1 {
+/*import net.minecraft.client.renderer.block.model.BlockModelPart;
+import net.minecraft.client.renderer.block.model.BlockStateModel;
+*///?} elif <1.21.5 {
+/*import net.minecraft.client.resources.model.BakedModel;
+*///?}
+//? if >=1.21.6 <26.1 {
+/*import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+*///?} elif <1.21.6 {
+/*import net.minecraft.client.renderer.RenderType;
+*///?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.RandomSource;
+//? if >=26.2 {
 import net.minecraft.world.entity.EntityTypes;
+//?} else {
+/*import net.minecraft.world.entity.EntityType;
+*///?}
 import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.NaturalSpawner;
 import net.minecraft.world.level.block.state.BlockState;
@@ -68,34 +90,66 @@ final class Models {
 		o.addProperty("p", props.toString());
 		o.addProperty("air", state.isAir());
 		if (state.isAir()) return o;
+		//? if >=1.21.2 {
 		o.addProperty("opaque", state.isSolidRender());
+		//?} else
+		//o.addProperty("opaque", state.isSolidRender(EmptyBlockGetter.INSTANCE, BlockPos.ZERO));
 		o.addProperty("selfCull", state.skipRendering(state, Direction.UP));
 		o.addProperty("light", state.getLightEmission());
 		// Mob spawning, judged for a zombie like the game does: can one stand on this block, and fit inside this cell?
-		o.addProperty("spawnOn", state.isValidSpawn(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, EntityTypes.ZOMBIE));
-		o.addProperty("spawnIn", NaturalSpawner.isValidEmptySpawnBlock(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, state, state.getFluidState(), EntityTypes.ZOMBIE)
+		//? if >=26.2 {
+		var zombie = EntityTypes.ZOMBIE;
+		//?} else {
+		/*var zombie = EntityType.ZOMBIE;
+		*///?}
+		o.addProperty("spawnOn", state.isValidSpawn(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, zombie));
+		o.addProperty("spawnIn", NaturalSpawner.isValidEmptySpawnBlock(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, state, state.getFluidState(), zombie)
 			&& state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).isEmpty());
 
 		JsonArray quads = new JsonArray();
+		//? if >=26.1 {
 		BlockStateModel model = mc.getModelManager().getBlockStateModelSet().get(state);
 		List<BlockStateModelPart> parts = new ArrayList<>();
+		TextureAtlasSprite particle = model.particleMaterial().sprite();
+		//?} elif >=1.21.5 {
+		/*BlockStateModel model = mc.getBlockRenderer().getBlockModel(state);
+		List<BlockModelPart> parts = new ArrayList<>();
+		TextureAtlasSprite particle = model.particleIcon();
+		*///?}
+		//? if >=1.21.5 {
 		model.collectParts(RandomSource.create(42L), parts);
-		for (BlockStateModelPart part : parts) {
+		for (var part : parts) {
 			for (Direction d : Direction.values()) for (BakedQuad q : part.getQuads(d)) quads.add(quad(state, q, d));
 			for (BakedQuad q : part.getQuads(null)) quads.add(quad(state, q, null));
 		}
+		//?} else {
+		/*BakedModel model = mc.getBlockRenderer().getBlockModel(state);
+		TextureAtlasSprite particle = model.getParticleIcon();
+		// The same seed for every face, so a model with random variants shows one of them on all sides.
+		for (Direction d : Direction.values()) for (BakedQuad q : model.getQuads(state, d, RandomSource.create(42L))) quads.add(quad(state, q, d));
+		for (BakedQuad q : model.getQuads(state, null, RandomSource.create(42L))) quads.add(quad(state, q, null));
+		*///?}
 		FluidState fluid = state.getFluidState();
-		if (quads.isEmpty() && fluid.isEmpty()) boxFallback(state, model, quads);
+		if (quads.isEmpty() && fluid.isEmpty()) boxFallback(state, particle, quads);
 		o.add("q", quads);
 
 		if (!fluid.isEmpty()) {
-			FluidModel fm = mc.getModelManager().getFluidStateModelSet().get(fluid);
 			JsonObject f = new JsonObject();
 			f.addProperty("k", BuiltInRegistries.FLUID.getKey(fluid.getType()).getPath().replace("flowing_", ""));
+			//? if >=26.1 {
+			FluidModel fm = mc.getModelManager().getFluidStateModelSet().get(fluid);
 			f.addProperty("t", texture(fm.stillMaterial().sprite()));
 			f.addProperty("c", fm.tintSource() == null ? -1 : tint(fm.tintSource(), state));
-			f.addProperty("h", fluid.getOwnHeight());
 			f.addProperty("l", fm.layer().ordinal());
+			//?} else {
+			/*FluidRenderHandler handler = FluidRenderHandlerRegistry.INSTANCE.get(fluid.getType());
+			BlockPos at = level == null ? null : tintPos;
+			f.addProperty("t", texture(handler.getFluidSprites(level, at, fluid)[0]));
+			int color = handler.getFluidColor(level, at, fluid);
+			f.addProperty("c", color == -1 ? -1 : color & 0xFFFFFF);
+			f.addProperty("l", layer(ItemBlockRenderTypes.getRenderLayer(fluid)));
+			*///?}
+			f.addProperty("h", fluid.getOwnHeight());
 			o.add("f", f);
 		}
 		return o;
@@ -107,11 +161,11 @@ final class Models {
 	}
 
 	/** Blocks drawn by special renderers (chests, signs, beds...) get their outline box in the particle texture. */
-	private void boxFallback(BlockState state, BlockStateModel model, JsonArray quads) {
+	private void boxFallback(BlockState state, TextureAtlasSprite particle, JsonArray quads) {
 		VoxelShape shape = state.getShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
 		if (shape.isEmpty()) return;
 		AABB b = shape.bounds();
-		int t = texture(model.particleMaterial().sprite());
+		int t = texture(particle);
 		float x0 = (float) b.minX, y0 = (float) b.minY, z0 = (float) b.minZ, x1 = (float) b.maxX, y1 = (float) b.maxY, z1 = (float) b.maxZ;
 		float[][] faces = {
 			{x0, y0, z1, x0, y0, z0, x1, y0, z0, x1, y0, z1}, // down
@@ -136,6 +190,7 @@ final class Models {
 
 	/** [texture, cullFace, tint, layer, shadeDir, then 4 × (x, y, z, u, v)]. */
 	private JsonArray quad(BlockState state, BakedQuad q, @Nullable Direction cull) {
+		//? if >=26.1 {
 		BakedQuad.MaterialInfo m = q.materialInfo();
 		TextureAtlasSprite s = m.sprite();
 		int tint = -1;
@@ -143,16 +198,41 @@ final class Models {
 			BlockTintSource src = mc.getBlockColors().getTintSource(state, m.tintIndex());
 			if (src != null) tint = tint(src, state);
 		}
+		int layer = m.layer().ordinal();
+		//?} else {
+		/*TextureAtlasSprite s = q.sprite();
+		int tint = -1;
+		if (q.isTinted()) {
+			int color = mc.getBlockColors().getColor(state, level, level == null ? null : tintPos, q.tintIndex());
+			if (color != -1) tint = color & 0xFFFFFF;
+		}
+		int layer = layer(ItemBlockRenderTypes.getChunkRenderType(state));
+		*///?}
+		//? if >=26.3 {
 		Direction shade = m.shadeDirectionOverride() != null ? m.shadeDirectionOverride() : q.direction();
-		JsonArray a = header(texture(s), cull == null ? -1 : cull.get3DDataValue(), tint, m.layer().ordinal(), shade);
+		//?} elif >=26.1 {
+		/*// 26.3's models replaced every "shade": false with "shade_direction_override": "up".
+		Direction shade = m.shade() ? q.direction() : Direction.UP;
+		*///?} else {
+		/*Direction shade = q.shade() ? q.direction() : Direction.UP;
+		*///?}
+		JsonArray a = header(texture(s), cull == null ? -1 : cull.get3DDataValue(), tint, layer, shade);
 		float du = s.getU1() - s.getU0(), dv = s.getV1() - s.getV0();
 		for (int v = 0; v < 4; v++) {
+			//? if >=1.21.11 {
 			Vector3fc p = q.position(v);
-			a.add(round(p.x()));
-			a.add(round(p.y()));
-			a.add(round(p.z()));
-			a.add(round((UVPair.unpackU(q.packedUV(v)) - s.getU0()) / du));
-			a.add(round((UVPair.unpackV(q.packedUV(v)) - s.getV0()) / dv));
+			float x = p.x(), y = p.y(), z = p.z(), u = UVPair.unpackU(q.packedUV(v)), w = UVPair.unpackV(q.packedUV(v));
+			//?} else {
+			/*// Eight ints per vertex, as DefaultVertexFormat.BLOCK lays them out: x, y, z, color, u, v, light, normal.
+			int[] d = q.vertices();
+			float x = Float.intBitsToFloat(d[v * 8]), y = Float.intBitsToFloat(d[v * 8 + 1]), z = Float.intBitsToFloat(d[v * 8 + 2]);
+			float u = Float.intBitsToFloat(d[v * 8 + 4]), w = Float.intBitsToFloat(d[v * 8 + 5]);
+			*///?}
+			a.add(round(x));
+			a.add(round(y));
+			a.add(round(z));
+			a.add(round((u - s.getU0()) / du));
+			a.add(round((w - s.getV0()) / dv));
 		}
 		return a;
 	}
@@ -167,9 +247,25 @@ final class Models {
 		return a;
 	}
 
+	//? if >=26.1 {
 	private int tint(BlockTintSource src, BlockState state) {
 		return (level == null ? src.color(state) : src.colorInWorld(state, level, tintPos)) & 0xFFFFFF;
 	}
+	//?} elif >=1.21.6 {
+	/*/^* The web app's layers, 26.1's: 0 solid, 1 cutout, 2 translucent. By name, since older versions have more of them. ^/
+	private static int layer(ChunkSectionLayer layer) {
+		return switch (layer.name()) {
+			case "SOLID" -> 0;
+			case "TRANSLUCENT", "TRIPWIRE" -> 2;
+			default -> 1;
+		};
+	}
+	*///?} else {
+	/*/^* The web app's layers, 26.1's: 0 solid, 1 cutout, 2 translucent. ^/
+	private static int layer(RenderType layer) {
+		return layer == RenderType.translucent() || layer == RenderType.tripwire() ? 2 : layer == RenderType.solid() ? 0 : 1;
+	}
+	*///?}
 
 	private int texture(TextureAtlasSprite s) {
 		return textures.computeIfAbsent(s, k -> {

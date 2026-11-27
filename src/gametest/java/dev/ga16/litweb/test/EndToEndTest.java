@@ -26,10 +26,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+//? if >=1.21.4 {
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+//?} else {
+/*import dev.ga16.litweb.test.legacy.ClientGameTests.ClientGameTestContext;
+import dev.ga16.litweb.test.legacy.ClientGameTests.FabricClientGameTest;
+import dev.ga16.litweb.test.legacy.ClientGameTests.TestServerContext;
+import dev.ga16.litweb.test.legacy.ClientGameTests.TestSingleplayerContext;
+*///?}
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -53,6 +60,7 @@ public class EndToEndTest implements FabricClientGameTest {
 
 	@Override
 	public void runTest(ClientGameTestContext ctx) {
+		Thread watchdog = watchdog();
 		try {
 			Files.createDirectories(out);
 			// Region sizes in a shared placement come from another player; a product that wraps must still count as too large.
@@ -69,7 +77,18 @@ public class EndToEndTest implements FabricClientGameTest {
 			Files.createDirectories(old.resolve("old"));
 			Files.writeString(old.resolve("old").resolve("kept.bin"), "");
 			try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
+				//? if >=26.2 {
 				sp.getConnection().waitForChunksRender();
+				//?} elif >=26.1 {
+				/*sp.getClientLevel().waitForChunksRender();
+				*///?} else {
+				/*sp.getClientWorld().waitForChunksRender();
+				*///?}
+				// Grass under the lamp and the observer would turn to dirt at a random moment and change the placement counts.
+				//? if >=1.21.11 {
+				sp.getServer().runCommand("gamerule random_tick_speed 0");
+				//?} else
+				//sp.getServer().runCommand("gamerule randomTickSpeed 0");
 				buildCottage(sp.getServer());
 				ctx.waitTicks(20);
 
@@ -91,12 +110,16 @@ public class EndToEndTest implements FabricClientGameTest {
 				// Mob spawning: a zombie stands on grass but not glass, and fits in short grass but not in planks.
 				check(spawn(sel, "minecraft:grass_block", "spawnOn") && !spawn(sel, "minecraft:glass", "spawnOn")
 					&& spawn(sel, "minecraft:short_grass", "spawnIn") && !spawn(sel, "minecraft:oak_planks", "spawnIn"), "spawn flags in the palette");
+				// The viewer draws layer 2 see-through and the rest opaque; each Minecraft version names its layers differently.
+				check(block(sel, "minecraft:light_blue_stained_glass").getAsJsonArray("q").get(0).getAsJsonArray().get(3).getAsInt() == 2
+					&& block(sel, "minecraft:water").getAsJsonObject("f").get("l").getAsInt() == 2
+					&& block(sel, "minecraft:poppy").getAsJsonArray("q").get(0).getAsJsonArray().get(3).getAsInt() == 1, "render layers in the palette");
 
-				AreaSelection area = ctx.computeOnClient(_ -> DataManager.getSelectionManager().getCurrentSelection());
+				AreaSelection area = ctx.computeOnClient(unused -> DataManager.getSelectionManager().getCurrentSelection());
 				// From the server world, as Litematica does in singleplayer: the client never gets chest and hopper contents.
 				LitematicaSchematic schem = sp.getServer().computeOnServer(server -> LitematicaSchematic.createFromWorld(server.overworld(), area,
 					new LitematicaSchematic.SchematicSaveInfo(false, false), "test", msg -> {}));
-				ctx.runOnClient(_ -> {
+				ctx.runOnClient(unused -> {
 					SchematicPlacement p = SchematicPlacement.createFor(schem, new BlockPos(31, -63, 1), "Cottage copy", true, true);
 					DataManager.getSchematicPlacementManager().addSchematicPlacement(p, false);
 				});
@@ -144,18 +167,24 @@ public class EndToEndTest implements FabricClientGameTest {
 				JsonObject inGame = json(call(ctx, "GET", "/api/state"));
 				check(inGame.getAsJsonArray("shared").get(0).getAsJsonObject().get("inGame").getAsBoolean(), "shared schematic marked as loaded");
 				check(inGame.getAsJsonArray("placements").size() == 1, "a loaded share isn't listed again under your placements");
-				String loaded = ctx.computeOnClient(_ -> {
+				String loaded = ctx.computeOnClient(unused -> {
 					for (SchematicPlacement p : DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()) {
-						if (p.getSchematicFile() == null || !p.getSchematicFile().getFileName().toString().equals(shared + ".litematic")) continue;
+						// A Path, or a File before Litematica 0.22; either prints as the file's path.
+						if (!String.valueOf(p.getSchematicFile()).endsWith(java.io.File.separator + shared + ".litematic")) continue;
 						int entities = 0;
 						for (String region : p.getSchematic().getAreas().keySet()) entities += p.getSchematic().getBlockEntityMapForRegion(region).size();
 						return p.getOrigin().toShortString() + " " + entities;
 					}
 					return "missing";
 				});
-				check(loaded.equals("31, -63, 1 4"), "loaded at the shared origin with the chest, furnace, hopper and comparator: " + loaded);
+				//? if >=26.2 {
+				String entities = "4";
+				//?} else {
+				/*String entities = "6"; // before 26.2, each half of the bed has a block entity too
+				*///?}
+				check(loaded.equals("31, -63, 1 " + entities), "loaded at the shared origin with the chest, furnace, hopper and comparator: " + loaded);
 				call(ctx, "POST", "/api/unload?id=" + shared);
-				check(ctx.computeOnClient(_ -> DataManager.getSchematicPlacementManager().getAllSchematicsPlacements().size()) == 1, "unload removes it from Litematica");
+				check(ctx.computeOnClient(unused -> DataManager.getSchematicPlacementManager().getAllSchematicsPlacements().size()) == 1, "unload removes it from Litematica");
 				check(st3.contains("\"margin\":8") && st3.contains("\"chunksCaptured\""), "shared list carries the capture");
 				JsonObject sst = json(save("status-shared.json", call(ctx, "GET", "/api/status?type=shared&id=" + shared)));
 				check(sst.getAsJsonArray("counts").toString().equals(c.toString()), "server status " + sst.get("counts") + " matches client " + c);
@@ -284,15 +313,40 @@ public class EndToEndTest implements FabricClientGameTest {
 				shaderPack(ctx);
 				ctx.takeScreenshot("litweb-scene");
 			}
+			// The production test checks for this, so a run that never reaches the end can't pass.
+			Files.writeString(out.resolve("passed"), "");
 		} catch (IOException e) {
 			throw new RuntimeException(e);
+		} finally {
+			watchdog.interrupt();
 		}
+	}
+
+	/** A test that hangs would sit silent until the build's timeout; this logs where every thread is and fails first. */
+	private static Thread watchdog() {
+		Thread t = new Thread(() -> {
+			try {
+				Thread.sleep(java.time.Duration.ofMinutes(10));
+			} catch (InterruptedException e) {
+				return;
+			}
+			StringBuilder dump = new StringBuilder("The end-to-end test is still running after 10 minutes. Threads:\n");
+			Thread.getAllStackTraces().forEach((thread, stack) -> {
+				dump.append(thread).append('\n');
+				for (StackTraceElement frame : stack) dump.append("\tat ").append(frame).append('\n');
+			});
+			dev.ga16.litweb.LitWeb.LOG.error(dump.toString());
+			Runtime.getRuntime().halt(1);
+		}, "litweb test watchdog");
+		t.setDaemon(true);
+		t.start();
+		return t;
 	}
 
 	/** A BuildPrint build and selection show up like Litematica's: listed, viewable and compared with the world. */
 	private static void buildPrint(ClientGameTestContext ctx, TestSingleplayerContext sp) {
-		ctx.waitFor(_ -> BuildprintBlueprints.isAvailable(), 200);
-		ctx.runOnClient(_ -> {
+		ctx.waitFor(unused -> BuildprintBlueprints.isAvailable(), 200);
+		ctx.runOnClient(unused -> {
 			String why = BuildprintBlueprints.problem("litweb-test");
 			check(why == null, "BuildPrint refuses the test blueprint: " + why);
 			check(BuildprintBlueprints.set("litweb-test", "Test tower", new int[] {50, -60, 1, 50, -59, 1, 51, -60, 1},
@@ -309,12 +363,14 @@ public class EndToEndTest implements FabricClientGameTest {
 		String id = java.net.URLEncoder.encode(p.get("id").getAsString(), java.nio.charset.StandardCharsets.UTF_8);
 		JsonObject view = json(call(ctx, "GET", "/api/view?type=placement&id=" + id));
 		check(view.getAsJsonArray("size").toString().equals("[2,2,1]"), "BuildPrint build size " + view.get("size"));
-		JsonArray c = json(call(ctx, "GET", "/api/status?type=placement&id=" + id)).getAsJsonArray("counts");
-		// One correct, one missing, one with the wrong state.
+		// One correct, one missing, one with the wrong state, once the client has the two blocks set above.
+		JsonArray c = null;
+		for (int i = 0; i < 40 && (c == null || !(c.get(1).getAsInt() == 1 && c.get(2).getAsInt() == 1 && c.get(4).getAsInt() == 1)); i++, ctx.waitTicks(5))
+			c = json(call(ctx, "GET", "/api/status?type=placement&id=" + id)).getAsJsonArray("counts");
 		check(c.get(1).getAsInt() == 1 && c.get(2).getAsInt() == 1 && c.get(4).getAsInt() == 1, "BuildPrint status counts " + c);
 
 		// The same build loaded a second time in the same spot gets its own row.
-		ctx.runOnClient(_ -> check(BuildprintBlueprints.set("litweb-test-2", "Test tower", new int[] {50, -60, 1, 50, -59, 1, 51, -60, 1},
+		ctx.runOnClient(unused -> check(BuildprintBlueprints.set("litweb-test-2", "Test tower", new int[] {50, -60, 1, 50, -59, 1, 51, -60, 1},
 			new String[] {"minecraft:stone", "minecraft:oak_planks", "minecraft:oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]"}) != null, "second blueprint written"));
 		Set<String> towers = new HashSet<>();
 		for (int i = 0; i < 40 && towers.size() < 2; i++, ctx.waitTicks(5)) {
@@ -325,7 +381,7 @@ public class EndToEndTest implements FabricClientGameTest {
 		check(towers.size() == 2 && towers.stream().allMatch(t -> t.contains("#")), "two same-named builds in one spot have distinct ids " + towers);
 
 		// With Litematica's selection back at its untouched default, BuildPrint's is the one shown.
-		ctx.runOnClient(_ -> {
+		ctx.runOnClient(unused -> {
 			AreaSelection area = DataManager.getSelectionManager().getCurrentSelection();
 			Box box = area.getAllSubRegionBoxes().get(0);
 			area.setSubRegionCornerPos(box, PositionUtils.Corner.CORNER_1, BlockPos.ZERO);
@@ -381,9 +437,13 @@ public class EndToEndTest implements FabricClientGameTest {
 	}
 
 	private static boolean spawn(JsonObject view, String block, String flag) {
+		return block(view, block).get(flag).getAsBoolean();
+	}
+
+	private static JsonObject block(JsonObject view, String name) {
 		for (JsonElement e : view.getAsJsonArray("palette"))
-			if (e.isJsonObject() && e.getAsJsonObject().get("n").getAsString().equals(block)) return e.getAsJsonObject().get(flag).getAsBoolean();
-		throw new IllegalStateException(block + " isn't in the view");
+			if (e.isJsonObject() && e.getAsJsonObject().get("n").getAsString().equals(name)) return e.getAsJsonObject();
+		throw new IllegalStateException(name + " isn't in the view");
 	}
 
 	private void collectTextures(JsonObject view) {
