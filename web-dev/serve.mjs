@@ -83,6 +83,7 @@ function withContributors(st) {
     ...shared[0],
     id: 'a7d0c3a2-3333-4000-8000-00000000beef',
     name: 'Item Sorter',
+    origin: [61, -63, 1], // copies the cottage share; put it beside the cottage, not on top of it
     owner: ALICE,
     ownerName: 'Alice_Mines',
     mine: false,
@@ -92,7 +93,7 @@ function withContributors(st) {
       'About 2,800 items an hour with two hoppers per slice.\n\nBuild order: the hopper line first, then the comparators, then the item frames.\nTurn it on: give each filter hopper 18 of its item in the first slot and one renamed stick in each of the other four, then connect the input chest.',
   };
   // Alice also asks to share her lighthouse, so the page shows a share request until you answer it.
-  const request = { ...theirs, id: LIGHTHOUSE, name: 'Harbor Lighthouse' };
+  const request = { ...theirs, id: LIGHTHOUSE, name: 'Harbor Lighthouse', origin: [31, -63, 31] };
   // The cottage's Nether half, connected to it, with the portal room the game test built there.
   const hub = parts && {
     ...shared[0],
@@ -155,6 +156,7 @@ function servers(st) {
       ...s0,
       id: LIGHTHOUSE,
       name: 'Harbor Lighthouse',
+      origin: [31, -63, 31],
       owner: ALICE,
       ownerName: 'Alice_Mines',
       mine: false,
@@ -166,6 +168,7 @@ function servers(st) {
       ...s0,
       id: 'a7d0c3a2-2222-4000-8000-00000000beef',
       name: 'Spawn Market',
+      origin: [1, -63, 31],
       owner: BOB,
       ownerName: 'bob',
       mine: false,

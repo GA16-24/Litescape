@@ -57,6 +57,7 @@ function demoState() {
     ...shared[0],
     id: 'a7d0c3a2-3333-4000-8000-00000000beef',
     name: 'Item Sorter',
+    origin: [61, -63, 1], // copies the cottage share; put it beside the cottage, not on top of it
     owner: ALICE,
     ownerName: 'Alice_Mines',
     mine: false,
@@ -71,7 +72,11 @@ function demoState() {
   return {
     ...state,
     singleplayer: false,
-    shared: [...shared, theirs, { ...theirs, id: LIGHTHOUSE, name: 'Harbor Lighthouse', answer: 'pending' }],
+    shared: [
+      ...shared,
+      theirs,
+      { ...theirs, id: LIGHTHOUSE, name: 'Harbor Lighthouse', origin: [31, -63, 31], answer: 'pending' },
+    ],
     placements: state.placements.map((p) => ({ ...p, author: 'Kestrel_Builds' })),
     server: here,
     online: [
@@ -90,6 +95,7 @@ function demoState() {
             ...s0,
             id: LIGHTHOUSE,
             name: 'Harbor Lighthouse',
+            origin: [31, -63, 31],
             owner: ALICE,
             ownerName: 'Alice_Mines',
             mine: false,
@@ -99,6 +105,7 @@ function demoState() {
             ...s0,
             id: 'a7d0c3a2-2222-4000-8000-00000000beef',
             name: 'Spawn Market',
+            origin: [1, -63, 31],
             owner: BOB,
             ownerName: 'bob',
             mine: false,
