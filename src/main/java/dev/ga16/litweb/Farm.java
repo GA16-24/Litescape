@@ -436,9 +436,7 @@ public final class Farm {
 		o.addProperty("seconds", before == null ? 0 : (now - runningSince) / 1e9);
 		if (baselineTicks > 1) o.addProperty("msBase", baselineNanos / 1e6 / (Math.min(baselineTicks, BASELINE_TICKS + 1) - 1));
 		if (ticks > 0) o.addProperty("msTick", runNanos / 1e6 / ticks);
-		int mobs = 0;
-		for (Entity e : level.getEntities((Entity) null, new AABB(v.x0, v.y0, v.z0, v.x0 + v.sx, v.y0 + v.sy, v.z0 + v.sz).inflate(128), e -> e instanceof Mob)) mobs++;
-		o.addProperty("mobs", mobs);
+		o.addProperty("mobs", level.getEntities((Entity) null, new AABB(v.x0, v.y0, v.z0, v.x0 + v.sx, v.y0 + v.sy, v.z0 + v.sz).inflate(128), e -> e instanceof Mob).size());
 		JsonArray items = new JsonArray();
 		if (before != null) {
 			Map<Item, Integer> gained = count();
