@@ -62,10 +62,11 @@ function mockDownloads(t) {
 test('findJava picks the newest Java that is new enough', { skip }, async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'litescape-java-'));
   fakeJava(path.join(tmp, 'runtime', 'java-runtime-gamma', 'jre'), 21);
-  const want = fakeJava(path.join(tmp, 'runtime', 'java-runtime-epsilon', 'jre'), 25);
+  // Newer than any real Java, so a Java on the PATH can't win.
+  const want = fakeJava(path.join(tmp, 'runtime', 'java-runtime-epsilon', 'jre'), 90);
   assert.deepEqual(await findJava([path.join(tmp, 'runtime'), path.join(tmp, 'missing')], 25), {
     bin: want,
-    major: 25,
+    major: 90,
   });
   assert.equal((await findJava([path.join(tmp, 'runtime', 'java-runtime-gamma')], 99))?.bin, undefined);
 });

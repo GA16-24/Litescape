@@ -91,7 +91,7 @@ Click **Test a farm** on the app's waiting screen, or use the app menu (<kbd>⌘
 
 Press **Run test**. The first run downloads the server from Fabric and Mojang, and Fabric API from Modrinth, which takes a minute. After that, Litescape on that server pastes the farm into an empty world, pulls your levers and fast-forwards with `/tick sprint`. An hour of game time takes under a second for a simple farm and up to about 20 seconds for one full of mobs. You get what the farm's chests and hoppers collected, per hour, and the **server cost**: how many of the 50 milliseconds a tick may take the farm adds. With furnaces, smokers or blast furnaces in the build, you also see how many items they smelted per hour and how close that is to their top speed. If your server's ticks already take 45 ms, a farm that adds 6 will make it lag.
 
-What it can't do yet: containers you don't keep full start empty, mobs and minecarts in the schematic are left out, and there's no terrain around the farm, so mob farm rates are a best case. The cost is measured on your computer, not your server's.
+What it can't do yet: containers you don't keep full start empty, block data like a spawner's mob isn't copied, mobs and minecarts in the schematic are left out, and there's no terrain around the farm, so mob farm rates are a best case. The cost is measured on your computer, not your server's.
 
 The app learns how blocks look from the mod, so start Minecraft 26.3 with Litescape once before using it.
 

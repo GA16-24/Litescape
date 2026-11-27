@@ -104,7 +104,8 @@ export function readLitematic(gz) {
     const ids = r.BlockStatePalette.map((s) => {
       const key = stateKey(s);
       if (!index.has(key)) {
-        if (palette.length === 65536) throw new Error('The schematic has more than 65,536 kinds of blocks');
+        // The farm test's server (Volume) numbers block states with signed shorts.
+        if (palette.length === 32768) throw new Error('The schematic has more than 32,768 kinds of blocks');
         index.set(key, palette.length);
         palette.push(s);
       }

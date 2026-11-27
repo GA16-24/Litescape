@@ -59,14 +59,21 @@ export function setupFarm({ mod, server, serverDir, startServer, instanceDirs, o
     return listed.files;
   };
   const table = () => mod && blockTable(blocksDir(mcBase(mod.mc)));
-  let run = null; // the test this window started: { id, state, error }, until the server reports on it
+  let run = null; // the test this window started: { id, modified, state, error }, until the server reports on it
 
   const farmStatus = () => {
     const f =
       run && run.state === 'sent' && server.farm && (server.farm.id === run.id || server.farm.state === 'error')
         ? server.farm
         : run;
-    return { ...(f || {}), server: server.state, load: server.load, eula: eulaAccepted(serverDir()) };
+    // modified: the file's version the run used, so the page doesn't show its results on an edited file
+    return {
+      ...(f || {}),
+      modified: run?.modified,
+      server: server.state,
+      load: server.load,
+      eula: eulaAccepted(serverDir()),
+    };
   };
 
   async function startFarm(q) {
@@ -75,7 +82,7 @@ export function setupFarm({ mod, server, serverDir, startServer, instanceDirs, o
     const job = jobOf(readLitematic(fs.readFileSync(file.path)), file.id, q);
     if (q.get('agree') === '1') acceptEula(serverDir());
     if (!eulaAccepted(serverDir())) return json({ error: 'Agree to the Minecraft EULA first' }, 409);
-    run = { id: file.id, state: 'server' };
+    run = { id: file.id, modified: file.modified, state: 'server' };
     const mine = run;
     (async () => {
       try {
@@ -88,7 +95,7 @@ export function setupFarm({ mod, server, serverDir, startServer, instanceDirs, o
         mine.state = 'sent';
         server.send('litweb-farm run');
       } catch (e) {
-        if (run === mine) run = { id: mine.id, state: 'error', error: e.message };
+        if (run === mine) run = { ...mine, state: 'error', error: e.message };
       }
     })();
     return json(farmStatus());
@@ -111,14 +118,14 @@ export function setupFarm({ mod, server, serverDir, startServer, instanceDirs, o
         const t = table();
         if (!t) return json({ error: 'Start Minecraft with Litescape once, so the app learns how blocks look' }, 409);
         const s = readLitematic(fs.readFileSync(file.path));
-        return json({ ...viewOf(s, t, file.id), name: s.name || file.name });
+        return json({ ...viewOf(s, t, file.id), name: s.name || file.name, modified: file.modified });
       }
       case '/api/farm':
         return post ? startFarm(q) : json(farmStatus());
       case '/api/farm/stop':
         if (!post) return json({ error: 'Use POST' }, 405);
         if (run?.state === 'sent') server.send('litweb-farm stop');
-        else if (run) run = { id: run.id, state: 'stopped' };
+        else if (run) run = { ...run, state: 'stopped' };
         return json(farmStatus());
       case '/api/app/open': {
         if (!post) return json({ error: 'Use POST' }, 405);
