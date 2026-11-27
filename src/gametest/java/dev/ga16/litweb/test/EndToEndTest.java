@@ -40,12 +40,15 @@ import dev.ga16.litweb.test.legacy.ClientGameTests.TestSingleplayerContext;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -77,13 +80,7 @@ public class EndToEndTest implements FabricClientGameTest {
 			Files.createDirectories(old.resolve("old"));
 			Files.writeString(old.resolve("old").resolve("kept.bin"), "");
 			try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
-				//? if >=26.2 {
-				sp.getConnection().waitForChunksRender();
-				//?} elif >=26.1 {
-				/*sp.getClientLevel().waitForChunksRender();
-				*///?} else {
-				/*sp.getClientWorld().waitForChunksRender();
-				*///?}
+				waitForChunks(sp);
 				// Grass under the lamp and the observer would turn to dirt at a random moment and change the placement counts.
 				//? if >=1.21.11 {
 				sp.getServer().runCommand("gamerule random_tick_speed 0");
@@ -291,16 +288,7 @@ public class EndToEndTest implements FabricClientGameTest {
 				check(contrib != null && contrib.size() == 1, "one contributor " + contrib);
 				check(contrib.entrySet().iterator().next().getValue().getAsJsonObject().get("placed").getAsInt() == 1, "only the matching block counts " + contrib);
 
-				for (String t : textures) {
-					int colon = t.indexOf(':');
-					String path = "/tex/" + t.substring(0, colon) + "/" + t.substring(colon + 1);
-					CompletableFuture<HttpResponse<byte[]>> f = HTTP.sendAsync(req("GET", path), HttpResponse.BodyHandlers.ofByteArray());
-					ctx.waitFor(mc -> f.isDone(), 200);
-					check(f.join().statusCode() == 200, "texture " + path);
-					Path file = out.resolve(path.substring(1) + ".png");
-					Files.createDirectories(file.getParent());
-					Files.write(file, f.join().body());
-				}
+				saveTextures(ctx);
 				// A loaded share that stops being shared stays in Litematica, so it shows as a placement again, not nowhere.
 				call(ctx, "POST", "/api/load?id=" + shared);
 				call(ctx, "POST", "/api/unshare?id=" + shared);
@@ -312,6 +300,7 @@ public class EndToEndTest implements FabricClientGameTest {
 				buildPrint(ctx, sp);
 				shaderPack(ctx);
 				ctx.takeScreenshot("litweb-scene");
+				crossDimension(ctx, sp);
 			}
 			// The production test checks for this, so a run that never reaches the end can't pass.
 			Files.writeString(out.resolve("passed"), "");
@@ -341,6 +330,120 @@ public class EndToEndTest implements FabricClientGameTest {
 		t.setDaemon(true);
 		t.start();
 		return t;
+	}
+
+	private static void waitForChunks(TestSingleplayerContext sp) {
+		//? if >=26.2 {
+		sp.getConnection().waitForChunksRender();
+		//?} elif >=26.1 {
+		/*sp.getClientLevel().waitForChunksRender();
+		*///?} else {
+		/*sp.getClientWorld().waitForChunksRender();
+		*///?}
+	}
+
+	/**
+	 * A farm in two dimensions: a lit Nether portal in the Overworld and its partner in the Nether, each shared from
+	 * its own dimension and connected. The server says where each portal leads, and each part is judged for the mob
+	 * that spawns in its dimension.
+	 */
+	private void crossDimension(ClientGameTestContext ctx, TestSingleplayerContext sp) throws IOException {
+		TestServerContext s = sp.getServer();
+		// Overworld: portal blocks at 61..62, -59..-57, 20. Their Nether exit is 7, y, 2.
+		s.runCommand("fill 60 -60 20 63 -56 20 obsidian");
+		s.runCommand("fill 61 -59 20 62 -57 20 air");
+		s.runCommand("setblock 61 -59 20 fire");
+		// Nether: a sealed room at 4..13, 68..77, -1..5 with portal blocks at 8..9, 71..73, 2. Their Overworld exit is 68 or 76, y, 20.
+		s.runCommand("execute in minecraft:the_nether run forceload add 0 0");
+		s.runCommand("execute in minecraft:the_nether run fill 4 68 -1 13 77 5 obsidian hollow");
+		s.runCommand("execute in minecraft:the_nether run fill 7 70 2 10 74 2 obsidian");
+		s.runCommand("execute in minecraft:the_nether run fill 8 71 2 9 73 2 air");
+		s.runCommand("execute in minecraft:the_nether run setblock 8 71 2 fire");
+		ctx.waitTicks(5);
+		check(s.computeOnServer(server -> server.overworld().getBlockState(new BlockPos(62, -57, 20)).is(Blocks.NETHER_PORTAL)
+			&& server.getLevel(Level.NETHER).getBlockState(new BlockPos(9, 73, 2)).is(Blocks.NETHER_PORTAL)), "both portals lit");
+
+		String overworld = sharePart(ctx, s, "Portal room", new BlockPos(60, -60, 20), new BlockPos(63, -56, 20), Level.OVERWORLD);
+		s.runCommand("execute in minecraft:the_nether run tp @a 8.5 69 4.5");
+		// Sharing reads Litematica and the server, not rendered chunks, so the client only needs to arrive.
+		ctx.waitFor(mc -> mc.level != null && mc.player != null && mc.level.dimension() == Level.NETHER, 600);
+		ctx.waitTicks(20);
+		String nether = sharePart(ctx, s, "Nether hub", new BlockPos(7, 70, 2), new BlockPos(10, 74, 2), Level.NETHER);
+
+		call(ctx, "POST", "/api/link?id=" + overworld + "&other=" + nether);
+		JsonObject st = json(call(ctx, "GET", "/api/state"));
+		for (int i = 0; i < 40 && links(st, overworld).isEmpty(); i++, ctx.waitTicks(5)) st = json(call(ctx, "GET", "/api/state"));
+		check(links(st, overworld).equals(List.of(nether)) && links(st, nether).equals(List.of(overworld)), "both parts list each other: " + st.get("shared"));
+		save("state-parts.json", st.toString());
+		// Update copy keeps the connection.
+		String placement = null;
+		for (JsonElement e : st.getAsJsonArray("placements")) if (e.getAsJsonObject().get("name").getAsString().equals("Nether hub")) placement = e.getAsJsonObject().get("id").getAsString();
+		call(ctx, "POST", "/api/share?id=" + placement + "&margin=0");
+		check(links(json(call(ctx, "GET", "/api/state")), nether).equals(List.of(overworld)), "Update copy keeps the connected part");
+
+		// Each portal leads to the other, by the game's rules: nearest portal block, then the lowest.
+		JsonArray portals = json(save("portals.json", call(ctx, "GET", "/api/portals?id=" + overworld))).getAsJsonArray("portals");
+		check(portals.size() == 2, "one portal in each part: " + portals);
+		JsonObject there = portals.get(0).getAsJsonObject(), back = portals.get(1).getAsJsonObject();
+		check(there.get("part").getAsString().equals(overworld) && there.get("lands").getAsString().equals("portal") && there.get("in").getAsString().equals(nether)
+			&& there.get("at").toString().equals("[8,71,2]") && there.get("built").getAsBoolean() && there.get("others").getAsInt() == 0
+			&& there.get("blocks").getAsInt() == 6 && there.get("to").getAsString().equals("minecraft:the_nether"), "Overworld portal leads to the Nether part: " + there);
+		check(back.get("part").getAsString().equals(nether) && back.get("lands").getAsString().equals("portal") && back.get("in").getAsString().equals(overworld)
+			&& back.get("at").toString().equals("[62,-57,20]") && back.get("others").getAsInt() == 0, "Nether portal leads back to the Overworld part: " + back);
+		Files.writeString(out.resolve("parts.json"), "{\"overworld\":\"" + overworld + "\",\"nether\":\"" + nether + "\"}");
+
+		// Spawning is judged for each part's own dimension: a zombie up here, a zombified piglin there, whatever the light.
+		JsonObject nv = json(save("view-nether.json", call(ctx, "GET", "/api/view?type=shared&id=" + nether)));
+		collectTextures(nv);
+		saveTextures(ctx);
+		JsonObject rule = nv.getAsJsonObject("spawnRule");
+		check(rule.get("id").getAsString().equals("minecraft:zombified_piglin") && rule.get("light").getAsInt() == 15 && rule.get("cells").getAsInt() == 2, "Nether spawn rule " + rule);
+		rule = json(call(ctx, "GET", "/api/view?type=shared&id=" + overworld)).getAsJsonObject("spawnRule");
+		check(rule.get("id").getAsString().equals("minecraft:zombie") && rule.get("light").getAsInt() == 0, "Overworld spawn rule " + rule);
+
+		// Unsharing one part takes it out of the other's list. With the Nether portal gone too, the game would build a new one.
+		call(ctx, "POST", "/api/unshare?id=" + nether);
+		for (int i = 0; i < 40 && !links(st, overworld).isEmpty(); i++, ctx.waitTicks(5)) st = json(call(ctx, "GET", "/api/state"));
+		check(links(st, overworld).isEmpty(), "an unshared part leaves the other's list");
+		s.runCommand("execute in minecraft:the_nether run fill 8 71 2 9 73 2 air");
+		ctx.waitTicks(45); // the server answers a portal check at most every 2 s
+		JsonObject alone = json(call(ctx, "GET", "/api/portals?id=" + overworld)).getAsJsonArray("portals").get(0).getAsJsonObject();
+		check(alone.get("lands").getAsString().equals("new") && alone.get("at").toString().equals("[7,-59,2]"), "no portal in range: the game builds one " + alone);
+		call(ctx, "POST", "/api/unshare?id=" + overworld);
+		// The test ends in the Nether: the world closes next, and a trip back can outlast the wait on a slow runner.
+	}
+
+	/** Shares the blocks between two corners as a placement, from the dimension the player is in now. */
+	private static String sharePart(ClientGameTestContext ctx, TestServerContext s, String name, BlockPos a, BlockPos b, ResourceKey<Level> dim) {
+		AreaSelection area = ctx.computeOnClient(unused -> {
+			AreaSelection sel = DataManager.getSelectionManager().getCurrentSelection();
+			check(sel != null, "a Litematica selection in " + dim);
+			Box box = sel.getAllSubRegionBoxes().get(0);
+			sel.setSubRegionCornerPos(box, PositionUtils.Corner.CORNER_1, a);
+			sel.setSubRegionCornerPos(box, PositionUtils.Corner.CORNER_2, b);
+			return sel;
+		});
+		LitematicaSchematic schem = s.computeOnServer(server -> LitematicaSchematic.createFromWorld(server.getLevel(dim), area,
+			new LitematicaSchematic.SchematicSaveInfo(false, false), "test", msg -> {}));
+		ctx.runOnClient(unused -> DataManager.getSchematicPlacementManager().addSchematicPlacement(SchematicPlacement.createFor(schem, a, name, true, true), false));
+		String id = null;
+		for (int i = 0; i < 40 && id == null; i++, ctx.waitTicks(5))
+			for (JsonElement e : json(call(ctx, "GET", "/api/state")).getAsJsonArray("placements"))
+				if (e.getAsJsonObject().get("name").getAsString().equals(name)) id = e.getAsJsonObject().get("id").getAsString();
+		check(id != null, name + " placement listed");
+		String shared = json(call(ctx, "POST", "/api/share?id=" + id + "&margin=0")).get("id").getAsString();
+		String st = "";
+		for (int i = 0; i < 40 && !st.contains("\"sharedId\":\"" + shared); i++, ctx.waitTicks(5)) st = call(ctx, "GET", "/api/state");
+		check(st.contains("\"sharedId\":\"" + shared), name + " shared");
+		return shared;
+	}
+
+	private static List<String> links(JsonObject state, String id) {
+		List<String> out = new ArrayList<>();
+		for (JsonElement e : state.getAsJsonArray("shared"))
+			if (e.getAsJsonObject().get("id").getAsString().equals(id) && e.getAsJsonObject().has("links"))
+				for (JsonElement l : e.getAsJsonObject().getAsJsonArray("links")) out.add(l.getAsString());
+		return out;
 	}
 
 	/** A BuildPrint build and selection show up like Litematica's: listed, viewable and compared with the world. */
@@ -444,6 +547,21 @@ public class EndToEndTest implements FabricClientGameTest {
 		for (JsonElement e : view.getAsJsonArray("palette"))
 			if (e.isJsonObject() && e.getAsJsonObject().get("n").getAsString().equals(name)) return e.getAsJsonObject();
 		throw new IllegalStateException(name + " isn't in the view");
+	}
+
+	/** The textures of every view collected so far, for web-dev/serve.mjs. */
+	private void saveTextures(ClientGameTestContext ctx) throws IOException {
+		for (String t : textures) {
+			int colon = t.indexOf(':');
+			String path = "/tex/" + t.substring(0, colon) + "/" + t.substring(colon + 1);
+			Path file = out.resolve(path.substring(1) + ".png");
+			if (Files.exists(file)) continue;
+			CompletableFuture<HttpResponse<byte[]>> f = HTTP.sendAsync(req("GET", path), HttpResponse.BodyHandlers.ofByteArray());
+			ctx.waitFor(mc -> f.isDone(), 200);
+			check(f.join().statusCode() == 200, "texture " + path);
+			Files.createDirectories(file.getParent());
+			Files.write(file, f.join().body());
+		}
 	}
 
 	private void collectTextures(JsonObject view) {

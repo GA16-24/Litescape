@@ -114,6 +114,15 @@ final class Servers {
 		return out;
 	}
 
+	/** The dimension a shared schematic is in, from the list saved for that server; null if it isn't there. */
+	static synchronized @Nullable String dim(String key, String id) {
+		Entry e = known.get(key);
+		if (e == null) return null;
+		for (var s : JsonParser.parseString(e.shared).getAsJsonArray())
+			if (s.getAsJsonObject().get("id").getAsString().equals(id)) return s.getAsJsonObject().get("dim").getAsString();
+		return null;
+	}
+
 	static void saveBlob(String key, String id, byte[] blob) {
 		try {
 			Files.createDirectories(blobDir(key));

@@ -62,6 +62,8 @@ const SERVER = [
   'The placement is locked in Litematica. Unlock it to move it.',
   "Couldn't save the schematic",
   "Couldn't read the shared placement",
+  "A schematic can't be connected to itself",
+  'Only the owner of both schematics or an operator can connect them',
 ];
 
 const KEYS = new Set([...sourceKeys(read('app.js')), ...htmlKeys(read('index.html')), ...SERVER]);

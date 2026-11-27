@@ -114,6 +114,8 @@ const S = {
   hidden: new Set(), // "server:sharedId" hidden in this browser, for servers from before share requests
   showHidden: false,
   notes: new Map(), // shared id -> notes typed but not saved yet
+  portals: new Map(), // shared id -> {list} or {err} from the server's portal check, or {busy}
+  linkPick: '', // the schematic picked in Connected parts to connect next
 };
 
 // ---------------------------------------------------------------- three.js
@@ -584,6 +586,7 @@ function prepare(data, atlas, refit) {
         light: e.light || 0,
         spawnOn: !!e.spawnOn,
         spawnIn: e.air || !!e.spawnIn,
+        open: e.air || (e.open ?? !!e.spawnIn),
         q: new Float32Array((e.q || []).flat()),
       },
   );
@@ -595,6 +598,7 @@ function prepare(data, atlas, refit) {
     blocks: data.blocks16,
     pal,
     rects: atlas.rects,
+    spawnRule: data.spawnRule,
   });
   sendEnt();
   buildHelpers(data);
@@ -1605,6 +1609,7 @@ function renderInspector() {
   h += '</section>';
   const shared = sh || (pl?.sharedId && findShared(pl.sharedId));
   if (shared) h += notesHtml(shared);
+  if (shared) h += partsHtml(shared);
   if (shared) h += surroundingsHtml(shared);
   h += spawnHtml(shared);
   if (shared?.manage && isLive()) h += accessHtml(shared);
@@ -1668,6 +1673,142 @@ function renderInspector() {
   if (f && document.activeElement?.id !== 'mat-filter' && S.matFocus) {
     f.focus();
     f.setSelectionRange(f.value.length, f.value.length);
+  }
+}
+
+// ---------------------------------------------------------------- connected parts
+
+/** A dimension's name; dimensions from mods and datapacks keep their id. */
+const dimName = (d) =>
+  d === 'minecraft:overworld'
+    ? t('Overworld')
+    : d === 'minecraft:the_nether'
+      ? t('Nether')
+      : d === 'minecraft:the_end'
+        ? t('End')
+        : d.replace('minecraft:', '');
+// A coordinate the server doesn't know (the world spawn's Y) is left out.
+const xyz = (p) => p.filter((v) => v != null).join(', ');
+
+/**
+ * The other parts of the same farm, often in another dimension, and where every portal in them leads. The owner
+ * (or an operator) connects their schematics here; everyone who can see them reads the parts and the portal check.
+ */
+function partsHtml(sh) {
+  const parts = (sh.links || []).map(findShared).filter(Boolean);
+  const mine =
+    sh.manage && isLive() ? sharedList().filter((s) => s.manage && s.id !== sh.id && !sh.links?.includes(s.id)) : [];
+  const portalsHere =
+    S.desc?.type === 'shared' && S.data?.palette.some((e) => e && /^minecraft:(nether|end)_portal$/.test(e.n));
+  let h = '';
+  if (parts.length || mine.length) {
+    h += `<section class="panel" id="parts"><div class="panel-head"><h3>${t('Connected parts')}</h3></div>`;
+    // A real link, so Cmd-click or middle-click opens the part in a new tab to view beside this one.
+    for (const p of parts)
+      h += `<div class="row"><span class="row-icon">${ICON.shared}</span>
+        <span class="row-main"><a class="row-title row-link" href="#/shared/${encodeURIComponent(p.id)}">${esc(p.name)}</a><span class="row-sub">${esc(dimName(p.dim))} · ${esc(xyz(p.origin))}</span></span>
+        ${sh.manage && isLive() ? `<button class="row-action" data-unlink="${esc(p.id)}" data-for="${esc(sh.id)}" data-tip="${t('Disconnect')}" aria-label="${t('Disconnect')}">${ICON.x}</button>` : ''}</div>`;
+    if (mine.length) {
+      const pick = mine.some((s) => s.id === S.linkPick) ? S.linkPick : mine[0].id;
+      const busy = S.busy.has(`link:${sh.id}`);
+      h += `<div class="part-add"><select class="opt-select" id="link-pick" aria-label="${t('Add a part')}">${mine.map((s) => `<option value="${esc(s.id)}"${s.id === pick ? ' selected' : ''}>${esc(dimName(s.dim))} · ${esc(s.name)}</option>`).join('')}</select>
+        <button class="btn" data-link="${esc(pick)}" data-for="${esc(sh.id)}" ${busy ? 'disabled' : ''}>${ICON.plug}${t('Connect')}</button></div>`;
+    }
+    h += '</section>';
+  }
+  if (isLive() && (parts.length || portalsHere)) h += portalsHtml(sh);
+  return h;
+}
+
+/** One line per lit portal: where it leads, problems first, with a short reason only when something is off. */
+function portalsHtml(sh) {
+  const r = S.portals.get(sh.id);
+  if (!r) queueMicrotask(() => checkPortals(sh.id));
+  const nameOf = (id) => esc(findShared(id)?.name || '?');
+  // A part's name, cut to fit with the full name on hover; a fixed label like "New portal" never gets cut.
+  const nm = (id) => `<span class="nm" title="${nameOf(id)}">${nameOf(id)}</span>`;
+  const label = (s) => `<span class="nm fixed">${s}</span>`;
+  const rows = (r?.list || []).map((p) => {
+    let to = nm(p.in);
+    const notes = [];
+    let bad = !!p.others;
+    // Without region access the server only sees loaded chunks, so "not there" may mean "not loaded".
+    if (p.lands === 'portal' && !p.in) {
+      [to, bad] = [label(t('Other portal')), true];
+      notes.push(t('Not in this farm'));
+    } else if (p.lands === 'portal' && !p.built)
+      notes.push(t(p.loadedOnly ? 'Not built or not loaded' : 'Not built yet'));
+    else if (p.lands === 'new') {
+      [to, bad] = [label(t('New portal')), true];
+      const radius = p.to === 'minecraft:the_nether' ? 16 : 128;
+      // "Can" already hedges; for a loaded-only check the panel's last line says the rest wasn't checked.
+      notes.push(
+        p.in
+          ? t('Can break blocks in {part}', { part: nameOf(p.in) })
+          : t(p.loadedOnly ? 'None loaded within {r} blocks' : 'None within {r} blocks', { r: radius }),
+      );
+    } else if (p.lands === 'platform') to = label(t('End platform'));
+    else if (p.lands !== 'portal') to = label(t('World spawn'));
+    if (p.others) notes.push(t('{n} of {total} blocks go elsewhere', { n: p.others, total: p.blocks }));
+    // The world spawn's height isn't known, and its line already names it.
+    const at = p.lands === 'spawn' ? '' : ` ${esc(xyz(p.at))}`;
+    const where = `<span class="nw">${esc(xyz(p.from))}</span> → <span class="nw">${esc(dimName(p.to))}${at}</span>`;
+    return {
+      bad,
+      html: `<div class="ready portal${bad ? '' : ' ok'}">${bad ? ICON.alert : ICON.check}<span class="pt"><span class="line">${nm(p.part)}→${to}</span>${notes.length ? `<span class="sub">${notes.join(' · ')}</span>` : ''}<span class="sub">${where}</span></span></div>`,
+    };
+  });
+  const bad = rows.filter((x) => x.bad).length;
+  let meta = bad ? `<span class="chip warn">${t('{n} to fix', { n: bad })}</span>` : '';
+  const busy = !r || r.busy; // the button stays put and spins, so the head doesn't shift
+  meta += `<button class="icon-btn" data-check-portals="${esc(sh.id)}" data-tip="${t('Check again')}" aria-label="${t('Check again')}" ${busy ? 'disabled aria-busy="true"' : ''}>${busy ? '<span class="spinner xs"></span>' : ICON.retry}</button>`;
+  let h = `<section class="panel" id="portals"><div class="panel-head"><h3>${t('Portals')}</h3><span class="head-meta">${meta}</span></div>`;
+  if (r?.err) h += `<p class="updated" style="color:var(--danger)">${esc(r.err)}</p>`;
+  else if (r?.list && !r.list.length) h += `<p class="updated">${t('No lit portals.')}</p>`;
+  h += rows
+    .sort((x, y) => y.bad - x.bad)
+    .map((x) => x.html)
+    .join('');
+  if (r?.list?.some((p) => p.loadedOnly))
+    h += `<p class="updated">${t('Only loaded chunks were checked. Operators can check the rest.')}</p>`;
+  return `${h}</section>`;
+}
+
+async function checkPortals(id, retry) {
+  if (S.portals.get(id)?.busy && !retry) return;
+  S.portals.set(id, { ...S.portals.get(id), busy: true }); // the last answer stays on screen while it checks
+  renderInspector();
+  try {
+    const r = await api(`api/portals?id=${encodeURIComponent(id)}`);
+    S.portals.set(id, { list: r.portals });
+  } catch (err) {
+    // A part opened right after another hits the server's 2 s limit; try again after it.
+    if (err.message === 'rate-limited') {
+      setTimeout(() => S.portals.get(id)?.busy && checkPortals(id, true), 2100);
+      return;
+    }
+    S.portals.set(id, { err: err.message });
+  }
+  renderInspector();
+}
+
+async function link(id, other, linked) {
+  const key = `link:${id}`;
+  if (S.busy.has(key)) return;
+  S.busy.add(key);
+  renderInspector();
+  try {
+    await api(`api/link?id=${encodeURIComponent(id)}&other=${encodeURIComponent(other)}&linked=${linked}`, {
+      method: 'POST',
+    });
+    S.api = await api('api/state'); // the server pushed the new list before it replied
+    S.portals.delete(id);
+    onState();
+  } catch (err) {
+    toast(t(linked ? "Couldn't connect the part" : "Couldn't disconnect the part"), err.message, { error: true });
+  } finally {
+    S.busy.delete(key);
+    renderInspector();
   }
 }
 
@@ -1860,12 +2001,26 @@ function spawnHtml(sh) {
   let h = `<section class="panel" id="spawning"><div class="panel-head"><h3>${t('Mob spawning')}</h3>${S.spawn ? `<span class="row-meta num">${fmt.format(S.spawnCount)}</span>` : ''}</div>
     <div class="sh-field"><span>${label}</span><button type="button" class="switch" role="switch" id="spawn-marks" aria-checked="${S.spawn}" aria-label="${label}"></button></div>`;
   if (S.spawn) {
-    h += `<p class="updated" style="margin:0 0 8px">${t('{n} blocks where a zombie could spawn at night: room to stand and no light from torches or lamps. Light them, cover them or dig them out.', { n: fmt.format(S.spawnCount) })}</p>`;
+    h += `<p class="updated" style="margin:0 0 8px">${spawnText(S.data?.spawnRule)}</p>`;
     h += `<p class="updated" style="margin:0 0 8px">${sh?.margin ? t('Checks the {m} blocks of surroundings captured around it. A farm needs everything within 128 blocks of where you stand spawnproofed.', { m: sh.margin }) : t('Checks only the blocks in this view. Share it with surroundings to check the land around it.')}</p>`;
     if (shaderOn())
       h += `<p class="updated" style="margin:0 0 8px">${t("The marks don't show while a shader pack is on.")}</p>`;
   }
   return `${h}</section>`;
+}
+
+/** The view's mob and its light rule, which the game picks for the view's dimension, then how to fix the marks. */
+function spawnText(rule) {
+  // Mods from before the rule judged every view for a zombie in the Overworld.
+  const { mob = t('Zombie'), light = 0 } = rule || {};
+  const [when, fix] =
+    light >= 15
+      ? [t('Any light'), t('Cover them or dig them out.')]
+      : [
+          light ? t('Block light {l} or less', { l: light }) : t('Block light 0'),
+          t('Light them, cover them or dig them out.'),
+        ];
+  return `<span><span class="text">${esc(mob)}</span> · ${t('{when}. {fix}', { when, fix })}</span>`;
 }
 
 function toggleSpawn() {
@@ -2227,6 +2382,12 @@ $('inspector').addEventListener('click', (e) => {
   }
   const sv = t.closest('[data-save-notes]');
   if (sv) return saveNotes(sv.dataset.saveNotes);
+  const ul = t.closest('[data-unlink]');
+  if (ul) return link(ul.dataset.for, ul.dataset.unlink, false);
+  const ln = t.closest('[data-link]');
+  if (ln) return link(ln.dataset.for, $('link-pick')?.value || ln.dataset.link, true);
+  const cp = t.closest('[data-check-portals]');
+  if (cp) return checkPortals(cp.dataset.checkPortals);
   const rc = t.closest('[data-recapture]');
   if (rc) return recapture(rc.dataset.recapture, 'remove' in rc.dataset ? 0 : undefined);
   const tm = t.closest('[data-terrain]')?.dataset.terrain;
@@ -2255,6 +2416,7 @@ $('inspector').addEventListener('mousedown', (e) => {
   if (e.target.closest('[data-add-player]')) e.preventDefault(); // keep focus in the field so the list stays open
 });
 $('inspector').addEventListener('change', (e) => {
+  if (e.target.id === 'link-pick') S.linkPick = e.target.value;
   if (e.target.name === 'access') {
     const a = accessTarget();
     setAccess(a.id, e.target.value, a.players);

@@ -61,6 +61,8 @@ public final class LitWeb implements ModInitializer {
 	static final int MAX_PLAYERS = 100;
 	/** Characters of designer notes per schematic; the whole list is pushed to every player on each change. */
 	static final int MAX_NOTES = 4000;
+	/** Other parts one schematic can be connected to, such as the Nether half of a farm. */
+	static final int MAX_LINKS = 8;
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
 	/** Metadata for one shared schematic; the blocks live in <id>.bin. */
@@ -85,6 +87,8 @@ public final class LitWeb implements ModInitializer {
 		public boolean placement;
 		/** What the designer wants builders to know: rates, build order, how to turn it on. Null = none. */
 		public @org.jspecify.annotations.Nullable String notes;
+		/** Ids of the other parts of the same farm, often in another dimension. Both sides list each other. */
+		public List<String> links = new ArrayList<>();
 	}
 
 	public static final class Contributor {
@@ -104,6 +108,7 @@ public final class LitWeb implements ModInitializer {
 	private final Map<String, Volume> loaded = new HashMap<>();
 	private final Map<UUID, ByteArrayOutputStream> uploads = new HashMap<>();
 	private final Map<UUID, Long> lastStatus = new HashMap<>();
+	private final Map<UUID, Long> lastPortals = new HashMap<>();
 	private final Properties config = new Properties();
 	private Path dir;
 
@@ -126,6 +131,7 @@ public final class LitWeb implements ModInitializer {
 		ServerPlayConnectionEvents.DISCONNECT.register((h, s) -> {
 			uploads.remove(h.player.getUUID());
 			lastStatus.remove(h.player.getUUID());
+			lastPortals.remove(h.player.getUUID());
 		});
 		ServerPlayNetworking.registerGlobalReceiver(Req.TYPE, (req, ctx) -> {
 			ServerPlayer player = ctx.player();
@@ -171,6 +177,7 @@ public final class LitWeb implements ModInitializer {
 					if (s.contributors == null) s.contributors = new LinkedHashMap<>(); // index.json from before contributors existed
 					if (s.players == null) s.players = new LinkedHashMap<>(); // index.json from before access existed
 					if (s.answers == null) s.answers = new LinkedHashMap<>(); // index.json from before share requests existed
+					if (s.links == null) s.links = new ArrayList<>(); // index.json from before connected parts existed
 					shared.put(s.id, s);
 				}
 			}
@@ -294,6 +301,41 @@ public final class LitWeb implements ModInitializer {
 				saveIndexAndBroadcast(server);
 				send(player, req.req(), "", new byte[0]);
 			}
+			case "link" -> { // connect two parts of one farm, or take one out
+				JsonObject a = GSON.fromJson(req.arg(), JsonObject.class);
+				Shared s = require(player, a.get("id").getAsString()), o = require(player, a.get("other").getAsString());
+				if (s == o) throw new IOException("A schematic can't be connected to itself");
+				if (!canManage(player, s) || !canManage(player, o)) throw new IOException("Only the owner of both schematics or an operator can connect them");
+				if (a.get("linked").getAsBoolean()) {
+					if (!s.links.contains(o.id) && (s.links.size() >= MAX_LINKS || o.links.size() >= MAX_LINKS)) {
+						throw new IOException("A schematic can have at most " + MAX_LINKS + " connected parts");
+					}
+					if (!s.links.contains(o.id)) s.links.add(o.id);
+					if (!o.links.contains(s.id)) o.links.add(s.id);
+				} else {
+					s.links.remove(o.id);
+					o.links.remove(s.id);
+				}
+				saveIndexAndBroadcast(server);
+				send(player, req.req(), "", new byte[0]);
+			}
+			case "portals" -> { // where its portals and its parts' portals lead
+				if (!allowed(player, "shared-progress")) throw new IOException("no-permission");
+				long now = System.currentTimeMillis();
+				if (now - lastPortals.getOrDefault(player.getUUID(), 0L) < 2000) throw new IOException("rate-limited");
+				lastPortals.put(player.getUUID(), now);
+				Shared s = require(player, req.arg());
+				List<Shared> parts = new ArrayList<>(List.of(s));
+				for (String id : s.links) {
+					Shared o = shared.get(id);
+					if (o != null && canSee(player, o)) parts.add(o);
+				}
+				Map<String, Volume> volumes = new HashMap<>();
+				for (Shared p : parts) volumes.put(p.id, volume(p));
+				// The whole portal index is region-read; alone in their own world, the host sees it all anyway.
+				boolean everywhere = allowed(player, "region-read") || !server.isDedicatedServer() && server.getPlayerCount() == 1;
+				send(player, req.req(), "", GSON.toJson(Portals.check(server, parts, volumes, everywhere)).getBytes(StandardCharsets.UTF_8));
+			}
 			case "answer" -> { // accept or deny someone else's share request
 				JsonObject a = GSON.fromJson(req.arg(), JsonObject.class);
 				Shared s = require(player, a.get("id").getAsString());
@@ -306,6 +348,7 @@ public final class LitWeb implements ModInitializer {
 				Shared s = require(player, req.arg());
 				if (!canManage(player, s)) throw new IOException("Only " + s.ownerName + " or an operator can stop sharing this schematic");
 				shared.remove(s.id);
+				for (Shared o : shared.values()) o.links.remove(s.id);
 				loaded.remove(s.id);
 				credited.remove(s.id);
 				creditedDirty.remove(s.id);
@@ -364,6 +407,7 @@ public final class LitWeb implements ModInitializer {
 			s.players = old.players;
 			s.answers = old.answers;
 			s.notes = old.notes;
+			s.links = old.links;
 		}
 		// Old clients send no margin; they get no surroundings rather than stale ones from before a move.
 		int margin = meta.has("margin") ? meta.get("margin").getAsInt() : 0;
@@ -585,6 +629,12 @@ public final class LitWeb implements ModInitializer {
 			JsonObject o = GSON.toJsonTree(s).getAsJsonObject();
 			o.addProperty("manage", canManage(player, s));
 			o.remove("answers"); // who turned it down is their own business
+			com.google.gson.JsonArray links = new com.google.gson.JsonArray();
+			for (String id : s.links) { // parts this player can't see read as not there
+				Shared other = shared.get(id);
+				if (other != null && canSee(player, other)) links.add(id);
+			}
+			o.add("links", links);
 			Boolean answer = s.answers.get(player.getStringUUID());
 			o.addProperty("answer", answer == null ? "pending" : answer ? "accepted" : "denied");
 			list.add(o);

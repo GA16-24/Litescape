@@ -174,6 +174,20 @@ final class WebServer {
 						await(Bridge.request("notes", body.toString(), new byte[0]));
 						json(ex, 200, new JsonObject());
 					}
+					case "/api/link" -> {
+						if (!post) throw new HttpError(405, "Use POST");
+						JsonObject body = new JsonObject();
+						body.addProperty("id", q.getOrDefault("id", ""));
+						body.addProperty("other", q.getOrDefault("other", ""));
+						body.addProperty("linked", !"false".equals(q.get("linked")));
+						await(Bridge.request("link", body.toString(), new byte[0]));
+						json(ex, 200, new JsonObject());
+					}
+					case "/api/portals" -> {
+						JsonObject out = new JsonObject();
+						out.add("portals", JsonParser.parseString(new String(await(Bridge.request("portals", q.getOrDefault("id", ""), new byte[0])), StandardCharsets.UTF_8)));
+						json(ex, 200, out);
+					}
 					case "/api/answer" -> {
 						if (!post) throw new HttpError(405, "Use POST");
 						JsonObject body = new JsonObject();
@@ -324,6 +338,7 @@ final class WebServer {
 		JsonObject contents = null;
 		String source, name;
 		String dim = null; // the view's dimension when it may not be the player's; "" for another server's world
+		String spawnDim = null; // the dimension mob spawning is judged for; null = the player's
 		switch (type) {
 			case "selection" -> {
 				Schematics.Selection sel = onClient(Schematics::selection);
@@ -368,8 +383,10 @@ final class WebServer {
 					dim = "";
 					for (var e : JsonParser.parseString(Bridge.sharedJson).getAsJsonArray())
 						if (e.getAsJsonObject().get("id").getAsString().equals(id)) dim = e.getAsJsonObject().get("dim").getAsString();
+					spawnDim = dim;
 				} else {
 					dim = "";
+					spawnDim = Servers.dim(serverKey, id);
 					// A remembered server: show the copy saved when it was last opened there.
 					byte[] blob = Servers.blob(serverKey, id);
 					if (blob == null) throw new HttpError(404, "not-saved");
@@ -394,13 +411,14 @@ final class WebServer {
 		buf.asShortBuffer().put(v.blocks);
 		out.addProperty("blocks", Base64.getEncoder().encodeToString(buf.array()));
 		Volume fv = v;
-		String fdim = dim;
+		String fdim = dim, fspawnDim = spawnDim;
 		int[] in = withTerrain != null && withTerrain.inner() != null ? withTerrain.inner() : new int[] {0, 0, 0, v.sx, v.sy, v.sz};
 		onClient(() -> {
 			BlockPos center = new BlockPos(fv.x0 + fv.sx / 2, fv.y0 + fv.sy / 2, fv.z0 + fv.sz / 2);
-			new Models(mc.level, center).export(fv.palette, out);
+			String sd = fspawnDim != null || mc.level == null ? fspawnDim : mc.level.dimension().identifier().toString();
+			new Models(mc.level, center, Models.SpawnRule.of(mc.level, sd)).export(fv.palette, out);
 			// The player's chunks only hold this world's biomes, so a view from another dimension or server gets none.
-			if (fdim == null || fdim.equals(mc.level.dimension().identifier().toString()))
+			if (mc.level != null && (fdim == null || fdim.equals(mc.level.dimension().identifier().toString())))
 				out.add("biomes", biomes(mc.level, fv.x0 + in[0], fv.y0 + in[1], fv.z0 + in[2], in[3], in[4], in[5]));
 			return null;
 		});
