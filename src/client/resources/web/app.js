@@ -1703,9 +1703,10 @@ function partsHtml(sh) {
   let h = '';
   if (parts.length || mine.length) {
     h += `<section class="panel" id="parts"><div class="panel-head"><h3>${t('Connected parts')}</h3></div>`;
+    // A real link, so Cmd-click or middle-click opens the part in a new tab to view beside this one.
     for (const p of parts)
-      h += `<div class="row" role="button" tabindex="0" data-go-shared="${esc(p.id)}"><span class="row-icon">${ICON.shared}</span>
-        <span class="row-main"><span class="row-title">${esc(p.name)}</span><span class="row-sub">${esc(dimName(p.dim))} · ${esc(xyz(p.origin))}</span></span>
+      h += `<div class="row"><span class="row-icon">${ICON.shared}</span>
+        <span class="row-main"><a class="row-title row-link" href="#/shared/${encodeURIComponent(p.id)}">${esc(p.name)}</a><span class="row-sub">${esc(dimName(p.dim))} · ${esc(xyz(p.origin))}</span></span>
         ${sh.manage && isLive() ? `<button class="row-action" data-unlink="${esc(p.id)}" data-for="${esc(sh.id)}" data-tip="${t('Disconnect')}" aria-label="${t('Disconnect')}">${ICON.x}</button>` : ''}</div>`;
     if (mine.length) {
       const pick = mine.some((s) => s.id === S.linkPick) ? S.linkPick : mine[0].id;
@@ -2387,8 +2388,6 @@ $('inspector').addEventListener('click', (e) => {
   if (ln) return link(ln.dataset.for, $('link-pick')?.value || ln.dataset.link, true);
   const cp = t.closest('[data-check-portals]');
   if (cp) return checkPortals(cp.dataset.checkPortals);
-  const go = t.closest('[data-go-shared]');
-  if (go) return open({ type: 'shared', id: go.dataset.goShared });
   const rc = t.closest('[data-recapture]');
   if (rc) return recapture(rc.dataset.recapture, 'remove' in rc.dataset ? 0 : undefined);
   const tm = t.closest('[data-terrain]')?.dataset.terrain;
@@ -2412,13 +2411,6 @@ $('inspector').addEventListener('click', (e) => {
   if (t.closest('#copy-mats')) return copyMaterials();
   if (t.closest('#ghosts')) return toggleGhosts();
   if (t.closest('#spawn-marks')) return toggleSpawn();
-});
-$('inspector').addEventListener('keydown', (e) => {
-  const go = (e.key === 'Enter' || e.key === ' ') && e.target.closest?.('[data-go-shared]');
-  if (go && e.target === go) {
-    e.preventDefault();
-    open({ type: 'shared', id: go.dataset.goShared });
-  }
 });
 $('inspector').addEventListener('mousedown', (e) => {
   if (e.target.closest('[data-add-player]')) e.preventDefault(); // keep focus in the field so the list stays open

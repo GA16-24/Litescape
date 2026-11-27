@@ -1089,6 +1089,27 @@ button {
 .updated .text {
   color: var(--text);
 }
+/* A connected part's name is the link; it stretches over the row, with Disconnect kept above it. */
+.row-link {
+  color: inherit;
+  text-decoration: none;
+}
+.row-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.row-link:focus-visible {
+  outline: none;
+}
+.row:has(.row-link:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.row:has(.row-link) .row-action {
+  position: relative;
+}
 .part-add {
   display: flex;
   gap: 6px;
