@@ -43,7 +43,7 @@ function mockDownloads(t) {
         { loader: { version: '0.20.1', stable: true } },
       ]);
     if (url.endsWith('/versions/installer')) return json([{ version: '1.1.2', stable: true }]);
-    if (url.includes('api.modrinth.com')) {
+    if (url.startsWith('https://api.modrinth.com/')) {
       const sha512 = crypto.createHash('sha512').update('fapi').digest('hex');
       const file = {
         primary: true,

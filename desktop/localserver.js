@@ -82,12 +82,17 @@ export async function setupServer(dir, mod) {
   install(dir, mod);
   const props = path.join(dir, 'server.properties');
   // A new world is empty, so a farm test counts only what the farm itself makes. Spawn protection off, since nobody is op.
-  if (!fs.existsSync(props))
+  // 'wx' writes only a new server's file, so the user's edits stay.
+  try {
     fs.writeFileSync(
       props,
       'motd=Litescape test server\nspawn-protection=0\ngenerate-structures=false\nlevel-type=minecraft\\:flat\n' +
         'generator-settings={"layers"\\:[{"block"\\:"minecraft\\:air","height"\\:1}],"biome"\\:"minecraft\\:plains"}\n',
+      { flag: 'wx' },
     );
+  } catch (e) {
+    if (e.code !== 'EEXIST') throw e;
+  }
   // Kept even if edited: only this computer can join, and an empty server keeps ticking so farm tests run.
   setProps(props, { 'server-ip': '127.0.0.1', 'pause-when-empty-seconds': '0' });
   return jar;
