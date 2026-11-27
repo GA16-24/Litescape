@@ -418,7 +418,7 @@ final class WebServer {
 			String sd = fspawnDim != null || mc.level == null ? fspawnDim : mc.level.dimension().identifier().toString();
 			new Models(mc.level, center, Models.SpawnRule.of(mc.level, sd)).export(fv.palette, out);
 			// The player's chunks only hold this world's biomes, so a view from another dimension or server gets none.
-			if (fdim == null || fdim.equals(mc.level.dimension().identifier().toString()))
+			if (mc.level != null && (fdim == null || fdim.equals(mc.level.dimension().identifier().toString())))
 				out.add("biomes", biomes(mc.level, fv.x0 + in[0], fv.y0 + in[1], fv.z0 + in[2], in[3], in[4], in[5]));
 			return null;
 		});

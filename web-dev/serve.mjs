@@ -105,7 +105,7 @@ function withContributors(st) {
     contributors: {},
     sharedId: undefined,
   };
-  const linksOf = (id) => [...links].filter((l) => l.includes(id)).map((l) => l.replace(id, '').replace('|', ''));
+  const linksOf = (id) => partsOf(id).slice(1);
   return {
     ...st,
     shared: [
@@ -134,6 +134,14 @@ const BOB = '5c2e7a10-0000-4000-8000-000000000b0b';
 const LIGHTHOUSE = 'a7d0c3a2-1111-4000-8000-00000000beef';
 const NETHER_HUB = 'a7d0c3a2-4444-4000-8000-00000000beef';
 // Connected parts, as "idA|idB"; the cottage starts connected to its Nether half.
+/** The id, then every part connected to it. */
+const partsOf = (id) => [
+  id,
+  ...[...links]
+    .map((l) => l.split('|'))
+    .filter((p) => p.includes(id))
+    .map((p) => p.find((x) => x !== id)),
+];
 const links = new Set(parts ? [`${state.shared[0]?.id}|${NETHER_HUB}`] : []);
 // Share requests answered in the page, by shared id.
 const answers = new Map();
@@ -218,7 +226,7 @@ createServer(async (req, res) => {
         const id = url.searchParams.get('id');
         const as = { [parts.overworld]: state.shared[0].id, [parts.nether]: NETHER_HUB };
         const swap = (p) => ({ ...p, part: as[p.part], in: as[p.in] });
-        const here = [id, ...[...links].filter((l) => l.includes(id)).map((l) => l.replace(id, '').replace('|', ''))];
+        const here = partsOf(id);
         const list = (await json('portals.json')).portals.map(swap).filter((p) => here.includes(p.part));
         return send(200, { portals: list.map((p) => (here.includes(p.in) ? p : { ...p, in: undefined })) });
       }

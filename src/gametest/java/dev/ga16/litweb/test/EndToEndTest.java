@@ -349,10 +349,6 @@ public class EndToEndTest implements FabricClientGameTest {
 	 */
 	private void crossDimension(ClientGameTestContext ctx, TestSingleplayerContext sp) throws IOException {
 		TestServerContext s = sp.getServer();
-		double[] home = s.computeOnServer(server -> {
-			ServerPlayer p = server.getPlayerList().getPlayers().getFirst();
-			return new double[] {p.getX(), p.getY(), p.getZ(), p.getYRot(), p.getXRot()};
-		});
 		// Overworld: portal blocks at 61..62, -59..-57, 20. Their Nether exit is 7, y, 2.
 		s.runCommand("fill 60 -60 20 63 -56 20 obsidian");
 		s.runCommand("fill 61 -59 20 62 -57 20 air");
@@ -414,10 +410,7 @@ public class EndToEndTest implements FabricClientGameTest {
 		JsonObject alone = json(call(ctx, "GET", "/api/portals?id=" + overworld)).getAsJsonArray("portals").get(0).getAsJsonObject();
 		check(alone.get("lands").getAsString().equals("new") && alone.get("at").toString().equals("[7,-59,2]"), "no portal in range: the game builds one " + alone);
 		call(ctx, "POST", "/api/unshare?id=" + overworld);
-
-		s.runCommand(String.format(java.util.Locale.ROOT, "execute in minecraft:overworld run tp @a %.3f %.3f %.3f %.1f %.1f", home[0], home[1], home[2], home[3], home[4]));
-		ctx.waitFor(mc -> mc.level != null && mc.player != null && mc.level.dimension() == Level.OVERWORLD, 600);
-		ctx.waitTicks(20);
+		// The test ends in the Nether: the world closes next, and a trip back can outlast the wait on a slow runner.
 	}
 
 	/** Shares the blocks between two corners as a placement, from the dimension the player is in now. */
