@@ -467,6 +467,9 @@ button {
   cursor: default;
   background: none;
 }
+.icon-btn[aria-busy="true"] {
+  opacity: 1; /* a busy button shows its spinner at full strength */
+}
 .crumbs {
   display: flex;
   align-items: center;

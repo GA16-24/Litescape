@@ -551,4 +551,5 @@ export default {
     'Solo se comprobaron los chunks cargados. Los operadores pueden comprobar el resto.',
   'Not built or not loaded': 'Sin construir o sin cargar',
   'None loaded within {r} blocks': 'Ninguno cargado a menos de {r} bloques',
+  '{when}. {fix}': '{when}. {fix}',
 };

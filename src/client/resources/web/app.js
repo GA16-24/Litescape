@@ -1742,7 +1742,8 @@ function portalsHtml(sh) {
       const radius = p.to === 'minecraft:the_nether' ? 16 : 128;
       notes.push(
         p.in
-          ? t('Can break blocks in {part}', { part: nameOf(p.in) })
+          ? // "Can" already hedges; for a loaded-only check the panel's last line says the rest wasn't checked
+            t('Can break blocks in {part}', { part: nameOf(p.in) })
           : t(p.loadedOnly ? 'None loaded within {r} blocks' : 'None within {r} blocks', { r: radius }),
       );
     } else if (p.lands === 'platform') to = label(t('End platform'));
@@ -2018,7 +2019,7 @@ function spawnText(rule) {
           light ? t('Block light {l} or less', { l: light }) : t('Block light 0'),
           t('Light them, cover them or dig them out.'),
         ];
-  return `<span><span class="text">${esc(mob)}</span> · ${when}. ${fix}</span>`;
+  return `<span><span class="text">${esc(mob)}</span> · ${t('{when}. {fix}', { when, fix })}</span>`;
 }
 
 function toggleSpawn() {

@@ -552,4 +552,5 @@ export default {
     'Nur geladene Chunks wurden geprüft. Operatoren können den Rest prüfen.',
   'Not built or not loaded': 'Nicht gebaut oder nicht geladen',
   'None loaded within {r} blocks': 'Keins geladen im Umkreis von {r} Blöcken',
+  '{when}. {fix}': '{when}. {fix}',
 };

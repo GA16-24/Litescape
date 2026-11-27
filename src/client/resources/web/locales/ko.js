@@ -540,4 +540,5 @@ export default {
     '로드된 청크만 확인했습니다. 나머지는 관리자가 확인할 수 있습니다.',
   'Not built or not loaded': '안 지었거나 로드 안 됨',
   'None loaded within {r} blocks': '{r}블록 안에 로드된 것 없음',
+  '{when}. {fix}': '{when}. {fix}',
 };

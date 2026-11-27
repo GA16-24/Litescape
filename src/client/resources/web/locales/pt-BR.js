@@ -552,4 +552,5 @@ export default {
     'Só os chunks carregados foram verificados. Operadores podem verificar o resto.',
   'Not built or not loaded': 'Não construído ou não carregado',
   'None loaded within {r} blocks': 'Nenhum carregado a menos de {r} blocos',
+  '{when}. {fix}': '{when}. {fix}',
 };

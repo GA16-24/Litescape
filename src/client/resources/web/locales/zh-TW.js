@@ -528,4 +528,5 @@ export default {
   'Only loaded chunks were checked. Operators can check the rest.': '只檢查了已載入的區塊。管理員可以檢查其餘部分。',
   'Not built or not loaded': '未建造或未載入',
   'None loaded within {r} blocks': '{r} 格內沒有已載入的',
+  '{when}. {fix}': '{when}。{fix}',
 };

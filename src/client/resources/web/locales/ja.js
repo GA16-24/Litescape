@@ -544,4 +544,5 @@ export default {
     '読み込み済みのチャンクだけを確認しました。残りはオペレーターが確認できます。',
   'Not built or not loaded': '未建設か未読み込み',
   'None loaded within {r} blocks': '{r} ブロック以内に読み込み済みのものなし',
+  '{when}. {fix}': '{when}。{fix}',
 };
