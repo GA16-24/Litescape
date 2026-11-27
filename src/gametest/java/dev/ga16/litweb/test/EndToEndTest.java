@@ -403,7 +403,7 @@ public class EndToEndTest implements FabricClientGameTest {
 
 		// Sharing over your own share folds it in (#75): one entry, its connection moved over, nothing listed twice.
 		String wider = sharePart(ctx, s, "Nether hub, wider", new BlockPos(7, 70, 2), new BlockPos(10, 74, 3), Level.NETHER);
-		st = json(call(ctx, "GET", "/api/state"));
+		st = json(save("state-merged.json", call(ctx, "GET", "/api/state")));
 		check(shared(st, nether) == null && links(st, wider).equals(List.of(overworld)) && links(st, overworld).equals(List.of(wider)),
 			"the covered share folded into the new one, connection kept: " + st.get("shared"));
 		check(shared(st, wider).get("size").toString().equals("[4,5,2]") && shared(st, wider).get("placement").getAsBoolean(), "covering share keeps its placement: " + shared(st, wider));
