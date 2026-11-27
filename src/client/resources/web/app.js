@@ -769,6 +769,8 @@ function focusBlock() {
   if (!f || f.key !== keyOf(S.desc) || !S.data) return;
   S.focus = null;
   const [ox, oy, oz] = S.data.origin;
+  const [y0, y1] = layerRange();
+  if (f.at[1] - oy < y0 || f.at[1] - oy > y1) setLayer('all'); // the layer slider hid the exit
   const c = new THREE.Vector3(f.at[0] - ox + 0.5, f.at[1] - oy + 0.5, f.at[2] - oz + 0.5);
   const off = camera.position.clone().sub(controls.target); // keep the angle the view had
   const dist = Math.min(off.length(), 14); // close enough to see a whole portal frame
