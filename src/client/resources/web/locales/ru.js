@@ -664,4 +664,8 @@ export default {
     'Печи заполняются из воронок сверху и сзади. Выберите сундук или воронку, которые их питают.',
   'Keep {name} full of': 'Держать {name} полным',
   'Remove {block}': 'Убрать «{block}»',
+  'Merge with your other shares?': 'Объединить с другими вашими публикациями?',
+  'Merge and share': 'Объединить и поделиться',
+  "This placement overlaps {names}, so sharing it merges them into one share. Who can see it, notes, contributors and connected parts carry over. You can't split them again.":
+    'Это размещение пересекается с {names}, поэтому при публикации они объединятся в одну. Доступ, заметки, участники и связанные части сохранятся. Разделить их обратно будет нельзя.',
 };

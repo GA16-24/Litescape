@@ -621,4 +621,8 @@ export default {
     'Los hornos se llenan con las tolvas de arriba y de atrás. Elige el cofre o la tolva que las alimenta.',
   'Keep {name} full of': 'Mantener {name} lleno de',
   'Remove {block}': 'Quitar {block}',
+  'Merge with your other shares?': '¿Combinar con tus otros compartidos?',
+  'Merge and share': 'Combinar y compartir',
+  "This placement overlaps {names}, so sharing it merges them into one share. Who can see it, notes, contributors and connected parts carry over. You can't split them again.":
+    'Esta colocación se solapa con {names}, así que al compartirla se combinan en uno solo. Quién puede verlo, las notas, los colaboradores y las partes conectadas se conservan. No podrás separarlos después.',
 };

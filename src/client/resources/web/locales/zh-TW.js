@@ -595,4 +595,8 @@ export default {
     '熔爐由上方和後方的漏斗供料。請選擇供料給這些漏斗的箱子或漏斗。',
   'Keep {name} full of': '讓{name}一直裝滿',
   'Remove {block}': '移除{block}',
+  'Merge with your other shares?': '要與你的其他分享合併嗎？',
+  'Merge and share': '合併並分享',
+  "This placement overlaps {names}, so sharing it merges them into one share. Who can see it, notes, contributors and connected parts carry over. You can't split them again.":
+    '此放置與 {names} 重疊，分享後它們會合併為一個分享。可見範圍、備註、貢獻者和連接的部分都會保留。合併後無法再拆分。',
 };

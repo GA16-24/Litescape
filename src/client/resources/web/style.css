@@ -1313,7 +1313,32 @@ a.ready.portal:focus-visible {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
   animation: pop 0.14s ease;
 }
-.settings::backdrop {
+.confirm {
+  width: min(440px, calc(100vw - 32px));
+  margin: auto;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  animation: pop 0.14s ease;
+}
+.confirm h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.confirm p {
+  margin: 0 0 16px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.confirm .btn-row {
+  justify-content: flex-end;
+}
+.settings::backdrop,
+.confirm::backdrop {
   background: color-mix(in srgb, var(--bg) 60%, transparent);
   backdrop-filter: blur(4px);
   animation: fade 0.12s ease;

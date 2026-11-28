@@ -170,6 +170,17 @@
     </div>
   </dialog>
 
+  <dialog class="confirm" id="merge-dialog" aria-labelledby="merge-title" aria-describedby="merge-text">
+    <form method="dialog">
+      <h2 id="merge-title">Merge with your other shares?</h2>
+      <p id="merge-text"></p>
+      <div class="btn-row">
+        <button type="submit" class="btn" value="cancel">Cancel</button>
+        <button type="submit" class="btn primary" value="merge">Merge and share</button>
+      </div>
+    </form>
+  </dialog>
+
   <div class="toasts" id="toasts" aria-live="polite"></div>
   <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
 

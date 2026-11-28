@@ -623,4 +623,8 @@ export default {
     'Les fourneaux se remplissent par les entonnoirs au-dessus et derrière eux. Choisis le coffre ou l’entonnoir qui les alimente.',
   'Keep {name} full of': 'Garder {name} plein de',
   'Remove {block}': 'Retirer {block}',
+  'Merge with your other shares?': 'Fusionner avec vos autres partages ?',
+  'Merge and share': 'Fusionner et partager',
+  "This placement overlaps {names}, so sharing it merges them into one share. Who can see it, notes, contributors and connected parts carry over. You can't split them again.":
+    'Ce placement chevauche {names} : le partager les fusionne en un seul partage. Qui peut le voir, les notes, les contributeurs et les parties reliées sont conservés. Vous ne pourrez plus les séparer.',
 };

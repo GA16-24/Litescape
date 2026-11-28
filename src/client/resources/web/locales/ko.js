@@ -608,4 +608,8 @@ export default {
     '화로는 위와 뒤의 호퍼로 채워집니다. 그 호퍼에 공급하는 상자나 호퍼를 고르세요.',
   'Keep {name} full of': '{name}을(를) 가득 채울 아이템',
   'Remove {block}': '{block} 제거',
+  'Merge with your other shares?': '다른 공유와 합칠까요?',
+  'Merge and share': '합쳐서 공유',
+  "This placement overlaps {names}, so sharing it merges them into one share. Who can see it, notes, contributors and connected parts carry over. You can't split them again.":
+    '이 배치는 {names}와(과) 겹치므로 공유하면 하나의 공유로 합쳐집니다. 볼 수 있는 사람, 메모, 기여자, 연결된 부분은 그대로 옮겨집니다. 합친 뒤에는 다시 나눌 수 없습니다.',
 };
