@@ -1,6 +1,7 @@
 import { fmt, LANGS, lang, MC_LOCALE, t, translateDom } from './i18n.js';
 import { Iris } from './iris.js';
 import { ACTIVATES, FALLS, FLOATING, FLUID, LAVA } from './order.js';
+import { mergesWith } from './shares.js';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import * as THREE from './vendor/three.module.min.js';
 
@@ -3229,9 +3230,30 @@ function isolate(idx) {
   if (S.iso >= 0) toast(t('Showing only {name}', { name: S.data.mats[idx].name }), t('Press Esc to show everything'));
 }
 
+// Resolves true once the player agrees to merge `shares` into the one they're sharing.
+function confirmMerge(shares) {
+  const d = $('merge-dialog');
+  $('merge-text').textContent = t(
+    "This placement overlaps {names}, so sharing it merges them into one share. Who can see it, notes, contributors and connected parts carry over. You can't split them again.",
+    { names: new Intl.ListFormat(lang).format(shares.map((s) => `“${s.name}”`)) },
+  );
+  d.returnValue = '';
+  d.showModal(); // Cancel comes first, so it has the focus
+  return new Promise((done) => d.addEventListener('close', () => done(d.returnValue === 'merge'), { once: true }));
+}
+
 async function sharePlacement(id) {
   if (S.busy.has(id)) return;
   const p = S.api.placements.find((x) => x.id === id);
+  // The server folds your overlapping shares in this dimension into this one, so ask first.
+  const shift = p && movedAt(p) ? atOf(p).map((v, k) => +v - p.origin[k]) : [0, 0, 0];
+  const merges = p?.boxes?.length
+    ? mergesWith(
+        p.boxes.map((b) => b.map((v, i) => v + shift[i % 3])),
+        sharedList().filter((s) => s.mine && s.dim === S.api.dim && s.id !== p.sharedId),
+      )
+    : [];
+  if (merges.length && !(await confirmMerge(merges))) return;
   S.busy.add(id);
   renderNav();
   renderInspector();
@@ -3254,8 +3276,9 @@ async function sharePlacement(id) {
     S.at.delete(id);
     toast(
       p?.sharedId ? t('Shared copy updated') : t('Shared “{name}”', { name: p?.name ?? t('placement') }),
-      t(p?.sharedId ? 'Who can see it stays the same.' : 'Only you can see it so far.'),
-      p?.sharedId
+      // A merge keeps the access of the share it folds into, like Update copy.
+      t(p?.sharedId || merges.length ? 'Who can see it stays the same.' : 'Only you can see it so far.'),
+      p?.sharedId || merges.length
         ? {}
         : {
             action: t('Choose who'),

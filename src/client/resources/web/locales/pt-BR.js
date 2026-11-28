@@ -622,4 +622,8 @@ export default {
     'Fornalhas se enchem pelos funis acima e atrás delas. Escolha o baú ou funil que abastece esses funis.',
   'Keep {name} full of': 'Manter {name} cheio de',
   'Remove {block}': 'Remover {block}',
+  'Merge with your other shares?': 'Juntar com seus outros compartilhamentos?',
+  'Merge and share': 'Juntar e compartilhar',
+  "This placement overlaps {names}, so sharing it merges them into one share. Who can see it, notes, contributors and connected parts carry over. You can't split them again.":
+    'Esta colocação se sobrepõe a {names}, então compartilhá-la junta tudo em um só compartilhamento. Quem pode ver, notas, colaboradores e partes conectadas são mantidos. Não dá para separá-los depois.',
 };

@@ -622,4 +622,8 @@ export default {
     'Öfen füllen sich über die Trichter darüber und dahinter. Wähle die Truhe oder den Trichter, der diese versorgt.',
   'Keep {name} full of': '{name} voll halten mit',
   'Remove {block}': '{block} entfernen',
+  'Merge with your other shares?': 'Mit deinen anderen Freigaben zusammenführen?',
+  'Merge and share': 'Zusammenführen und teilen',
+  "This placement overlaps {names}, so sharing it merges them into one share. Who can see it, notes, contributors and connected parts carry over. You can't split them again.":
+    'Diese Platzierung überschneidet sich mit {names}. Beim Teilen werden sie zu einer Freigabe zusammengeführt. Wer sie sehen kann, Notizen, Mitwirkende und verbundene Teile werden übernommen. Du kannst sie danach nicht wieder trennen.',
 };

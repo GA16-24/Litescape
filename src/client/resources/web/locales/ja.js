@@ -612,4 +612,8 @@ export default {
     'かまどは上と後ろのホッパーから補充されます。それらに供給しているチェストかホッパーを選んでください。',
   'Keep {name} full of': '{name}を満タンにするアイテム',
   'Remove {block}': '{block}を外す',
+  'Merge with your other shares?': 'ほかの共有と統合しますか？',
+  'Merge and share': '統合して共有',
+  "This placement overlaps {names}, so sharing it merges them into one share. Who can see it, notes, contributors and connected parts carry over. You can't split them again.":
+    'この配置は {names} と重なっているため、共有すると 1 つの共有に統合されます。公開範囲、メモ、協力者、接続されたパーツは引き継がれます。統合後は元に戻せません。',
 };
