@@ -1,6 +1,8 @@
 // Which of your shares a new share folds into. Mirrors the server's rule in LitWeb.upload, so the viewer can ask first.
 
-const union = (boxes) => [0, 1, 2, 3, 4, 5].map((i) => (i < 3 ? Math.min : Math.max)(...boxes.map((b) => b[i])));
+// Either corner can come first (a rotated or mirrored sub-region), as Volume.union allows.
+const union = (boxes) =>
+  [0, 1, 2, 3, 4, 5].map((i) => (i < 3 ? Math.min : Math.max)(...boxes.flatMap((b) => [b[i % 3], b[(i % 3) + 3]])));
 
 /**
  * The shares among `shares` (already only yours, in this dimension, not this placement's own) that a share of

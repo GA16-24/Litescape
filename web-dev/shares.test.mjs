@@ -21,6 +21,10 @@ test('a share the joint box reaches merges too, whatever order they come in', ()
   assert.deepEqual(names(mergesWith([[0, 0, 0, 2, 0, 0]], shares)).sort(), ['a', 'b']);
 });
 
+test('a region with its corners reversed still counts', () => {
+  assert.deepEqual(names(mergesWith([[10, 0, 0, 0, 0, 0]], [share('inside', [5, 0, 0], [2, 1, 1])])), ['inside']);
+});
+
 test('the box is the union of every region', () => {
   const shares = [share('between', [5, 0, 0], [1, 1, 1])];
   assert.deepEqual(
