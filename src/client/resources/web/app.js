@@ -2258,7 +2258,7 @@ function farmHtml(d, data) {
     S.farmPick = null;
     S.farmError = '';
   }
-  const f = S.farm.id === d.id && S.farm.modified === d.modified ? S.farm : {};
+  const f = S.farm.id === d.id && S.farm.modified === data.modified ? S.farm : {};
   const live = farmLive(f);
   const off = live ? 'disabled' : '';
   let h = `<section class="panel" id="farm"><div class="panel-head"><h3>${t('Farm test')}</h3></div>
